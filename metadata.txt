@@ -6,7 +6,7 @@
 name=Accessibility calculator
 qgisMinimumVersion=3.1.1
 description=Accessibility Calculations
-version=5.27
+version=5.28
 author=Igor Shusterman (based on dev of Evgeny Kleiman)
 email=ishusterman2011@gmail.com
 license=MIT
@@ -24,7 +24,7 @@ hasProcessingProvider=no
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=Accessibility calculator,public transportation,car,raptor,dejkstra,voronoi,hexagone
 
 homepage=https://github.com/ishusterman/tau_net_calc
 category=Plugins
