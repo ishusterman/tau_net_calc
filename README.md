@@ -97,4 +97,3 @@ covereges of two kinds:
 
 -   Voronoi polygons constructed based on the buildings\' foundations    
 -   H3 hexagons, of the h11, h10, h9 and h8 scales.
-
