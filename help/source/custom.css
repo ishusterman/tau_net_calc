@@ -1,0 +1,9 @@
+.simple {
+    margin-top: 0px !important;   /* Уменьшение отступа сверху */
+    margin-bottom: 5px !important;  /* Уменьшение отступа снизу */
+}
+
+ul, ol {
+    margin-top: 5px;   /* Уменьшение отступа сверху */
+    margin-bottom: 5px;  /* Уменьшение отступа снизу */
+}

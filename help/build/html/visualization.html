@@ -1,0 +1,169 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>9. Visualization of accessibility map &mdash; Introduction to QGIS plugin &#34;Accessibility Calculator&#34;</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=e9518a68" />
+
+  
+    <link rel="shortcut icon" href="_static/app.png"/>
+      <script src="_static/documentation_options.js?v=4c4d3c97"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="10. Assessing the effect of a new Light Rail Transit line on transport accessibility in the Tel-Aviv Metropolitan Area" href="sample.html" />
+    <link rel="prev" title="8. Compare accessibility maps" href="relative_ready-made.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Introduction to QGIS plugin "Accessibility Calculator"
+          </a>
+              <div class="version">
+                1.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="welcome.html">1. Workshop Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">2. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building_pkl.html">4. Data preprocessing for fast routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="raptor_area.html">5. Transit accessibility – Service area</a></li>
+<li class="toctree-l1"><a class="reference internal" href="raptor_map.html">6. Transit Accessibility of all locations in the     Region</a></li>
+<li class="toctree-l1"><a class="reference internal" href="car_accessibility.html">7. Сar accessibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="relative_ready-made.html">8. Compare accessibility maps</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">9. Visualization of accessibility map</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-style-of-presentation">9.1. The style of presentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-layers-for-visualization">9.2. The layers for visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#visualization-of-accessibility-maps-comparison">9.3. Visualization of accessibility maps comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sample.html">10. Assessing the effect of a new Light Rail Transit line on transport accessibility in the Tel-Aviv Metropolitan Area</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">11. Appendix A: Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">12. Appendix B: License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Introduction to QGIS plugin "Accessibility Calculator"</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><span class="section-number">9. </span>Visualization of accessibility map</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="visualization-of-accessibility-map">
+<span id="visualization"></span><h1><span class="section-number">9. </span>Visualization of accessibility map<a class="headerlink" href="#visualization-of-accessibility-map" title="Link to this heading"></a></h1>
+<p>Accessibility Calculator always presents the thematic map of the results. In the case of the <em>Service area</em> regime, these are maps of the travel time. In the case of the <em>Region regime</em>, these are the thematic maps of the aggregate measures.</p>
+<section id="the-style-of-presentation">
+<h2><span class="section-number">9.1. </span>The style of presentation<a class="headerlink" href="#the-style-of-presentation" title="Link to this heading"></a></h2>
+<p>The default map style is <strong>Graduated</strong>. The [Minimum accessibility, Maximal accessibility] interval is split into bins as follows:</p>
+<ul class="simple">
+<li><p><em>Service area</em> accessibility - a constant 5-minute bin.</p></li>
+<li><p><em>Region</em> accessibility – the interval is split into the  <span class="guilabel">Number of bins</span>.</p></li>
+<li><p><em>Compare accessibility</em> – the [MIN, MAX] interval of the result is divided into deciles.</p></li>
+</ul>
+<p>The palettes for the visualization are supplied with the Accessibility Calculator and presented in the examples of this and other sections.</p>
+</section>
+<section id="the-layers-for-visualization">
+<h2><span class="section-number">9.2. </span>The layers for visualization<a class="headerlink" href="#the-layers-for-visualization" title="Link to this heading"></a></h2>
+<p>The results can be visualized based on:</p>
+<ul class="simple">
+<li><p>The layer of buildings (not recommended)</p></li>
+<li><p>The layer of the <a class="reference internal" href="glossary.html#term-Voronoi-diagram"><span class="xref std std-term">Voronoi polygons</span></a> that are constructed based on the buildings’ foundations.</p></li>
+<li><p>The layers of <a class="reference internal" href="glossary.html#term-H3"><span class="xref std std-term">hexagonal cells h3</span></a> at resolutions of h8, h9, h10, h11.</p></li>
+</ul>
+<p>The layers of the Voronoi polygons and four h3 hexagon layers at resolutions of h8, h9, h10, and h11 for Israel are supplied with the Accessibility Calculator.
+<span style="display: block; margin-top: 5px;"></span>
+The IDs of the visualization polygons must repeat the IDs of some of the buildings, and each polygon will present the results for the building with this ID. The maps below (Figure 1) present the results of the same computations based on the Voronoi polygons of buildings, h3-11, h3-10, and h3-9 hexagons.</p>
+<div style="display: flex; justify-content: space-between;">
+    <img src="_images/sample/vis1.png" style="width: 48%; border: 0px solid black;margin-bottom: 10px" />
+    <img src="_images/sample/vis2.png" style="width: 48%; border: 0px solid black;margin-bottom: 10px" />
+</div>   <div style="display: flex; justify-content: space-between;">
+    <img src="_images/sample/vis3.png" style="width: 48%; border: 0px solid black;margin-bottom: 10px" />
+    <img src="_images/sample/vis4.png" style="width: 48%; border: 0px solid black;margin-bottom: 10px" />
+</div>
+<p>Figure 1. Gesher Theater in Yafo from accessibility at 22:30, after the performance is finished. Calculated with the <i>Transit accessibility maps → Service area → From location Fixed-time departure</i> option. Visualized with the Voronoi polygons of buildings (top-left), h3-11 hexagons (top-right), h3-10 hexagons (bottom left), and h3-9 hexagons (bottom right)</p></section>
+<section id="visualization-of-accessibility-maps-comparison">
+<h2><span class="section-number">9.3. </span>Visualization of accessibility maps comparison<a class="headerlink" href="#visualization-of-accessibility-maps-comparison" title="Link to this heading"></a></h2>
+<p>The map in Figure 2 presents the region accessibility map.</p>
+<div style="display: flex; justify-content: center">
+     <img src="_images/sample/vis5.png" style="width: 50%; border: 0px solid black;margin-bottom: 10px" />
+</div>
+<p>Figure 2. <i>Transit accessibility map → Region → From every location – fixed time departure</i> accessibility map. Visualization of the number of buildings accessible in 45 minutes from each of the region’s buildings</p><p>Figure 3 presents the comparison between two to-accessibility scenarios of the Yafo Gesher Theater at the beginning of the performance, 20:00. One of them is computed before and the other after the Red LRT line was established in the Tel Aviv Metropolitan Area in 2024.</p>
+   <div style="display: flex; justify-content: space-between;">
+    <img src="_images/sample/vis6.png" style="width: 48%; border: 0px solid black;margin-bottom: 10px" />
+    <img src="_images/sample/vis7.png" style="width: 48%; border: 0px solid black;margin-bottom: 10px" />
+</div>
+<p>Figure 3. The map output of the <i>Compare accessibility maps → Service Area</i> option.</p><p>In 2024, after the Red LRT line was established, accessibility to the distant buildings in the North-East along the LRT line increased (greenish), while accessibility to the buildings to the south and west of the LRT line decreased (brownish) due to cancellation of several bus lines (left map). Note, that many additional buildings became accessible after the Red LRT line was established (right map)</p>
+<p>For more examples of visualization see <a class="reference internal" href="sample.html#sample-compare-single"><span class="std std-ref">here</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="relative_ready-made.html" class="btn btn-neutral float-left" title="8. Compare accessibility maps" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sample.html" class="btn btn-neutral float-right" title="10. Assessing the effect of a new Light Rail Transit line on transport accessibility in the Tel-Aviv Metropolitan Area" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Geosimlab | TLV university.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

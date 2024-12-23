@@ -1,0 +1,178 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>8. Compare accessibility maps &mdash; Introduction to QGIS plugin &#34;Accessibility Calculator&#34;</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=e9518a68" />
+
+  
+    <link rel="shortcut icon" href="_static/app.png"/>
+      <script src="_static/documentation_options.js?v=4c4d3c97"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="9. Visualization of accessibility map" href="visualization.html" />
+    <link rel="prev" title="7. Сar accessibility" href="car_accessibility.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Introduction to QGIS plugin "Accessibility Calculator"
+          </a>
+              <div class="version">
+                1.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="welcome.html">1. Workshop Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">2. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building_pkl.html">4. Data preprocessing for fast routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="raptor_area.html">5. Transit accessibility – Service area</a></li>
+<li class="toctree-l1"><a class="reference internal" href="raptor_map.html">6. Transit Accessibility of all locations in the     Region</a></li>
+<li class="toctree-l1"><a class="reference internal" href="car_accessibility.html">7. Сar accessibility</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">8. Compare accessibility maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">9. Visualization of accessibility map</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sample.html">10. Assessing the effect of a new Light Rail Transit line on transport accessibility in the Tel-Aviv Metropolitan Area</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">11. Appendix A: Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">12. Appendix B: License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Introduction to QGIS plugin "Accessibility Calculator"</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><span class="section-number">8. </span>Compare accessibility maps</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="compare-accessibility-maps">
+<span id="relative-ready-made"></span><h1><span class="section-number">8. </span>Compare accessibility maps<a class="headerlink" href="#compare-accessibility-maps" title="Link to this heading"></a></h1>
+<p>Accessibility is a relative characteristic. Typically, every accessibility study demands a comparison of the results of accessibility computations for two or more scenarios that consider different travel modes or different sets of parameters. This section explains the <em>Compare accessibility</em> maps part of the Accessibility Calculator menu (Figure 1) that is developed for this purpose.</p>
+   <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/mainwindow-compare.png" style="width: 35%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+ <p>Figure 1. <i>Compare accessibility menu</i></p><p>The Accessibility Calculator verifies that the comparison can be performed based on the Log files of the scenarios. These log files must be in the folder of each scenario’s output, otherwise the comparison will be quit. The compatibility tests verify that:</p>
+<ul class="simple">
+<li><p>The scenarios are both for the service area or for the regions.</p></li>
+<li><p>The overlap between the regions is not empty.</p></li>
+<li><p>In the REGION regime, the time bins of both outputs are the same.</p></li>
+</ul>
+<p><span style="display: block; margin-top: 5px;"></span>
+Note that the comparison of the from-accessibility maps to the to-accessibility maps is allowed.
+<span style="display: block; margin-top: 5px;"></span>
+If the tests are all passed successfully, the comparison made for the spatially overlapping parts of the output. The non-overlapping parts are presented as additional layers, together with the results of the comparison.
+<span style="display: block; margin-top: 5px;"></span>
+The dialog and parameters  of the <em>Compare accessibility maps → Service areas or Region</em> computations same. We illustrate them with the <em>Compare accessibility maps → Service areas</em> comparison.
+<span style="display: block; margin-top: 5px;"></span>
+Enter the parameters:</p>
+<blockquote>
+<div><div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/compare.png" style="width: 70%; border: 3px solid white;margin-bottom: 10px" />
+</div></div></blockquote>
+<p><span class="guilabel">Result1 folder</span> — the folder that contains the results of the first scenario.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Name of file1</span>— the CSV file of the Scenario_1 results in the
+<span class="guilabel">Result1 folder</span> is found automatically.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Result2 folder</span> — the folder that contains the results of the second scenario.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Name of file2</span> — the CSV file of the Scenario_2 results in the <span class="guilabel">Result2 folder</span> is found automatically.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Output folder</span> — the folder to store the results of the comparison.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Output alias</span> — the alias for the files of results and layers of visualization.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Basic visualization layer</span> — the name of the layer that will be used for visualization of accessibility maps, must be a part of the current QGIS project.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">id</span>- the name of the unique identifier field of the visualization layer unit. The identifiers must be the subset of buildings’ identifiers. More information <a class="reference internal" href="visualization.html"><span class="doc">here</span></a>.
+<span style="display: block; margin-top: 5px;"></span>
+The measures of comparison:
+<br/>
+<span class="guilabel">Ratio: Result_1/Result_2</span> — the ratio of the result of the first scenario to the results of the second scenario, for the overlapping part of the outputs.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Difference: Result_1 - Result_2</span> — the difference between the result of the first scenario and the results of the second scenario, for the overlapping part of the outputs.
+<span style="display: block; margin-top: 5px;"></span>
+<span class="guilabel">Relative difference: [Result_1 - Result_2]/Result 2</span> — the difference between the result of the first scenario and the results of the second scenario divided by the result of the second scenario, for the overlapping part of the outputs. The result is presented in percents.
+<span style="display: block; margin-top: 5px;"></span>
+For each of the three cases, in addition to the map of the selected measure of difference, two more maps are presented. The first one presents the buildings that were not accessible in Scenario 1 (Result_1 is NULL) but are accessible in Scenario 2 (Result_2 is not NULL). The second map presents the buildings that were not accessible in Scenario 2 (Result_2 is NULL) but are accessible in Scenario 1 (Result_1 is not NULL).
+<span style="display: block; margin-top: 5px;"></span>
+Click <strong>Run</strong> to start. The <strong>Progress bar</strong> shows the progress of the computations. You can break the process of the computations by pressing <strong>Break</strong>.
+<span style="display: block; margin-top: 5px;"></span>
+The <strong>Log</strong> tab repeats the <strong>Log</strong> information of each of the compared scenarios and contains the metadata about the chosen measures and the overlapping parts of the outputs. If the comparison has failed the Log file contains the reason for the failure (Figure 2).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/compare_log.png" style="width: 60%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 2. The log file of the Compare accessibility maps output</p><p>The example of the <em>Compare accessibility map → Service areas</em>, see <a class="reference internal" href="sample.html#sample-compare-single"><span class="std std-ref">here</span></a>.
+<br/>
+The example of the <em>Compare accessibility map → Region</em>, see <a class="reference internal" href="sample.html#sample-compare-region"><span class="std std-ref">here</span></a>.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="car_accessibility.html" class="btn btn-neutral float-left" title="7. Сar accessibility" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="visualization.html" class="btn btn-neutral float-right" title="9. Visualization of accessibility map" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Geosimlab | TLV university.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

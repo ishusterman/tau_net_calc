@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "./mytransit"
+    ],
+    "esbonio.server.enabled": false,
+    "iis.configDir": ""
+}

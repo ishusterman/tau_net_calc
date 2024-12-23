@@ -1,0 +1,64 @@
+table   {
+    margin-bottom: 10px !important;  /* Уменьшение внешнего отступа снизу */
+
+}
+
+ul, ol, blockquote {
+    margin-top: 0px !important;      /* Убираем внешний отступ сверху */
+    margin-bottom: 0px !important;   /* Убираем внешний отступ снизу */
+    padding-top: 0px !important;     /* Убираем внутренний отступ сверху */
+    padding-bottom: 0px !important;  /* Убираем внутренний отступ снизу */
+    line-height: minimum !important;
+}
+
+p   {
+    margin-bottom: 5px !important;  /* Уменьшение внешнего отступа снизу */
+    padding-bottom: 0px !important; /* Убираем внутренний отступ снизу */
+}
+
+p {
+
+    line-height: 1.8;
+    }
+
+
+h3 {
+    padding-top: 10px !important;  /* Уменьшение внешнего отступа снизу */
+    margin-bottom: 15px !important; 
+}
+
+
+h2 {
+    padding-top: 10px !important;  /* Уменьшение внешнего отступа снизу */
+    margin-bottom: 20px !important; 
+}
+ dt {
+        font-weight: normal !important; /* Установить обычный вес шрифта */
+    }
+
+.simple {
+    margin: 0; /* Убрать внешний отступ у всего блока */
+    padding: 0; /* Убрать внутренний отступ у всего блока */
+}
+
+.simple dt,
+.simple dd,
+.simple dd p {
+    margin: 0; /* Убрать отступы */
+    padding: 0; /* Убрать внутренние отступы */
+    line-height: 1; /* Установить минимальное межстрочное расстояние */
+}
+
+div.admonition.note {
+            margin-bottom: 0px; /* Уменьшение отступа снизу */
+         
+        }
+
+ul.simple {
+
+            padding-left: 0 !important; ; /* Убираем отступ для списка */
+            margin: 0 !important; ; /* Убираем отступ для списка */
+
+h1{
+		white-space: break-spaces  !important;
+}

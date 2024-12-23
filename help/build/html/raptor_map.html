@@ -1,0 +1,280 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>6. Transit Accessibility of all locations in the Region &mdash; Introduction to QGIS plugin &#34;Accessibility Calculator&#34;</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=e9518a68" />
+
+  
+    <link rel="shortcut icon" href="_static/app.png"/>
+      <script src="_static/documentation_options.js?v=4c4d3c97"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="7. Сar accessibility" href="car_accessibility.html" />
+    <link rel="prev" title="5. Transit accessibility – Service area" href="raptor_area.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Introduction to QGIS plugin "Accessibility Calculator"
+          </a>
+              <div class="version">
+                1.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="welcome.html">1. Workshop Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">2. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building_pkl.html">4. Data preprocessing for fast routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="raptor_area.html">5. Transit accessibility – Service area</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">6. Transit Accessibility of all locations in the     Region</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-necessary-datasets">6.1. The necessary datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#accessibility-from-every-location-in-the-region-fixed-time-departure">6.2. Accessibility from every location in the region, fixed-time departure</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-log-file-and-region-accessibility-report">6.2.1. The log file and REGION accessibility report</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#accessibility-to-every-location-in-the-region-fixed-time-arrival">6.3. Accessibility to every location in the region, fixed-time arrival</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#region-accessibility-for-the-schedule-based-departure-or-arrival">6.4. Region accessibility for the schedule-based departure or arrival</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="car_accessibility.html">7. Сar accessibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="relative_ready-made.html">8. Compare accessibility maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">9. Visualization of accessibility map</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sample.html">10. Assessing the effect of a new Light Rail Transit line on transport accessibility in the Tel-Aviv Metropolitan Area</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">11. Appendix A: Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">12. Appendix B: License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Introduction to QGIS plugin "Accessibility Calculator"</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><span class="section-number">6. </span>Transit Accessibility of all locations in the     Region</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="transit-accessibility-of-all-locations-in-the-region">
+<span id="raptor-map"></span><h1><span class="section-number">6. </span>Transit Accessibility of all locations in the     Region<a class="headerlink" href="#transit-accessibility-of-all-locations-in-the-region" title="Link to this heading"></a></h1>
+<p>This section explains the <em>Transit accessibility → Region</em> part of the Accessibility Calculator menu (Figure 1).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/mainwindow-region.png" style="width: 50%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 1. <i>Transit accessibility → Region</i> menu</p><p>We present in detail the <em>From every location – Fixed-time departure</em> option and then, for each of the three other options, present the differences between this option and the chosen one.</p>
+<section id="the-necessary-datasets">
+<h2><span class="section-number">6.1. </span>The necessary datasets<a class="headerlink" href="#the-necessary-datasets" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Transit routing database, see <a class="reference internal" href="building_pkl.html#building-data"><span class="std std-ref">Data preprocessing for fast routing</span></a>.</p></li>
+<li><p>The layer of buildings opened in the current QGIS project.</p></li>
+</ul>
+</section>
+<section id="accessibility-from-every-location-in-the-region-fixed-time-departure">
+<h2><span class="section-number">6.2. </span>Accessibility from every location in the region, fixed-time departure<a class="headerlink" href="#accessibility-from-every-location-in-the-region-fixed-time-departure" title="Link to this heading"></a></h2>
+<p>Choose <em>Transit accessibility → Region → From every location – fixed-time departure</em>. Enter the parameters (Figure 2).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/pt-fr-m.png" style="width: 70%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 2: <i>Region → From every location – a fixed-time departure </i> dialog</p><p><span class="guilabel">Transit routing database folder</span> — the folder of the transit routing database must contain the following files <code class="docutils literal notranslate"><span class="pre">stops.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">stoptimes.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">transfers_dict.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">idx_by_route_stop.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">routes_by_stop.pkl</span></code>
+<br/>
+<span class="guilabel">Output folder</span> — the name of the folder for storing the results of the computation.
+<br/>
+<span class="guilabel">Output alias</span> — the alias name for the files of results and layers of visualization.
+<br/>
+<span class="guilabel">Facilities</span> — the layer of the facility buildings, may be selection set.
+<br/>
+<span class="guilabel">id</span> — the field of the unique identifier of a building, in the layer of buildings.
+<br/>
+<span class="guilabel">Visualization layer</span> — the layer that will be used for visualization of accessibility maps, must be a part of the current QGIS project.
+<br/>
+<span class="guilabel">id</span> — the field of the unique identifier of the visualization layer feature. The identifiers must be the subset of buildings’ identifiers. More information <a class="reference internal" href="visualization.html"><span class="doc">here</span></a>.
+<br/>
+<span class="guilabel">Minimum number of transfers</span> — the minimum number of transfers of the transit trip, typically 0.
+<br/>
+<span class="guilabel">Maximum number of transfers</span> — the maximum number of transfers of the trip, typically 1 or 2.
+<br/>
+<span class="guilabel">Maximum walk distance to the initial PT stop, m</span> — the maximum acceptable walking distance between the trip origin and the first bus stop. The default value is 400 m.
+<br/>
+<span class="guilabel">Maximum walk distance at transfer, m</span> — the maximum acceptable walking distance between two stops at the transfer. The default value is 150 m.
+<br/>
+<span class="guilabel">Maximum walk distance from the last PT stop, m</span> — the maximum acceptable walking distance between the last stop of a trip to the destination. The default value is 400 m.
+<br/>
+<span class="guilabel">Start at (hh:mm:ss)</span> — trip start time.
+<br/>
+<span class="guilabel">Walking speed (km/h)</span> — walking speed.
+<br/>
+<span class="guilabel">Maximum waiting time at the initial stop, min</span> — the maximum waiting time at the initial stop of the trip.
+<br/>
+<span class="guilabel">Maximum waiting time at the transfer stop, min</span> — the maximum waiting time at the transfer stop.
+<br/>
+<span class="guilabel">Boarding time gap</span> — the minimum time between two sequential activities, like arriving at the stop and boarding the bus. Usually, zero or several seconds.
+<br/>
+<span class="guilabel">Maximum travel time, min</span> — the maximum total travel time.
+<br/>
+<span class="guilabel">Number of bins</span> — the number of bins to split the time interval [0, Maximum travel time]. The aggregate accessibility measures will be stored for every bin, just as the cumulative histogram frequencies.
+<br/>
+The bin’s width is equal to the <span class="guilabel">Maximum travel time</span> /<span class="guilabel">Number of bins</span>, and the <span class="guilabel">Number of bins</span> must not exceed the <span class="guilabel">Maximum travel time</span>. If the last bin does not match the <span class="guilabel">Maximum travel time</span>, the measures for the <span class="guilabel">Maximum travel time</span> are also stored. Typically, the <span class="guilabel">Number of bins</span> is selected in a way to have the bin’s width of 5 or 10 minutes, while a 2- or even 1-minute bin can be useful for further analysis of accessibility.
+<br/>
+<span class="guilabel">Aggregate</span> — each of the numeric attributes of buildings can be selected for aggregation. For example, if the number of jobs is known for a building, then the total number of jobs that can be reached from a building in a given time can be calculated as a measure of the from-accessibility to jobs. You could choose several fields to aggregate (Figure 3).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/sample/map_opt1.png" style="width: 60%; border: 0px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 3. The choice of attributes for aggregation</p><p>The sum of the aggregated attribute over buildings achievable in one, two, etc., bins will be stored as a result in the <span class="guilabel">Output folder</span>, as a separate file for each of the aggregated fields. Each of the aggregated measures is presented by the thematic map. The structure of the result files is described in the next section.</p>
+<p>Click <strong>Run</strong> to start. The <strong>Progress bar</strong> shows the progress of the computations. You can break the process of the computations by pressing <strong>Break</strong>. The <strong>Log</strong> tab contains the metadata about the computations (next section). In case the computations are based on the selection of buildings, the results will include the new layer that represents these buildings.</p>
+<section id="the-log-file-and-region-accessibility-report">
+<h3><span class="section-number">6.2.1. </span>The log file and REGION accessibility report<a class="headerlink" href="#the-log-file-and-region-accessibility-report" title="Link to this heading"></a></h3>
+<p>The log file (Figure 4) is in the folder of the results. It stores all the settings of the run and the computation time.</p>
+  <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+      <img src="_images/log_area.png" style="width: 70%; border: 3px solid white;margin-bottom: 10px" />
+  </div>
+<p>Figure 4. Log file of the <i>Region → From every location – fixed-time departure</i> computations</p><p>In the case of the from-accessibility, the basic file of results presents the total number of buildings that can be reached from each of the region’s buildings after every time bin:</p>
+<style>
+    .custom-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .custom-table th {
+        border: 1px solid #d3d3d3;
+        padding: 8px;
+        text-align: center;
+        vertical-align: middle;
+        font-weight: bold;
+        background-color: white;
+    }
+
+    .custom-table td {
+        border: 1px solid #d3d3d3;
+        padding: 8px;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .custom-table tr:nth-child(even) {
+        background-color: #f0f8ff;
+    }
+
+    .custom-table tr:nth-child(odd) {
+        background-color: white;
+    }
+</style>
+
+<table class="custom-table" style="margin-bottom: 10px">
+    <tr>
+        <th>Attribute</th>
+        <th>Meaning</th>
+    </tr>
+    <tr>
+        <td>Origin_ID</td>
+        <td>The ID of the building of origin</td>
+    </tr>
+    <tr>
+        <td>One bin time</td>
+        <td>Total number of buildings accessible in 1 time-bin</td>
+    </tr>
+    <tr>
+        <td>Two bins time</td>
+        <td>Total number of buildings accessible in 2 time bins</td>
+    </tr>
+    <tr>
+        <td>… N bins time</td>
+        <td>Total number of buildings accessible in N time bins</td>
+    </tr>
+    <tr>
+        <td>Maximum travel time</td>
+        <td>Total number of buildings accessible in maximum travel time (if the latter is not an integer number of bins)</td>
+    </tr>
+</table><p>The thematic map presents the number of buildings reachable in maximum travel time. Additional result files present the totals of other attributes chosen for aggregation and for each of these attributes the thematic map of the result for the maximum travel time is constructed.
+<span style="display: block; margin-top: 5px;"></span>
+The example of the <em>Transit accessibility → Region → From every location – fixed-time</em> departure computations <a class="reference internal" href="sample.html#sample-region-from-accessibility-fixed-time"><span class="std std-ref">here</span></a>.</p>
+</section>
+</section>
+<section id="accessibility-to-every-location-in-the-region-fixed-time-arrival">
+<h2><span class="section-number">6.3. </span>Accessibility to every location in the region, fixed-time arrival<a class="headerlink" href="#accessibility-to-every-location-in-the-region-fixed-time-arrival" title="Link to this heading"></a></h2>
+<p>To compute the to-accessibility of every location in the region run the <em>Transit accessibility → Region → To all locations – fixed-time arrival</em> option. Most of the parameters of the region’s to-accessibility computations are the same as for the from-accessibility. This regards walking distance, walking speed, waiting time at stops, number of transfers, and the gap between sequential activities. The major difference is in establishing origins and destinations – for to-accessibility, one must establish the layer of the region’s destination buildings, and provide the layer of buildings from which these destinations may be accessed (Figure 5).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/sample/map_opt2.png" style="width: 80%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 5. The part of the region to-accessibility dialog that is different from the corresponding part in the region from-accessibility dialog</p><p>The Log and Result files are the same as for the from-accessibility, with minor differences that reflect the <em>from-accessibility</em> changes.
+<span style="display: block; margin-top: 5px;"></span>
+The example of the <em>Transit accessibility → Region → From all locations – fixed-time departure</em> computations see <a class="reference internal" href="sample.html#sample-region-from-accessibility-fixed-time"><span class="std std-ref">here</span></a> section.</p>
+</section>
+<section id="region-accessibility-for-the-schedule-based-departure-or-arrival">
+<h2><span class="section-number">6.4. </span>Region accessibility for the schedule-based departure or arrival<a class="headerlink" href="#region-accessibility-for-the-schedule-based-departure-or-arrival" title="Link to this heading"></a></h2>
+<p>The modern users of public transport are aware of the time the bus arrives at the stop they plan to start from, or to the final stops of the trip. These travelers start their trip and walk to the initial stop to be there just before the bus arrival or take the bus that arrives at the destination just before the time a traveler must be at their destination. We have modified the <a class="reference internal" href="glossary.html#term-RAPTOR-Algorithm"><span class="xref std std-term">RAPTOR algorithm</span></a> to compute accessibility for these schedule-informed travelers. The explanation of the schedule-based view of accessibility is presented in the section devoted to the single location accessibility computations <a class="reference internal" href="sample.html#sample-schedule-based"><span class="std std-ref">here</span></a>.
+<span style="display: block; margin-top: 5px;"></span>
+Just as for the single location accessibility, instead of one “start time” parameter, schedule-dependent accessibility from every building in the region demands two parameters – the “earliest start time”, and the “maximum delay at start”. In the computation dialog, these are
+<span class="guilabel">The earliest start time</span> - the earliest start time of a trip, <span class="guilabel">Maximum delay at start, min</span> - the maximum delay of a trip start.The time between the earliest start time and the actual start of the trip is not included in the total travel time. In the case of schedule-based accessibility to every location in the region, the latest arrival time is also substituted by the arrival interval. A traveler is allowed to arrive at the destination between the “earliest arrival time” and this time plus “Maximum lateness.” In the computation dialog, these are <span class="guilabel">The earliest arrival time</span> - the time of the earliest arrival to a destination, <span class="guilabel">Maximum lateness at arrival, min</span> - the maximum lateness in arriving at a destination. The time between the arrival and the latest possible arrival is not included in the total travel time.
+<span style="display: block; margin-top: 5px;"></span>
+The examples of schedule-based accessibility are <a class="reference internal" href="sample.html#sample-schedule-based"><span class="std std-ref">here</span></a>. The <a class="reference internal" href="sample.html#sample-comparison-time-fixed-schedule-dependent"><span class="std std-ref">example section</span></a> contains the comparison between the time-fixed and schedule-dependent accessibility estimates.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="raptor_area.html" class="btn btn-neutral float-left" title="5. Transit accessibility – Service area" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="car_accessibility.html" class="btn btn-neutral float-right" title="7. Сar accessibility" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Geosimlab | TLV university.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,330 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>7. Сar accessibility &mdash; Introduction to QGIS plugin &#34;Accessibility Calculator&#34;</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=e9518a68" />
+
+  
+    <link rel="shortcut icon" href="_static/app.png"/>
+      <script src="_static/documentation_options.js?v=4c4d3c97"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="8. Compare accessibility maps" href="relative_ready-made.html" />
+    <link rel="prev" title="6. Transit Accessibility of all locations in the Region" href="raptor_map.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Introduction to QGIS plugin "Accessibility Calculator"
+          </a>
+              <div class="version">
+                1.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="welcome.html">1. Workshop Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">2. Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">3. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building_pkl.html">4. Data preprocessing for fast routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="raptor_area.html">5. Transit accessibility – Service area</a></li>
+<li class="toctree-l1"><a class="reference internal" href="raptor_map.html">6. Transit Accessibility of all locations in the     Region</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">7. Сar accessibility</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-necessary-datasets">7.1. The necessary datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#from-service-area-fixed-time-departure">7.2. From - service area, fixed-time departure</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#from-service-area-log-file-and-accessibility-report">7.2.1. From - service area log file and accessibility report</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#to-service-area-fixed-time-arrival">7.3. “To“ service area, fixed-time arrival</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#car-accessibility-of-all-locations-in-the-region">7.4. Car Accessibility of all locations in the Region</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#car-accessibility-to-every-location-in-the-region">7.5. Car accessibility to every location in the region</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="relative_ready-made.html">8. Compare accessibility maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">9. Visualization of accessibility map</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sample.html">10. Assessing the effect of a new Light Rail Transit line on transport accessibility in the Tel-Aviv Metropolitan Area</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">11. Appendix A: Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">12. Appendix B: License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Introduction to QGIS plugin "Accessibility Calculator"</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><span class="section-number">7. </span>Сar accessibility</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ar-accessibility">
+<h1><span class="section-number">7. </span>Сar accessibility<a class="headerlink" href="#ar-accessibility" title="Link to this heading"></a></h1>
+<p>This section explains the <em>Car accessibility</em> branch of the Accessibility Calculator menu (Figure 1).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/mainwindow-car.png" style="width: 50%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 1. <i>Car accessibility</i> menu<p><p>Below, we present in detail the <em>From location – Fixed-time departure</em> option and then, for each of the three other options, present the differences between this option and the chosen one. Note that the car trip description is simpler than the transit trip and includes three components only – walk from the facility building to the parking car, drive, and walk from the parking spot to the destination. Also, in the case of car accessibility, a fixed start/arrival time only makes sense.</p>
+<section id="the-necessary-datasets">
+<h2><span class="section-number">7.1. </span>The necessary datasets<a class="headerlink" href="#the-necessary-datasets" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Car routing database, see <a class="reference internal" href="building_pkl.html#building-data"><span class="std std-ref">Data preprocessing for fast routing</span></a></p></li>
+<li><p>The layer of buildings opened in the current QGIS project.</p></li>
+</ul>
+</section>
+<section id="from-service-area-fixed-time-departure">
+<span id="car-options"></span><h2><span class="section-number">7.2. </span>From - service area, fixed-time departure<a class="headerlink" href="#from-service-area-fixed-time-departure" title="Link to this heading"></a></h2>
+<p>Choose a <em>Car accessibility → Service Area → Fixed-time departure</em>. Enter the parameters.</p>
+<div style="display: flex; justify-content: center;">
+     <img src="_images/car_area.png" style="width: 60%; border: 0px solid black;margin-bottom: 10px" />
+</div>
+<p>Figure 2. <i>From locations – fixed-time departure</i> dialog for car accessibility</p><p><span class="guilabel">Car routing database folder</span> — the folder of the car routing database. Must contain the following files: <code class="docutils literal notranslate"><span class="pre">graph.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">graph_rev.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">dict_vertex_buildings.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">dict_building_vertex.pkl</span></code>.
+<br/>
+<span class="guilabel">Output folder</span> — the folder for storing the results of the computation.
+<br/>
+<span class="guilabel">Output alias</span> — the alias name for the files of results and layers of visualization.
+<br/>
+<span class="guilabel">Facilities</span> — the layer of the facility buildings, may be selection set.
+<br/>
+<span class="guilabel">id</span> — the field with the unique identifier of a facility, in the layer of buildings.
+<br/>
+<span class="guilabel">Visualization layer</span> — the layer that will be used for visualization of accessibility maps, must be a part of the current QGIS project.
+<br/>
+<span class="guilabel">id</span> — the field of the unique identifier of the visualization layer’s features. The identifiers must be the subset of buildings’ identifiers. More information <a class="reference internal" href="visualization.html"><span class="doc">here</span></a>.
+<br/>
+<span class="guilabel">Walking distance from origin to car parking, m</span> — a typical walking distance from the building to the parking car.
+<br/>
+<span class="guilabel">Walking distance from car parking to destination, m</span> — a typical walking distance from the parking car to the destination.
+<br/>
+<span class="guilabel">Driving start/finish gap</span> — the minimum time between two sequential activities, like arriving at the parking car and starting driving. Usually, zero or several seconds.
+<br/>
+<span class="guilabel">Maximum travel time</span> — the maximum total trip time.
+<br/>
+<span class="guilabel">Walking speed (km/h)</span> — a walking speed.
+<br/>
+<span class="guilabel">Start at (hh:mm:ss)</span> — trip start time.
+<br/></p>
+<p>Click <strong>Run</strong> to start. The <strong>Progress bar</strong> shows the progress of the computations. You can break the process of the computations by pressing <strong>Break</strong>.
+<br/>
+The <strong>Log</strong> tab contains the metadata about the computations (next section). The structure of the report contains details of every leg for every trip and is described in detail in the next section.</p>
+<p>The results of the computations are stored as two CSV report files in the <span class="guilabel">Output folder</span>. The first depicts the service area and contains all buildings that can be reached from <em>at least one</em> of the facilities in <span class="guilabel">Maximum travel time</span> or faster. Each of these buildings is represented by the record that contains the <span class="guilabel">id</span> of the facility that served it in a minimal time, and all details of the trip between the origin and the reached building. The service area is visualized based on the <span class="guilabel">Visualization layer</span>.
+<span style="display: block; margin-top: 5px;"></span>
+The service area file does not contain information on whether the building can be served by more than one facility. This information can be retrieved from the second output file, where for each origin, all served buildings that can be served are listed irrespective of the travel time from the facility. This second file can be used for deeper analysis of the accessibility, for example for recognizing buildings that can be reached from half or more of the facilities. In both output files, the details of every leg for every trip are described in detail, see the next section.</p>
+<section id="from-service-area-log-file-and-accessibility-report">
+<h3><span class="section-number">7.2.1. </span>From - service area log file and accessibility report<a class="headerlink" href="#from-service-area-log-file-and-accessibility-report" title="Link to this heading"></a></h3>
+<p>The log file (Figure 3) is in the folder of the results. It stores all the settings of the run and the time the computations took.</p>
+  <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+      <img src="_images/log_car.png" style="width: 60%; border: 3px solid white;margin-bottom: 10px" />
+  </div>
+<p>Figure 3. Log file of the <i>From locations – fixed-time departure</i> computations</p><p>The output contains all the details of a trip to each of the buildings reachable in less than the maximum travel time from the clisest facility. The map of the output presents the total travel time for each of the accessible buildings (Figure 4).</p>
+<style>
+    .custom-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .custom-table th, .custom-table td {
+        border: 1px solid #d3d3d3;
+        padding: 8px;
+    }
+
+    .custom-table th {
+        background-color: white;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .custom-table td {
+        text-align: left;
+    }
+
+    .custom-table tr:nth-child(even) {
+        background-color: #f0f8ff;
+    }
+
+    .custom-table tr:nth-child(odd) {
+        background-color: white;
+    }
+</style>
+
+<table class="custom-table" style="margin-bottom: 10px">
+    <tr>
+        <th style="width: 150px;">Attribute</th>
+        <th style="width: 200px;">Meaning</th>
+    </tr>
+    <tr>
+        <td>Origin_ID</td>
+        <td>The ID of the facility building</td>
+    </tr>
+    <tr>
+        <td>Destination_ID</td>
+        <td>The ID of the destination building</td>
+    </tr>
+    <tr>
+        <td>Duration</td>
+        <td>Total travel time</td>
+    </tr>
+</table>
+<p>Figure 4. The structure of the <i>Car accessibility → Service area → From locations – fixed-time departure</i> output file.</p><p>The example of the <em>Car accessibility → Service area → From locations – fixed-time departure</em> computations see <a class="reference internal" href="sample.html#sample-car-from-accessibility-fixed-time"><span class="std std-ref">here</span></a>.</p>
+</section>
+</section>
+<section id="to-service-area-fixed-time-arrival">
+<h2><span class="section-number">7.3. </span>“To“ service area, fixed-time arrival<a class="headerlink" href="#to-service-area-fixed-time-arrival" title="Link to this heading"></a></h2>
+<p>Run the <em>Car accessibility → Service area → To locations – fixed-time arrival</em> option. As you can see, most of the parameters of the to-accessibility computations are the same as for the from-accessibility. This regards walking distances, walking speed, and the gap between sequential activities. The major difference is in establishing facilities and served buildings – for the to-accessibility, facilities are destinations, and not the origins (Figure 5).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/sample/area_opt.png" style="width: 70%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 5. The Destinations/Origins part of the service area, to-accessibility dialog dialog</p><p>In addition, the trip’s start time is substituted by the arrival time (Figure 6).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/sample/area_opt2.png" style="width: 70%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 6. The Start/Arrive time part of the region to-accessibility dialog is different from the corresponding part in the region from-accessibility dialog</p><p>The Log and Result files are the same as for the from-accessibility, with minor differences that reflect the <em>from-accessibility</em> to the <em>to-accessibility</em> changes.
+<span style="display: block; margin-top: 5px;"></span>
+The example of the <em>Car accessibility → Service Area → From locations – fixed-time arrival</em> computations see <a class="reference internal" href="sample.html#sample-car-from-accessibility-fixed-time"><span class="std std-ref">here</span></a> .</p>
+</section>
+<section id="car-accessibility-of-all-locations-in-the-region">
+<h2><span class="section-number">7.4. </span>Car Accessibility of all locations in the Region<a class="headerlink" href="#car-accessibility-of-all-locations-in-the-region" title="Link to this heading"></a></h2>
+<p>The parameters of accessibility computation for all locations in the Region are the same as they are for computing single-location accessibility, plus the list of attributes for aggregation. The default aggregation parameter is, just as it was for transit accessibility, the number of accessible buildings. In addition, each numeric parameter of the buildings can be selected for aggregation via the dialog option of <span class="guilabel">Aggregate</span> (Figure 7). The result of the computations is the sum of this attribute over buildings achievable in one, two, etc., time bins. The results for each of the aggregated fields are stored as a separate file in the <span class="guilabel">Output folder</span>.</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/sample/map_opt1.png" style="width: 60%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 7. The choice of attributes for aggregation</p><p>The number of bins to split the time interval [0, Maximum travel time] must be chosen via the <span class="guilabel">Number of bins</span> box. The aggregate accessibility measures will be stored for every bin, just as the cumulative histogram frequencies. The bin width is equal to the <span class="guilabel">Maximum travel time</span>/<span class="guilabel">Number of bins</span> and the number of bins must not exceed the <span class="guilabel">Maximum travel time</span>. Typically, the <span class="guilabel">Number of bins</span> is selected in a way to have the bin’s width of 5 or 10 minutes, while a 2- or even 1-minute bin can be useful for further analysis of accessibility. If the last bin does not match the <span class="guilabel">Maximum travel time</span>, the results for the <span class="guilabel">Maximum travel time</span> are also stored. The basic file of results presents the total number of buildings that can be reached from each of the region’s buildings after every time bin:</p>
+<style>
+    .custom-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .custom-table th, .custom-table td {
+        border: 1px solid #d3d3d3;
+        padding: 8px;
+    }
+
+    .custom-table th {
+        background-color: white;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .custom-table td {
+        text-align: left;
+    }
+
+    .custom-table tr:nth-child(even) {
+        background-color: #f0f8ff;
+    }
+
+    .custom-table tr:nth-child(odd) {
+        background-color: white;
+    }
+</style>
+
+<table class="custom-table" style="margin-bottom: 10px">
+    <tr>
+        <th style="width: 150px;">Attribute</th>
+        <th style="width: 400px;">Meaning</th>
+    </tr>
+    <tr>
+        <td>Origin_ID</td>
+        <td>ID of the building of origin or destination</td>
+    </tr>
+    <tr>
+        <td>One bin time</td>
+        <td>Total number of buildings that are accessible in 1 time-bin</td>
+    </tr>
+    <tr>
+        <td>Two bins time</td>
+        <td>Total number of buildings that are accessible in 2 time-bins</td>
+    </tr>
+    <tr>
+        <td>… N bins time</td>
+        <td>Total number of buildings that are accessible in N time-bins</td>
+    </tr>
+    <tr>
+        <td>Maximum travel time</td>
+        <td>Total number of buildings that are accessible in maximum travel time (if the latter is not an integer number of bins)</td>
+    </tr>
+</table><p>The thematic map presents the number of buildings reachable in <span class="guilabel">Maximum travel time</span>. Additional result files contain accessibility measures for each of the attributes chosen for aggregation. Each of these results is also presented by the thematic map.
+<span style="display: block; margin-top: 5px;"></span>
+The example of the <em>Car accessibility → Region → From every location – fixed-time departure</em> computations see <a class="reference internal" href="sample.html#sample-car-to-accessibility-fixed-time"><span class="std std-ref">here</span></a>.</p>
+</section>
+<section id="car-accessibility-to-every-location-in-the-region">
+<h2><span class="section-number">7.5. </span>Car accessibility to every location in the region<a class="headerlink" href="#car-accessibility-to-every-location-in-the-region" title="Link to this heading"></a></h2>
+<p>Run the <em>Car accessibility → Region → To every location – fixed-time arrival</em> option. As you can see, most of the parameters of the region’s to-accessibility computations are the same as for the from-accessibility. This regards walking distances, walking speed, and the gap between sequential activities. The major difference is in establishing origins and destinations – for to-accessibility, the buildings of the region are destinations (Figure 8).</p>
+<div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <img src="_images/sample/area_opt.png" style="width: 70%; border: 3px solid white;margin-bottom: 10px" />
+</div>
+<p>Figure 8. The Origins/Destinations part of the region to-accessibility dialog</p><p>The Log and Result files are the same as for the from-accessibility, with minor differences that reflect the from-accessibility to the to-accessibility changes.
+<span style="display: block; margin-top: 5px;"></span>
+The example of the <em>Car accessibility → Region → To every location – fixed-time departure</em> computations see <a class="reference internal" href="sample.html#sample-car-to-accessibility-fixed-time"><span class="std std-ref">here</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="raptor_map.html" class="btn btn-neutral float-left" title="6. Transit Accessibility of all locations in the Region" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="relative_ready-made.html" class="btn btn-neutral float-right" title="8. Compare accessibility maps" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Geosimlab | TLV university.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
