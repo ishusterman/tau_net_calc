@@ -13,8 +13,8 @@ license=MIT
 
 about=Accessibility calculations in public transportation network and car roads
 
-tracker=https://github.com/ishusterman/dev
-repository=https://github.com/ishusterman/dev
+tracker=https://github.com/ishusterman/tau_net_calc
+repository=https://github.com/ishusterman/tau_net_calc
 # End of mandatory metadata
 
 # Recommended items:
@@ -26,7 +26,7 @@ hasProcessingProvider=no
 # Tags are comma separated with spaces allowed
 tags=python
 
-homepage=https://github.com/ishusterman/dev
+homepage=https://github.com/ishusterman/tau_net_calc
 category=Plugins
 icon=icon.png
 # experimental flag
