@@ -1,11 +1,7 @@
 # What is it all about?
 
-The goal of the ACCESSIBILITY plugin is to assess transport
-accessibility at the resolution of a single building. The assessment is
-based on a precise estimation of the travel time between the building of
-the trip Origin (O), and the Destination (D) building.
-The OD travel time depends on the transportation mode that can be
-Public Transport (PT) or Private Car.
+What is it all about?
+The goal of the Accessibility Calculator plugin is to assess transport accessibility at the resolution of a single building. The assessment is based on a precise estimation of the travel time between the Origin (O), and the Destination (D) buildings of a trip. The OD travel time depends on the transportation mode which can be a Public Transport (PT) or a Private Car. The results of accessibility computations are stored as a CSV table that presents the details of trips and presented visually as an accessibility map.
 
 # ACCESSIBILITY plugin accounts for every component of a trip
 
