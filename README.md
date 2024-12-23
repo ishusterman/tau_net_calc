@@ -17,11 +17,11 @@ The PT or car trip consists of several components: A PT user walks from the O-bu
 
 To use the Accessibility Calculator, you need three sets of data, all covering the region of your interest:
 
-The layer of roads.
+- The layer of roads.
 
-The layer of buildings that are represented by polygons or points.
+- The layer of buildings that are represented by polygons or points.
 
-The GTFS dataset of the PT network and schedule.
+- The GTFS dataset of the PT network and schedule.
 
 Three datasets are checked and translated into three fast-access databases. The first one contains a topologically cleaned road network, the second is constructed for computing transit accessibility and the third is constructed for computing car accessibility. It is often convenient to use datasets that cover an area that is larger than the region of the current interest.
 
