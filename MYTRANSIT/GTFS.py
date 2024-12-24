@@ -1049,15 +1049,16 @@ class GTFS ():
                     max_trip_id += 1
 
         # Batch combine expanded rows into a DataFrame
-        expanded_df = pd.concat(expanded_rows, ignore_index=True)
-        expanded_df.drop(columns=["departure_time_sec"], inplace=True)
+        if expanded_rows:
+            expanded_df = pd.concat(expanded_rows, ignore_index=True)
+            expanded_df.drop(columns=["departure_time_sec"], inplace=True)
 
-        # Combine and save data
-        stop_times_df = pd.concat([stop_times_df, expanded_df], ignore_index=True)
-        df_new_trips = pd.DataFrame(new_trips)
-        #df_new_trips.to_csv(r"C:\\Users\\geosimlab\\Documents\\Igor\\gtfs_others\\petersburg\\new_trips.csv", index=False)
+            # Combine and save data
+            stop_times_df = pd.concat([stop_times_df, expanded_df], ignore_index=True)
+            df_new_trips = pd.DataFrame(new_trips)
+            #df_new_trips.to_csv(r"C:\\Users\\geosimlab\\Documents\\Igor\\gtfs_others\\petersburg\\new_trips.csv", index=False)
 
-        trips_df = pd.concat([trips_df, df_new_trips], ignore_index=True)
+            trips_df = pd.concat([trips_df, df_new_trips], ignore_index=True)
 
         return stop_times_df, trips_df
 
