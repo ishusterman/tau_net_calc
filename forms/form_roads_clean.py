@@ -1,10 +1,8 @@
 import os
-import sys
 import webbrowser
 import configparser
 from time import sleep
 from datetime import datetime
-
 
 from qgis.PyQt import QtCore
 
@@ -29,12 +27,16 @@ from PyQt5 import uic
 
 
 from common import get_qgis_info
-from visualization_clean import cls_clean_visualization
+from layer_clean import cls_clean_roads
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'visualization_clean.ui'))
+#FORM_CLASS, _ = uic.loadUiType(os.path.join(
+#    os.path.dirname(__file__), 'roads_clean.ui'))
 
-class form_visualization_clean(QDialog, FORM_CLASS):
+FORM_CLASS, _ = uic.loadUiType(
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'roads_clean.ui')
+)
+
+class form_roads_clean(QDialog, FORM_CLASS):
     def __init__(self, title):
         super().__init__()
         self.setupUi(self)
@@ -63,8 +65,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
-        self.showAllLayersInCombo_Line(self.cmbLayers)
-        self.cmbLayers.installEventFilter(self)
+        self.showAllLayersInCombo_Line(self.cmbLayersRoad)
+        self.cmbLayersRoad.installEventFilter(self)
 
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
@@ -89,7 +91,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         layers = QgsProject.instance().mapLayers().values()
         line_layers = [layer for layer in layers
                        if isinstance(layer, QgsVectorLayer) and
-                       layer.geometryType() in {QgsWkbTypes.PolygonGeometry} and
+                       layer.geometryType() in {QgsWkbTypes.LineGeometry} and
                        not layer.name().startswith("Temp") and
                        'memory' not in layer.dataProvider().dataSourceUri()]
         cmb.clear()
@@ -118,11 +120,11 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.break_on = True
         self.close_button.setEnabled(True)
         if self.task:
-            self.task.cancel() 
-            self.progressBar.setValue(0) 
+            self.task.cancel()  
+            self.progressBar.setValue(0)  
             if not (self.already_show_info):
                 self.textLog.append(
-                    f'<a><b><font color="red">Process is break</font> </b></a>')
+                    f'<a><b><font color="red">Process of topological cleaning is break</font> </b></a>')
                 self.already_show_info = True
             self.setMessage("")
 
@@ -142,7 +144,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.saveParameters()
         self.readParameters()
 
-        self.setMessage("Constructing visialization database  ...")
+        self.setMessage("Cleaning the layer of roads ...")
         self.folder_name = f'{self.txtPathToProtocols.text()}'
         self.close_button.setEnabled(False)
         self.textLog.clear()
@@ -159,14 +161,14 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
 
         self.layer_road = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['layer_clean-visualization'])[0]
+            self.config['Settings']['layerroad_clean'])[0]
         self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[
             0]
         self.textLog.append(
-            f"<a>Initial layer of buildings: {self.layer_road_path}</a>")
-        self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization']
+            f"<a>Initial road network: {self.layer_road_path}</a>")
+        self.folder_name = self.config['Settings']['PathToProtocols_clean']
         self.textLog.append(
-            f"<a>Folder to store database: {self.folder_name}</a>")
+            f"<a>Folder for the cleaned road network: {self.folder_name}</a>")
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
@@ -175,7 +177,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         self.break_on = False
 
-        self.task = cls_clean_visualization(
+        self.task = cls_clean_roads(
             self, begin_computation_time, self.layer_road, self.folder_name)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
@@ -197,11 +199,11 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.config.read(file_path)
 
-        if 'layer_clean-visualization' not in self.config['Settings']:
-            self.config['Settings']['layer_clean-visualization'] = ''
+        if 'layerroad_clean' not in self.config['Settings']:
+            self.config['Settings']['layerroad_clean'] = ''
 
-        if 'PathToProtocols_clean-visualization' not in self.config['Settings']:
-            self.config['Settings']['PathToProtocols_clean-visualization'] = 'C:/'
+        if 'PathToProtocols_clean' not in self.config['Settings']:
+            self.config['Settings']['PathToProtocols_clean'] = 'C:/'
 
     # update config file
 
@@ -209,31 +211,35 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         project_directory = os.path.dirname(QgsProject.instance().fileName())
         f = os.path.join(project_directory, 'parameters_accessibility.txt')
-        self.config['Settings']['Layer_clean-visualization'] = self.cmbLayers.currentText()
-        self.config['Settings']['PathToProtocols_clean-visualization'] = self.txtPathToProtocols.text()
+        self.config['Settings']['LayerRoad_clean'] = self.cmbLayersRoad.currentText()
+        self.config['Settings']['PathToProtocols_clean'] = self.txtPathToProtocols.text()
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
     def ParametrsShow(self):
         self.readParameters()
-        self.cmbLayers.setCurrentText(
-            self.config['Settings']['Layer_clean-visualization'])
+        self.cmbLayersRoad.setCurrentText(
+            self.config['Settings']['Layerroad_clean'])
         self.txtPathToProtocols.setText(
-            self.config['Settings']['PathToProtocols_clean-visualization'])
+            self.config['Settings']['PathToProtocols_clean'])
 
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
     def check_type_layer_road(self):
 
-        layer = self.cmbLayers.currentText()
+        layer = self.cmbLayersRoad.currentText()
+        if layer == "":
+            self.setMessage(f"The layer is empty")
+            return 0
+
         layer = QgsProject.instance().mapLayersByName(layer)[0]
 
         try:
             features = layer.getFeatures()
         except:
             self.setMessage(
-                f"The layer '{self.cmbLayers.currentText()}' is empty")
+                f"The layer '{self.cmbLayersRoad.currentText()}' is empty")
             return 0
 
         for feature in features:
@@ -241,9 +247,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             feature_geometry_type = feature_geometry.type()
             break
         
-        if not (feature_geometry_type in {QgsWkbTypes.PolygonGeometry}):
+        if not (feature_geometry_type in {QgsWkbTypes.LineGeometry}):
             self.setMessage(
-                f"Features in the layer '{self.cmbLayers.currentText()}' must be polygones")
+                f"Features in the layer '{self.cmbLayersRoad.currentText()}' must be polylines")
             return 0
 
         return 1
@@ -258,6 +264,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         """
         # check for the presence of .shp files in the folder
         if os.path.isdir(self.txtPathToProtocols.text()):
+        
             for file in os.listdir(self.txtPathToProtocols.text()):
                 if file.lower().endswith('.shp'):
                     self.setMessage(f"The folder '{self.txtPathToProtocols.text()}' is not empty")

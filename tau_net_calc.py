@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import py_compile
 import shutil
 import configparser
@@ -19,7 +20,7 @@ from .accessibility_tools import AccessibilityTools
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-module_path = os.path.join(current_dir, 'MYTRANSIT')
+module_path = os.path.join(current_dir, 'cls')
 config_path = os.path.join(current_dir, 'config')
 user_home = os.path.expanduser("~")
 
@@ -111,9 +112,9 @@ class TAUNetCalc():
         cache_dir = os.path.expanduser('~/.qgis2/cache/tau_net_calc')
         if os.path.exists(cache_dir):
             shutil.rmtree(cache_dir)
-
+        
         icon_accessibility_path = os.path.join(
-            os.path.dirname(__file__), 'app.png')
+            os.path.dirname(__file__), 'img', 'app.png')
 
         version = self.get_version_from_metadata()
         name_plugin = f'Accessibility calculator v.{version}'

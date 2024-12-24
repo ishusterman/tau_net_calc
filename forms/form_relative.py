@@ -27,8 +27,12 @@ from PyQt5 import uic
 from visualization import visualization
 from common import getDateTime, get_qgis_info, is_valid_folder_name
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'relative.ui'))
+#FORM_CLASS, _ = uic.loadUiType(os.path.join(
+#    os.path.dirname(__file__), 'relative.ui'))
+
+FORM_CLASS, _ = uic.loadUiType(
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'relative.ui')
+)
 
 class form_relative(QDialog, FORM_CLASS):
     def __init__(self, title, mode):

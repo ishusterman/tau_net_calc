@@ -30,8 +30,12 @@ from PyQt5 import uic
 from car import car_accessibility
 from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'car.ui'))
+#FORM_CLASS, _ = uic.loadUiType(os.path.join(
+#    os.path.dirname(__file__), 'car.ui'))
+
+FORM_CLASS, _ = uic.loadUiType(
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'car.ui')
+)
 
 class CarAccessibility(QDialog, FORM_CLASS):
     def __init__(self,

@@ -31,8 +31,16 @@ from PyQt5 import uic
 from query_file import runRaptorWithProtocol
 from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'raptor.ui'))
+#FORM_CLASS, _ = uic.loadUiType(os.path.join(
+#    os.path.dirname(__file__), 'raptor.ui'))
+
+#FORM_CLASS, _ = uic.loadUiType(
+#    os.path.join(os.path.dirname(__file__), 'UI', 'raptor.ui')
+#    )
+
+FORM_CLASS, _ = uic.loadUiType(
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui')
+)
 
 class RaptorDetailed(QDialog, FORM_CLASS):
     def __init__(self, parent, mode, protocol_type, title, timetable_mode):

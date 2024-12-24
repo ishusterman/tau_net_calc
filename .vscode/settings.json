@@ -1,6 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "./mytransit"
+        "./cls"
     ],
     "esbonio.server.enabled": false,
     "iis.configDir": ""

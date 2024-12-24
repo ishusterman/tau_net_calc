@@ -28,7 +28,7 @@ tags=Accessibility calculator,public transportation,car,raptor,dejkstra,voronoi,
 
 homepage=https://github.com/ishusterman/tau_net_calc
 category=Plugins
-icon=icon.png
+icon=img/icon.png
 # experimental flag
 experimental=False
 

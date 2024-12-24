@@ -30,8 +30,12 @@ from PyQt5 import uic
 from common import get_qgis_info
 from visualization_clean_h import cls_clean_visualization_h
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'visualization_clean.ui'))
+#FORM_CLASS, _ = uic.loadUiType(os.path.join(
+#    os.path.dirname(__file__), 'visualization_clean.ui'))
+
+FORM_CLASS, _ = uic.loadUiType(
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'visualization_clean.ui')
+)    
 
 class form_visualization_clean_h(QDialog, FORM_CLASS):
     def __init__(self, title):

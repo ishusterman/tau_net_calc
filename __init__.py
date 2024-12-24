@@ -25,7 +25,7 @@
 
 import os
 import site
-site.addsitedir(os.path.abspath(os.path.dirname(__file__) + '/MYTRANSIT'))
+site.addsitedir(os.path.abspath(os.path.dirname(__file__) + '/cls'))
 # noinspection PyPep8Naming
 
 

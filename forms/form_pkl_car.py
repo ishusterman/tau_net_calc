@@ -30,8 +30,12 @@ from common import get_qgis_info
 
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'pkl_car.ui'))
+#FORM_CLASS, _ = uic.loadUiType(os.path.join(
+#    os.path.dirname(__file__), 'pkl_car.ui'))
+
+FORM_CLASS, _ = uic.loadUiType(
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl_car.ui')
+)
 
 
 class form_pkl_car(QDialog, FORM_CLASS):
