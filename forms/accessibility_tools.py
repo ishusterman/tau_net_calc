@@ -9,15 +9,15 @@ import os
 import webbrowser
 from qgis.core import QgsProject
 
-from .forms.form_raptor_detailed import RaptorDetailed
-from .forms.form_raptor_summary import RaptorSummary
-from .forms.form_car import CarAccessibility
-from .forms.form_pkl import form_pkl
-from .forms.form_pkl_car import form_pkl_car
-from .forms.form_relative import form_relative
-from .forms.form_roads_clean import form_roads_clean
-from .forms.form_visualization_clean import form_visualization_clean
-from .forms.form_visualization_clean_h import form_visualization_clean_h
+from .form_raptor_detailed import RaptorDetailed
+from .form_raptor_summary import RaptorSummary
+from .form_car import CarAccessibility
+from .form_pkl import form_pkl
+from .form_pkl_car import form_pkl_car
+from .form_relative import form_relative
+from .form_roads_clean import form_roads_clean
+from .form_visualization_clean import form_visualization_clean
+from .form_visualization_clean_h import form_visualization_clean_h
 
 
 class AccessibilityTools(QWidget):
@@ -99,10 +99,9 @@ class AccessibilityTools(QWidget):
         group7.setExpanded(True)
 
         self.item1 = QTreeWidgetItem(self.tree_widget, ['Help and tutorial'])
-
-        icon1 = os.path.join(os.path.dirname(__file__), 'img', 'folder.png')  # icon for groups
-
-        icon2 = os.path.join(os.path.dirname(__file__), 'img', 'ring.png')  # icon for elements
+      
+        icon1 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'folder.png') # icon for groups
+        icon2 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'ring.png') # icon for elements 
 
         for group_index in range(self.tree_widget.topLevelItemCount()):
             group_item = self.tree_widget.topLevelItem(group_index)
@@ -127,7 +126,7 @@ class AccessibilityTools(QWidget):
                     # icon for elements (ring)
                     child_item.setIcon(0, QIcon(icon2))
         
-        icon3 = os.path.join(os.path.dirname(__file__), 'img', 'help.png')
+        icon3 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'help.png')
         self.item1.setIcon(0, QIcon(icon3))
        
         layout.addWidget(self.tree_widget)

@@ -26,15 +26,12 @@
 import os
 import site
 site.addsitedir(os.path.abspath(os.path.dirname(__file__) + '/cls'))
-# noinspection PyPep8Naming
 
-
-def classFactory(iface):  # pylint: disable=invalid-name
+def classFactory(iface):
     """Load TAUNetCalc class from file TAUNetCalc.
 
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    #
     from .tau_net_calc import TAUNetCalc
     return TAUNetCalc(iface)

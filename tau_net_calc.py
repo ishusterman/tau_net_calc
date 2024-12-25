@@ -16,7 +16,7 @@ from qgis.PyQt.QtGui import QIcon
 from PyQt5.QtWidgets import QDockWidget,  QAction
 from qgis.core import QgsProject
 
-from .accessibility_tools import AccessibilityTools
+from .forms.accessibility_tools import AccessibilityTools
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,17 +32,7 @@ class TAUNetCalc():
         self.dock_widget = None
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
-
-        locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'TAUNetCalc_{}.qm'.format(locale))
-
-        if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-            QCoreApplication.installTranslator(self.translator)
+       
 
         # Declare instance attributes
         self.actions = []
