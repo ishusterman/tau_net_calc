@@ -159,25 +159,26 @@ class TAUNetCalc():
     #  )
 
     def runAccessibility_tools(self):
+        if self.dock_widget and self.dock_widget.isVisible():
+            self.dock_widget.hide()
+            self.widget_visible = False
+        else:
+            if not self.dock_widget:
+                project_directory = os.path.dirname(
+                    QgsProject.instance().fileName())
+                parameters_path = os.path.join(
+                    project_directory, 'parameters_accessibility.txt')
+                source_path = os.path.join(
+                    config_path, 'parameters_accessibility_shablon.txt')
 
-        if self.first_start_accessibility == True:
+                if not os.path.exists(parameters_path):
+                    shutil.copy(source_path, parameters_path)
 
-            project_directory = os.path.dirname(
-                QgsProject.instance().fileName())
-            parameters_path = os.path.join(
-                project_directory, 'parameters_accessibility.txt')
-            source_path = os.path.join(
-                config_path, 'parameters_accessibility_shablon.txt')
+                my_widget = AccessibilityTools()
+                self.dock_widget = QDockWidget("Accessiblity calculator")
+                self.dock_widget.setWidget(my_widget)
+                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
 
-            if not os.path.exists(parameters_path):
-                shutil.copy(source_path, parameters_path)
-   
-        if not self.widget_visible:
-            my_widget = AccessibilityTools()
-            self.dock_widget = QDockWidget("Accessiblity calculator")
-            self.dock_widget.setWidget(my_widget)
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
             self.dock_widget.show()
             self.widget_visible = True
-        else:
-            self.dock_widget.show()
+        
