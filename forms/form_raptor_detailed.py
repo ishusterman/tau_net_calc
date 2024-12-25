@@ -422,10 +422,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        file = os.path.join(module_path, 'raptor_area.html')
-        webbrowser.open(f'file:///{file}')
+        #current_dir = os.path.dirname(os.path.abspath(__file__))
+        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
+        #file = os.path.join(module_path, 'raptor_area.html')
+        #webbrowser.open(f'file:///{file}')
+        url = "https://ishusterman.github.io/tutorial/raptor_area.html"
+        webbrowser.open(url)
 
     def showAllLayersInCombo_Point_and_Polygon(self, cmb):
         layers = QgsProject.instance().mapLayers().values()

@@ -138,10 +138,12 @@ class AccessibilityTools(QWidget):
     def on_tree_item_clicked(self, item, column):
 
         if item == self.item1:
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            module_path = os.path.join(current_dir, 'help', 'build', 'html')
-            file = os.path.join(module_path, 'introduction.html')
-            webbrowser.open(f'file:///{file}')
+            #current_dir = os.path.dirname(os.path.abspath(__file__))
+            #module_path = os.path.join(current_dir, 'help', 'build', 'html')
+            #file = os.path.join(module_path, 'introduction.html')
+            #webbrowser.open(f'file:///{file}')
+            url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+            webbrowser.open(url)
 
         if item == self.item2:
             roads_clean = form_roads_clean(

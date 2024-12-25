@@ -187,10 +187,12 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        file = os.path.join(module_path, 'building_pkl.html')
-        webbrowser.open(f'file:///{file}')
+        #current_dir = os.path.dirname(os.path.abspath(__file__))
+        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
+        #file = os.path.join(module_path, 'building_pkl.html')
+        #webbrowser.open(f'file:///{file}')
+        url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+        webbrowser.open(url)
 
     def readParameters(self):
         project_directory = os.path.dirname(QgsProject.instance().fileName())

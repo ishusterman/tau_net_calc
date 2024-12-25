@@ -408,14 +408,14 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        file_path = os.path.join(module_path, 'building_pkl.html')
-
-        anchor = urllib.parse.quote('building-database-for-car-routing')
-        full_url = f'file:///{file_path}#{anchor}'
-
-        webbrowser.open(full_url)
+        #current_dir = os.path.dirname(os.path.abspath(__file__))
+        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
+        #file_path = os.path.join(module_path, 'building_pkl.html')
+        #anchor = urllib.parse.quote('building-database-for-car-routing')
+        #full_url = f'file:///{file_path}#{anchor}'
+        #webbrowser.open(full_url)
+        url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+        webbrowser.open(url)
 
     def showAllLayersInCombo_Point_and_Polygon(self, cmb):
         layers = QgsProject.instance().mapLayers().values()
@@ -467,7 +467,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
             obj.setText(obj.text())
 
     def read_factor_speed_by_hour(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         config_path = os.path.join(current_dir, 'config')
 
         self.file_path_factor_speed_by_hour = os.path.join(
@@ -483,9 +483,9 @@ class form_pkl_car(QDialog, FORM_CLASS):
                 self.factor_speed_by_hour[hour_item] = factor_item
 
     def read_road_speed_default(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         config_path = os.path.join(current_dir, 'config')
-
+        
         self.file_path_road_speed_default = os.path.join(
             config_path, "car_speed_by_link_type.csv")
 

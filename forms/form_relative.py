@@ -456,10 +456,12 @@ class form_relative(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        file = os.path.join(module_path, 'relative_ready-made.html')
-        webbrowser.open(f'file:///{file}')
+        #current_dir = os.path.dirname(os.path.abspath(__file__))
+        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
+        #file = os.path.join(module_path, 'relative_ready-made.html')
+        #webbrowser.open(f'file:///{file}')
+        url = "https://ishusterman.github.io/tutorial/relative_ready-made.html"
+        webbrowser.open(url)
 
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(
