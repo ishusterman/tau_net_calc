@@ -35,7 +35,7 @@ from common import get_qgis_info, zip_directory, getDateTime
 #    os.path.dirname(__file__), 'pkl.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'pkl.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl.ui')
 )
 
 class form_pkl(QDialog, FORM_CLASS):

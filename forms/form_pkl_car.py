@@ -34,7 +34,7 @@ from common import get_qgis_info
 #    os.path.dirname(__file__), 'pkl_car.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'pkl_car.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl_car.ui')
 )
 
 

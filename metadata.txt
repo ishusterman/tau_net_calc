@@ -24,7 +24,7 @@ hasProcessingProvider=no
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=Accessibility calculator,public transportation,car,raptor,dejkstra,voronoi,hexagone
+tags=Accessibility calculator,public transportation,car,raptor,dijkstra,voronoi,hexagone
 
 homepage=https://github.com/ishusterman/tau_net_calc
 category=Plugins

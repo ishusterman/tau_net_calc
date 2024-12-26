@@ -35,7 +35,7 @@ from visualization_clean import cls_clean_visualization
 #    os.path.dirname(__file__), 'visualization_clean.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'visualization_clean.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'visualization_clean.ui')
 )
 
 class form_visualization_clean(QDialog, FORM_CLASS):

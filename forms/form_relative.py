@@ -31,7 +31,7 @@ from common import getDateTime, get_qgis_info, is_valid_folder_name
 #    os.path.dirname(__file__), 'relative.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'relative.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'relative.ui')
 )
 
 class form_relative(QDialog, FORM_CLASS):

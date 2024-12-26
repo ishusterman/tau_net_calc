@@ -22,7 +22,6 @@ def remove_pycache_dirs(start_dir):
                 shutil.rmtree(dir_path)
                 print(f"Removed: {dir_path}")
 
-
 def get_unique_filename(base_path):
     """Returns a unique file name by adding a suffix if the file already exists."""
     if not os.path.exists(f"{base_path}.zip"):
@@ -39,6 +38,9 @@ def create_plugin_archive(plugin_dir):
     # Get version from metadata.txt
     version = get_version_from_metadata(plugin_dir)
 
+    # Get the plugin's name (folder name)
+    plugin_name = os.path.basename(plugin_dir)
+
     # Base name for the archive
     base_name = f"tau_net_calc_v{version}"
     output_path = os.path.join(os.path.dirname(plugin_dir), base_name)
@@ -48,12 +50,16 @@ def create_plugin_archive(plugin_dir):
 
     # Create a temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Copy plugin contents, excluding .git
+        # Create a folder with the plugin's name in the temporary directory
+        plugin_folder_path = os.path.join(temp_dir, plugin_name)
+        os.makedirs(plugin_folder_path)
+
+        # Copy plugin contents, excluding .git and other unnecessary files
         for item in os.listdir(plugin_dir):
             if item in ['.git', '__pycache__', '.gitignore', '.vscode']:
                 continue
             src_path = os.path.join(plugin_dir, item)
-            dst_path = os.path.join(temp_dir, item)
+            dst_path = os.path.join(plugin_folder_path, item)
             if os.path.isdir(src_path):
                 shutil.copytree(src_path, dst_path)
             else:
@@ -64,7 +70,7 @@ def create_plugin_archive(plugin_dir):
             base_name=unique_output_path.rstrip('.zip'),  # Remove the extension for make_archive
             format='zip',
             root_dir=temp_dir,
-            base_dir='.'
+            base_dir=plugin_name  # This adds the plugin folder to the archive
         )
 
     print(f"Archive created: {unique_output_path}")
