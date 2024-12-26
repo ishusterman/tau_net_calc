@@ -6,8 +6,8 @@
 name=Accessibility calculator
 qgisMinimumVersion=3.1.1
 description=Accessibility Calculations
-version=5.29
-author=Igor Shusterman (based on dev of Evgeny Kleiman)
+version=5.30
+author=Itzhak Benenson, Aleksey Ogulenko, Igor Shusterman
 email=ishusterman2011@gmail.com
 license=MIT
 

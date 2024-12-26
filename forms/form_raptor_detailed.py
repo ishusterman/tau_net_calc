@@ -39,7 +39,7 @@ from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_
 #    )
 
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'raptor.ui')
 )
 
 class RaptorDetailed(QDialog, FORM_CLASS):

@@ -33,7 +33,7 @@ from layer_clean import cls_clean_roads
 #    os.path.dirname(__file__), 'roads_clean.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'roads_clean.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'roads_clean.ui')
 )
 
 class form_roads_clean(QDialog, FORM_CLASS):

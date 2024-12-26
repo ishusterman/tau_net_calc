@@ -34,7 +34,7 @@ from common import get_qgis_info
 #    os.path.dirname(__file__), 'pkl_car.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl_car.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'pkl_car.ui')
 )
 
 
@@ -382,14 +382,14 @@ class form_pkl_car(QDialog, FORM_CLASS):
             f"<a> Layer of roads: {self.config['Settings']['Roads_car_pkl']}</a>")
 
         self.textLog.append(
-            f'<a>  link type: {self.config['Settings']['LayerRoad_type_road_car_pkl']}</a>')
+            f"<a>  link type: {self.config['Settings']['LayerRoad_type_road_car_pkl']}</a>")
         self.textLog.append(
-            f'<a>  speed: {self.config['Settings']['FieldSpeed_car_pkl']}</a>')
+            f"<a>  speed: {self.config['Settings']['FieldSpeed_car_pkl']}</a>")
         self.textLog.append(
-            f'<a>  direction: {self.cmbFieldsDirection.currentText()}</a>')
+            f"<a>  direction: {self.cmbFieldsDirection.currentText()}</a>")
 
         self.textLog.append(
-            f'<a> Layer of buildings: {self.layer_origins_path}</a>')
+            f"<a> Layer of buildings: {self.layer_origins_path}</a>")
 
         self.textLog.append(
             f"<a> Default speed: {self.config['Settings']['speed_car_pkl']} km/h</a>")
