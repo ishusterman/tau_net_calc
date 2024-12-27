@@ -1068,6 +1068,7 @@ def make_protocol_detailed(raptor_mode,
     '''
             pareto_set = info[3]
             duration = info[2]
+            transfers = info[4]
 
             if pareto_set is None or dest is None:
 

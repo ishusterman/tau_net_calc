@@ -92,7 +92,7 @@ class PlotGenerator:
                         if csv_file_path:
                             # Read the CSV file using pandas
                             df = pd.read_csv(csv_file_path)
-                         
+                                                     
                             # Apply the transfer conditions or use all rows if no list is provided
                             if min_transfer == 0 and max_transfer == 2:
                                 # Use all rows (no filtering by transfer count)
@@ -100,18 +100,18 @@ class PlotGenerator:
                                 y_values.append(row_count)
                                 
                             else:
+                                if 'Transfers' not in df.columns:
+                                    df['Transfers'] = df.apply(self.count_transfers, axis=1)
+                                    df.to_csv(csv_file_path, index=False)
                                 # Filter rows by the number of transfers
-                                df['Transfers'] = df.apply(self.count_transfers, axis=1)
                                 filtered_df = df[(df['Transfers'] >= min_transfer) & (df['Transfers'] <= max_transfer)]
                                 row_count = filtered_df.shape[0]
                                 y_values.append(row_count)
-                                #self.lines.append((x_values, y_values, color, f'{label}_{transfer_count}'))
-
+                                
                         else:
                             print(f"CSV file corresponding to {log_file} not found.")
-
-        if not(min_transfer == 0 and max_transfer == 2):
-            label = f'{label} (transfers {min_transfer}-{max_transfer})'
+       
+        label = f'{label} (transfers {min_transfer}-{max_transfer})'
 
         if x_values and y_values:
             self.lines.append((x_values, y_values, color, label))

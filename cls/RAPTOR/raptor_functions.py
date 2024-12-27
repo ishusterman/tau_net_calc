@@ -151,7 +151,8 @@ def post_processing(DESTINATION,
                 if (duration > Maximal_travel_time) or end_time > D_Time - departure_interval:
                     append = False
 
-        if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed + 1 >= MIN_TRANSFER):
+        #if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed + 1 >= MIN_TRANSFER):
+        if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
             if append:
                 pareto_set.append((transfer_needed, duration, journey))
 
@@ -245,9 +246,9 @@ def post_processingAll(
 
         if pareto_set != None and len(pareto_set) > 0:
             # Just one journey with minimal time will be in pareto set
-            total_time_to_dest, pareto_set = get_optimal_journey(pareto_set)
+            total_time_to_dest, transfers, pareto_set = get_optimal_journey(pareto_set)
 
-        newDict[p_i] = [SOURCE, D_TIME, total_time_to_dest, pareto_set]
+        newDict[p_i] = [SOURCE, D_TIME, total_time_to_dest, pareto_set, transfers]
 
     return newDict
 
@@ -270,7 +271,7 @@ def get_optimal_journey(pareto_set):
                 min_count_leg = count_leg
                 journey_opt = journey
 
-    return min_duration, journey_opt
+    return min_duration, min_count_leg, journey_opt
 
 
 def initialize_rev_raptor(routes_by_stop_dict,
