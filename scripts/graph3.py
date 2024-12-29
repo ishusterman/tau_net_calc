@@ -4,7 +4,7 @@ if __name__ == "__main__":
     plot_generator = PlotGenerator(
         xlabel="Start time",  # X-axis label
         ylabel="Number of buildings",  # Y-axis label
-        title="Accessibility Gesher (5 sec waiting at the initial stops)"  # Plot title
+        title="Accessibility Gesher (5 min waiting at the initial stops)"  # Plot title
     )
 
     # Add lines from the specified directory with specific transfer counts

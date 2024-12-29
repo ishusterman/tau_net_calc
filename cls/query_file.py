@@ -36,25 +36,16 @@ def get_route_desc__route_id(path):
     return route_desc__route_id
 
 def myload_all_dict(self,
-                    parent,
                     PathToNetwork,
                     mode,
                     exclude_routes,
                     numbers_routes,
                     route_dict,
-                    layer_origin,
-                    layer_origin_field,
                     RunOnAir,
                     ):
 
     path = PathToNetwork
-
-    need_reload = False
-    if parent.path_to_pkl != PathToNetwork:
-        need_reload = True
-        parent.path_to_pkl = PathToNetwork
-        
-    need_reload = True
+    
     self.setMessage("Loading walking paths ...")
     QApplication.processEvents()
 
@@ -63,17 +54,9 @@ def myload_all_dict(self,
     else:
         filename_transfer = 'transfers_dict_projection.pkl'
     filename_transfer = os.path.join(path, filename_transfer)
-
-    if need_reload:
-        with open(filename_transfer, 'rb') as file:
+   
+    with open(filename_transfer, 'rb') as file:
             footpath_dict = pickle.load(file)
-
-        parent.dict_footpath = footpath_dict
-
-    else:
-        footpath_dict = parent.dict_footpath
-
-    filtered_footpath_dict_b_b = {}
     
     stop_ids = pd.read_pickle(path + '/stop_ids.pkl')
     stop_ids_set = set(stop_ids)
@@ -151,7 +134,6 @@ def myload_all_dict(self,
     return (stops_dict,
             stoptimes_dict,
             footpath_dict,
-            filtered_footpath_dict_b_b,
             routes_by_stop_dict,
             idx_by_route_stop_dict,
             stop_ids_set)
@@ -474,18 +456,14 @@ def runRaptorWithProtocol(self,
         stops_dict,
         stoptimes_dict,
         footpath_dict,
-        footpath_dict_b_b,
         routes_by_stop_dict,
         idx_by_route_stop_dict, set_stops
     ) = myload_all_dict(self,
-                        parent,
                         PathToNetwork,
                         raptor_mode,
                         exlude_routes,
                         numbers_routes,
                         route_dict,
-                        layer_origin,
-                        layer_origin_field,
                         RunOnAir
                         )
 
