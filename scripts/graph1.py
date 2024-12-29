@@ -71,12 +71,13 @@ class PlotGenerator:
                 # Read the log file
                 with open(log_path, 'r') as log:
                     log_content = log.read()
-                    time_match = time_pattern.search(log_content)
-                    if time_match:
-                        if time_match.group(1):
-                            time_str = time_match.group(1)
-                        elif time_match.group(2):
-                            time_str = time_match.group(2)
+                    time_matches = list(time_pattern.finditer(log_content))  # Находим все совпадения
+                    if time_matches:
+                        last_match = time_matches[-1]  # Берем последнее совпадение
+                        if last_match.group(1):
+                            time_str = last_match.group(1)
+                        elif last_match.group(2):
+                            time_str = last_match.group(2)
         
                         time_without_seconds = time_str[:5]  # Keep only hh:mm part
                         x_values.append(time_without_seconds)  # Add time to X
@@ -111,7 +112,7 @@ class PlotGenerator:
                         else:
                             print(f"CSV file corresponding to {log_file} not found.")
        
-        label = f'{label} (transfers {min_transfer}-{max_transfer})'
+        #label = f'{label} (transfers {min_transfer}-{max_transfer})'
 
         if x_values and y_values:
             self.lines.append((x_values, y_values, color, label))
@@ -148,6 +149,27 @@ class PlotGenerator:
 
         plt.tight_layout()  # Adjust layout to prevent overlap
         plt.show()
+
+    def save_data_to_excel(self, filename):
+        """
+        Saves the plot data to an Excel file.
+
+        Parameters:
+            filename (str): Path to the Excel file to save.
+        """
+        all_data = []
+        for x_values, y_values, color, label in self.lines:
+            for x, y in zip(x_values, y_values):
+                all_data.append({
+                    'X Values': x,
+                    'Y Values': y,
+                    'Color': color,
+                    'Label': label
+                })
+
+        df = pd.DataFrame(all_data)
+        df.to_excel(filename, index=False)
+        print(f"Data successfully saved to {filename}")
 
 if __name__ == "__main__":
     plot_generator = PlotGenerator(
@@ -205,6 +227,9 @@ if __name__ == "__main__":
         min_transfer = 0, max_transfer = 2,
         label="Gesher (from, shedule-based)"  # Set line label
     )
+
+    # Save data to an Excel file
+    plot_generator.save_data_to_excel(r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\plot_data.xlsx")
 
     # Generate the plot
     plot_generator.generate_plot()

@@ -6,7 +6,8 @@ import webbrowser
 import re
 import configparser
 
-from common import time_to_seconds
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QGuiApplication
 
 from qgis.core import (QgsProject,
                        QgsWkbTypes,
@@ -29,14 +30,7 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
 from query_file import runRaptorWithProtocol
-from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias
-
-#FORM_CLASS, _ = uic.loadUiType(os.path.join(
-#    os.path.dirname(__file__), 'raptor.ui'))
-
-#FORM_CLASS, _ = uic.loadUiType(
-#    os.path.join(os.path.dirname(__file__), 'UI', 'raptor.ui')
-#    )
+from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias, seconds_to_time, time_to_seconds
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui')
@@ -79,6 +73,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.break_on = False
 
+        self.shift_mode = False
         self.parent = parent
         self.mode = mode
         self.protocol_type = protocol_type
@@ -277,6 +272,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             return 1
 
     def on_run_button_clicked(self):
+
+        modifiers = QGuiApplication.keyboardModifiers()
+        if modifiers & Qt.ShiftModifier:
+            self.shift_mode = True
+
         self.run_button.setEnabled(False)
         self.break_on = False
 
@@ -672,7 +672,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     def get_feature_from_layer(self):
         layer = self.config['Settings']['Layer']
-        D_TIME = time_to_seconds(self.config['Settings']['TIME'])
+        #D_TIME = time_to_seconds(self.config['Settings']['TIME'])
         feature_id_field = self.config['Settings']['Layer_field']
         layer = QgsProject.instance().mapLayersByName(layer)[0]
         ids = []
@@ -705,7 +705,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             if i % 50000 == 0:
                 QApplication.processEvents()
             id = feature[feature_id_field]
-            ids.append((int(id), D_TIME))
+            ids.append((int(id)))
 
         return ids
    
@@ -716,6 +716,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         mode = self.mode
         protocol_type = self.protocol_type
         timetable_mode = self.timetable_mode
+        
         sources = self.get_feature_from_layer()
         if sources == 0:
             self.run_button.setEnabled(True)
@@ -738,19 +739,58 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if run:
 
-            if not os.path.exists(self.folder_name):
-                os.makedirs(self.folder_name)
-            else:
-                self.setMessage(f"Folder '{self.folder_name}' already exists")
-                self.run_button.setEnabled(True)
-                return 0
+            if self.shift_mode:
+                START_TIME = time_to_seconds(self.config['Settings']['TIME'])
 
-            runRaptorWithProtocol(self,
+                
+                self.folder_name_copy = self.folder_name
+                for i in range(13): 
+                    D_TIME = START_TIME + i * 300 
+                    D_TIME_str = seconds_to_time(D_TIME)
+                    if not self.timetable_mode:
+                        if self.mode == 1:
+                            self.textLog.append(
+                                f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
+                        else:
+                            self.textLog.append(
+                                f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
+                    if self.timetable_mode:
+                       if self.mode == 1:
+                           self.textLog.append(f"<a style='font-weight:bold;'> The earliest start time: {D_TIME_str}</a>")
+                       else:
+                           self.textLog.append( f"<a style='font-weight:bold;'> The earliest arrival time: {D_TIME_str}</a>")
+                
+                 
+                    postfix = i + 1 
+                    self.folder_name = f'{self.folder_name_copy}-{postfix}'
+                    os.makedirs(self.folder_name, exist_ok=True)
+                    runRaptorWithProtocol(self,
                                   self.parent,
                                   sources,
                                   mode,
                                   protocol_type,
                                   timetable_mode,
+                                  D_TIME,
+                                  self.cbSelectedOnly1.isChecked(),
+                                  self.cbSelectedOnly2.isChecked(),
+                                  self.aliase
+                                  )
+            if not(self.shift_mode):
+                if not os.path.exists(self.folder_name):
+                    os.makedirs(self.folder_name)
+                else:
+                    self.setMessage(f"Folder '{self.folder_name}' already exists")
+                    self.run_button.setEnabled(True)
+                    return 0
+            
+                D_TIME = time_to_seconds(self.config['Settings']['TIME'])
+                runRaptorWithProtocol(self,
+                                  self.parent,
+                                  sources,
+                                  mode,
+                                  protocol_type,
+                                  timetable_mode,
+                                  D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
                                   self.aliase

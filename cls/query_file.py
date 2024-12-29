@@ -241,6 +241,7 @@ def runRaptorWithProtocol(self,
                           raptor_mode,
                           protocol_type,
                           timetable_mode,
+                          D_TIME,
                           selected_only1,
                           selected_only2,
                           aliase) -> tuple:
@@ -251,7 +252,7 @@ def runRaptorWithProtocol(self,
 
     PathToNetwork = self.config['Settings']['PathToPKL']
     PathToProtocols = self.config['Settings']['PathToProtocols']
-    D_TIME = time_to_seconds(self.config['Settings']['TIME'])
+    #D_TIME = time_to_seconds(self.config['Settings']['TIME'])
 
     MAX_TRANSFER = int(self.config['Settings']['Max_transfer'])
     MIN_TRANSFER = int(self.config['Settings']['Min_transfer'])
@@ -668,7 +669,7 @@ def runRaptorWithProtocol(self,
         self.progressBar.setValue(i + 6)
         self.setMessage(f'Calculating №{i+1} of {count}')
         QApplication.processEvents()
-        SOURCE, D_TIME = sources[i]
+        SOURCE = sources[i]
 
         # if protocol_type == 2 :
         # prefix_alias = get_prefix_alias(True,
