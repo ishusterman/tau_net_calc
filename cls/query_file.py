@@ -42,6 +42,12 @@ def myload_all_dict(self,
                     numbers_routes,
                     route_dict,
                     RunOnAir,
+
+                    layer_origin,
+                    layer_dest,
+                    MaxWalkDist1,
+                    layer_dest_field,
+                    Speed
                     ):
 
     path = PathToNetwork
@@ -131,12 +137,41 @@ def myload_all_dict(self,
 
         self.progressBar.setValue(6)
 
-    return (stops_dict,
+    footpath_on_air_b_b = None
+    footpath_on_projection = None
+    graph_projection = None
+    dict_osm_vertex = None
+    dict_vertex_osm = None
+
+    if RunOnAir:
+        footpath_on_air_b_b = cls_footpath_on_air_b_b(layer_origin,
+                                                      layer_dest,
+                                                      MaxWalkDist1,
+                                                      layer_dest_field,
+                                                      Speed
+                                                      )
+    else:
+        footpath_on_projection = cls_footpath_on_projection(self)
+        graph_projection = footpath_on_projection.load_graph(PathToNetwork)
+        dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
+            PathToNetwork)
+        dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
+            PathToNetwork)
+        
+    return (
+            stops_dict,
             stoptimes_dict,
             footpath_dict,
             routes_by_stop_dict,
             idx_by_route_stop_dict,
-            stop_ids_set)
+            stop_ids_set
+            ),(
+            footpath_on_air_b_b,
+            footpath_on_projection,
+            graph_projection,
+            dict_osm_vertex,
+            dict_vertex_osm
+            )
 
 def verify_break(self,
                  Layer="",
@@ -218,7 +253,6 @@ def get_roads_from_file(path):
     return 0
 
 def runRaptorWithProtocol(self,
-                          parent,
                           sources,
                           raptor_mode,
                           protocol_type,
@@ -226,16 +260,16 @@ def runRaptorWithProtocol(self,
                           D_TIME,
                           selected_only1,
                           selected_only2,
-                          aliase) -> tuple:
+                          aliase,
+                          dictionary,
+                          dictionary2,
+                          shift_mode = False) -> tuple:
 
     count = len(sources)
     self.progressBar.setMaximum(count + 5)
     self.progressBar.setValue(0)
 
     PathToNetwork = self.config['Settings']['PathToPKL']
-    PathToProtocols = self.config['Settings']['PathToProtocols']
-    #D_TIME = time_to_seconds(self.config['Settings']['TIME'])
-
     MAX_TRANSFER = int(self.config['Settings']['Max_transfer'])
     MIN_TRANSFER = int(self.config['Settings']['Min_transfer'])
 
@@ -284,8 +318,6 @@ def runRaptorWithProtocol(self,
 
     LayerViz = self.config['Settings']['LayerViz']
     layer_vis_field = self.config['Settings']['LayerViz_field']
-
-    layer_origin = QgsProject.instance().mapLayersByName(Layer)[0]
     layer_dest = QgsProject.instance().mapLayersByName(LayerDest)[0]
 
     if 'Field_ch' in self.config['Settings']:
@@ -312,21 +344,7 @@ def runRaptorWithProtocol(self,
     exlude_routes = False
     recalculate = False
 
-    if RunOnAir:
-        footpath_on_air_b_b = cls_footpath_on_air_b_b(layer_origin,
-                                                      layer_dest,
-                                                      round(
-                                                          MaxWalkDist1/Speed),
-                                                      layer_dest_field,
-                                                      Speed
-                                                      )
-    else:
-        footpath_on_projection = cls_footpath_on_projection(self)
-        graph_projection = footpath_on_projection.load_graph(PathToNetwork)
-        dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
-            PathToNetwork)
-        dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
-            PathToNetwork)
+    
 
     if file_exists_exclude_routes(PathToNetwork):
         msgBox = QMessageBox()
@@ -457,27 +475,24 @@ def runRaptorWithProtocol(self,
         stoptimes_dict,
         footpath_dict,
         routes_by_stop_dict,
-        idx_by_route_stop_dict, set_stops
-    ) = myload_all_dict(self,
-                        PathToNetwork,
-                        raptor_mode,
-                        exlude_routes,
-                        numbers_routes,
-                        route_dict,
-                        RunOnAir
-                        )
+        idx_by_route_stop_dict, 
+        set_stops
+    ) = dictionary
 
+    (
+        footpath_on_air_b_b,
+        footpath_on_projection,
+        graph_projection,
+        dict_osm_vertex,
+        dict_vertex_osm
+
+    ) = dictionary2
+
+    
+    
     if verify_break(self):
         return 0, 0
-
-    # print (f'mode = {raptor_mode}')
-    # print("stops_dict:\n" + "\n".join([f"{key}: {value}" for key, value in list(stops_dict.items())]))
-
-    # print("stoptimes_dict:\n" + "\n".join([f"{key}: {value}" for key, value in list(stoptimes_dict.items())]))
-    # print("routes_by_stop_dict:\n" + "\n".join([f"{key}: {value}" for key, value in list(routes_by_stop_dict.items())]))
-    # print("idx_by_route_stop_dict:\n" + "\n".join([f"{key}: {value}" for key, value in list(idx_by_route_stop_dict.items())]))
-
-    # print("footpath_dict:\n" + "\n".join([f"{key}: {value}" for key, value in list(footpath_dict.items())]))
+   
 
     reachedLabels = dict()
 
@@ -684,36 +699,6 @@ def runRaptorWithProtocol(self,
             list_buildings_from_start = [
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
 
-        """
-          nearby_buildings_1200 = footpath_on_projection.get_nearby_buildings(SOURCE, graph_projection, dict_osm_vertex, dict_vertex_osm, mode = "find_b", dist = 1200)  
-          
-          filtered_buildings = nearby_buildings_1200
-          source_str = str(SOURCE)
-          if source_str.startswith("333"):
-                source_str = source_str[3:]  # Убираем первые 3 символа  
-    
-          with open(f"c:/temp/id{source_str}.csv", mode="w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["Origin_ID", "Destination_ID", "Duration"])  # Заголовок
-
-            
-            for building, dist in filtered_buildings:
-              # Если первые три цифры в building — "333", убираем их
-              building_str = str(building)
-              if building_str.startswith("333"):
-                building_str = building_str[3:]  # Убираем первые 3 символа
-           
-
-              if source_str != building_str:
-              
-                writer.writerow([source_str, building_str, dist])
-          """
-
-        # nearby_buildings_from_start = footpath_on_graph_b_b.get_nearby_buildings(SOURCE)
-        # list_buildings_from_start = [osm_id for osm_id, _ in nearby_buildings_from_start]
-
-        # b_b = footpath_b_b.calc(str(SOURCE))
-
         SOURCE = str(SOURCE)
 
         if raptor_mode == 1:
@@ -824,6 +809,7 @@ def runRaptorWithProtocol(self,
                fields_ok,
                f,
                protocol_type,
+               shift_mode
                )
 
     self.setMessage(f'Finished')
@@ -835,7 +821,6 @@ def make_service_area_report(folder_name, aliase, prefix_alias):
 
     all_data = pd.DataFrame()
 
-    # Добавляем маску для поиска CSV-файлов
     file_pattern = rf"{folder_name}\*.csv"
     for file in glob.glob(file_pattern):
         df = pd.read_csv(file)
@@ -857,6 +842,7 @@ def write_info(self,
                fields_ok,
                f,
                protocol_type,
+               shift_mode = False
                ):
 
     self.textLog.append(f'<a>Output:</a>')
@@ -865,13 +851,15 @@ def write_info(self,
         if len(fields_ok) > 0:
             for field in fields_ok:
                 alias = os.path.splitext(os.path.basename(f[field]))[0]
-                vis.add_thematic_map(f[field], alias, set_min_value=0)
+                if not (shift_mode):
+                    vis.add_thematic_map(f[field], alias, set_min_value=0)
                 self.textLog.append(f'<a>{f[field]}</a>')
 
     if protocol_type == 2:
         self.textLog.append(f'<a>{f}</a>')
         alias = os.path.splitext(os.path.basename(f))[0]
-        vis.add_thematic_map(f, alias, set_min_value=0)
+        if not (shift_mode):
+            vis.add_thematic_map(f, alias, set_min_value=0)
 
     text = self.textLog.toPlainText()
     filelog_name = f'{self.folder_name}//log_{self.aliase}.txt'
@@ -936,9 +924,6 @@ def make_protocol_summary(SOURCE,
         # with open(f2, 'w') as file2:
 
         for dest, info in dictInput.items():
-
-            # if int(dest) <= 50585 or int(dest) >= 10000000000: # exclude bus stops from protokol
-            # continue
 
             if str(dest) in set_stops:
                 continue

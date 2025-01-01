@@ -20,7 +20,7 @@ def remove_pycache_dirs(start_dir):
             if dir_name == '__pycache__':
                 dir_path = os.path.join(root, dir_name)
                 shutil.rmtree(dir_path)
-                print(f"Removed: {dir_path}")
+                
 
 def get_unique_filename(base_path):
     """Returns a unique file name by adding a suffix if the file already exists."""

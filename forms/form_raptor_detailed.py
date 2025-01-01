@@ -29,7 +29,7 @@ from PyQt5.QtCore import (Qt,
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
-from query_file import runRaptorWithProtocol
+from query_file import runRaptorWithProtocol, myload_all_dict
 from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias, seconds_to_time, time_to_seconds
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -738,14 +738,41 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 run = False
 
         if run:
+            PathToNetwork = self.config['Settings']['PathToPKL']
+            raptor_mode = mode
+            exlude_routes = False
+            numbers_routes = None
+            route_dict = None
+            RunOnAir = self.config['Settings']['RunOnAir'] == 'True'
 
+            Layer = self.config['Settings']['Layer']
+            LayerDest = self.config['Settings']['LayerDest']
+            layer_origin = QgsProject.instance().mapLayersByName(Layer)[0]
+            layer_dest = QgsProject.instance().mapLayersByName(LayerDest)[0]    
+            MaxWalkDist1 = int(self.config['Settings']['MaxWalkDist1'])
+            layer_dest_field = self.config['Settings']['LayerDest_field']
+            Speed = float(self.config['Settings']['Speed'].replace(',', '.')) * 1000 / 3600  # from km/h to m/sec
+
+            dictionary, dictionary2 = myload_all_dict(self,
+                        PathToNetwork,
+                        raptor_mode,
+                        exlude_routes,
+                        numbers_routes,
+                        route_dict,
+                        RunOnAir,
+
+                        layer_origin,
+                        layer_dest,
+                        MaxWalkDist1,
+                        layer_dest_field,
+                        Speed
+                        )
+            
             if self.shift_mode:
                 START_TIME = time_to_seconds(self.config['Settings']['TIME'])
-
-                
                 self.folder_name_copy = self.folder_name
-                for i in range(13): 
-                    D_TIME = START_TIME + i * 300 
+                for i in range(54): 
+                    D_TIME = START_TIME + i * 1200 
                     D_TIME_str = seconds_to_time(D_TIME)
                     if not self.timetable_mode:
                         if self.mode == 1:
@@ -765,7 +792,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     self.folder_name = f'{self.folder_name_copy}-{postfix}'
                     os.makedirs(self.folder_name, exist_ok=True)
                     runRaptorWithProtocol(self,
-                                  self.parent,
                                   sources,
                                   mode,
                                   protocol_type,
@@ -773,7 +799,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
-                                  self.aliase
+                                  self.aliase,
+                                  dictionary,
+                                  dictionary2,
+                                  self.shift_mode
                                   )
             if not(self.shift_mode):
                 if not os.path.exists(self.folder_name):
@@ -785,7 +814,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             
                 D_TIME = time_to_seconds(self.config['Settings']['TIME'])
                 runRaptorWithProtocol(self,
-                                  self.parent,
                                   sources,
                                   mode,
                                   protocol_type,
@@ -793,7 +821,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
-                                  self.aliase
+                                  self.aliase,
+                                  dictionary,
+                                  dictionary2
                                   )
             """
          _, self.folder_name = self.profile_runRaptorWithProtocol( 
