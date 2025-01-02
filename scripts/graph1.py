@@ -6,9 +6,11 @@ from matplotlib.ticker import MaxNLocator
 import pandas as pd
 import openpyxl
 from datetime import datetime
+from scipy.interpolate import UnivariateSpline
+import numpy as np
 
 class PlotGenerator:
-    def __init__(self, xlabel="Start time", ylabel="Number of buildings", title="Accessibility"):
+    def __init__(self, xlabel="Time", ylabel="Number of buildings", title="Accessibility"):
         """
         Initializes the PlotGenerator with the given parameters.
         
@@ -249,7 +251,10 @@ class PlotGenerator:
                                 y_value = calculation_method(filtered_df)
                             y_values.append(y_value)
                         else:
-                            print(f"CSV file corresponding to {log_file} not found.")
+                            y_values.append(0)
+                            print(f"CSV file corresponding to {log_file} not found. {csv_file_path}")
+
+        print(f"len(x_values): {len(x_values)}, len(y_values): {len(y_values)}")
 
         if x_values and y_values:
             datetime_x_values = [datetime.strptime(time, "%H:%M") for time in x_values]
@@ -282,6 +287,14 @@ class PlotGenerator:
 
                 plt.text(x_start, y_start - 0.05, label, color=color, fontsize=10,
                          verticalalignment='bottom', horizontalalignment='left')
+
+
+            # Add the label to the plot at the start of the line if legend is not shown
+            if not show_legend:
+                x_start = x_values[0]  # First X value (start of the line)
+                y_start = y_values[0]  # First Y value (start of the line)
+                plt.text(x_start, y_start - 0.05, label, color=color, fontsize=10,
+                     verticalalignment='bottom', horizontalalignment='left')
 
         if not self.lines:
             print("No lines to plot. Ensure that data is added correctly.")
