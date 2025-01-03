@@ -231,6 +231,7 @@ class GTFS ():
             for trip_id, trip_group in grouped_trips:
 
                 trip_id = trip_id[0]
+                
                 target_trip = trips_file2.loc[trip_id]  # access through index
 
                 current_trip = {'stop_id': trip_group.index.get_level_values('stop_id').tolist(),
@@ -412,6 +413,13 @@ class GTFS ():
             self.parent.setMessage(f'Filtering data ...')
             self.stop_times_df = self.stop_times_df[self.stop_times_df['trip_id'].isin(self.trips_df['trip_id'])]
 
+            # Преобразуем время в формат HH:MM:SS
+            self.parent.setMessage(f'Correcting date ...')
+            self.stop_times_df["arrival_time"] = self.stop_times_df["arrival_time"].apply(
+            lambda x: f"{int(x.split(':')[0]):02}:{x.split(':')[1]}:{x.split(':')[2]}"
+            )
+            self.stop_times_df["departure_time"] = self.stop_times_df["arrival_time"]
+
     def interpolate_times(self):
         
         # group by `trip_id` and interpolate missing times
@@ -451,7 +459,7 @@ class GTFS ():
         if self.verify_break():
             return 0
         QApplication.processEvents()
-
+       
         ##############################
         # interpolate  arrivel_times if skipped value
         ##############################
@@ -476,6 +484,7 @@ class GTFS ():
         if self.verify_break():
             return 0
         QApplication.processEvents()
+        
         ######################    
         self.create_my_routes()
         self.parent.progressBar.setValue(2)
@@ -489,7 +498,7 @@ class GTFS ():
         if self.verify_break():
             return 0
         QApplication.processEvents()
-
+                    
         ##############################
         #  Exclude trips where  'arrival_time' is not monotonic_increasing:
         ##############################
@@ -514,6 +523,7 @@ class GTFS ():
                 continue
 
             trips_with_correct_timestamps.append(id)
+        
 
         self.stop_times_df = self.stop_times_df[self.stop_times_df['trip_id'].isin(
             trips_with_correct_timestamps)]
@@ -526,6 +536,7 @@ class GTFS ():
             columns=['arrival_time_seconds'])
         self.stop_times_df.reset_index()
 
+        
         ##############################
         #  Exclude trips where 'stop_sequence' is monotonic increasing:
         ##############################
@@ -564,6 +575,7 @@ class GTFS ():
             return 0
         QApplication.processEvents()
         ####################################
+        
         self.parent.setMessage(f'Saving ...')
         self.parent.progressBar.setValue(7)
         self.stop_times_df = self.stop_times_df.reset_index()
@@ -577,7 +589,7 @@ class GTFS ():
             for line in self.log_processing:
                 file.write(line + "\n")
         #################################        
-        """
+        
         self.parent.setMessage(f'Building aerial paths...')
         QApplication.processEvents()
         self.create_footpath_AIR()
@@ -642,7 +654,7 @@ class GTFS ():
         QApplication.processEvents()
 
         self.converter.remove_temp_layer()
-        """
+        
         return 1
 
     def found_repeated_in_trips_stops(self):
@@ -703,6 +715,7 @@ class GTFS ():
                     return 0
 
             first_trip_id = group['trip_id'].iloc[0]
+                        
             trip = self.stop_times_df.xs(first_trip_id, level='trip_id')
             trip = trip.reset_index()
             stop_ids = []
@@ -795,7 +808,7 @@ class GTFS ():
         ##################
         # For testing algo!!!!!!!!
         ##################
-        self.filter_trips(nth=2)
+        #self.filter_trips(nth=3)
         ##################
         ##################
         ##################
