@@ -254,41 +254,7 @@ class PKL ():
                 pickle.dump(existing_data, pickle_file)
 
         return 1
-
-    """
-    def build_footpath_dict_b_b(self):
-
-        filename = 'footpath_road_b_b.txt'
-        #self.parent.setMessage(f'Building dictionary ...')
-        QApplication.processEvents()
-        obj_txt = pd.read_csv(f'{self.__path_gtfs}/{filename}', sep=',')
-        file_name = 'transfers_dict_b_b.pkl'
-        
-        if self.verify_break():
-                return 0
-
-        footpath_dict = {}
-        g = obj_txt.groupby("from_stop_id")
-        i = 0
-        len_g = len(g)
-        for from_stop, details in g:
-            i += 1
-            if i%1000 == 0:
-                #self.parent.setMessage(f'Building transfer for route {i} from {len_g}...')
-                QApplication.processEvents()
-                if self.verify_break():
-                    return 0
-            footpath_dict[from_stop] = []
-            for _, row in details.iterrows():
-                footpath_dict[from_stop].append(
-                    
-                    (row.to_stop_id, (row.min_transfer_time)))
-           
-        with open(f'{self.__path_pkl}/{file_name}', 'wb') as pickle_file:    
-            pickle.dump(footpath_dict, pickle_file)
-        
-        return 1
-    """
+    
     # Function to merge dictionary values
 
     def merge_dicts(self, dict1, dict2):
@@ -297,46 +263,40 @@ class PKL ():
             for key, value in d.items():
                 result[key].extend(value)
         return dict(result)
-
+        
     def build_footpath_dict(self, obj_txt, file_name):
-
-        self.parent.setMessage(f'Building transfers ...')
+        """Build footpath dictionary with optimized performance."""
+    
+        self.parent.setMessage(f'Building transfers {file_name}...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
 
-        footpath_dict = {}
-        g = obj_txt.groupby("from_stop_id")
+        # Grouping and processing
+        grouped = obj_txt.groupby("from_stop_id")
+        footpath_dict = {
+            from_stop: list(zip(details["to_stop_id"], details["min_transfer_time"]))
+            for from_stop, details in grouped
+        }
 
-        len_g = len(g)
-        for i, (from_stop, details) in enumerate(g):
+        # Path to save the pickle file
+        pickle_path = f'{self.__path_pkl}/{file_name}'
 
-            if i % 1000 == 0:
-                self.parent.setMessage(f'Building transfers {i} of {len_g}...')
-                QApplication.processEvents()
-                if self.verify_break():
-                    return 0
-            footpath_dict[from_stop] = []
-            for _, row in details.iterrows():
-                footpath_dict[from_stop].append(
-
-                    (row.to_stop_id, (row.min_transfer_time)))
-
-        f = f'{self.__path_pkl}/{file_name}'
-        if not (self.mode_append):
-            with open(f, "wb") as pickle_file:
+        # Write or append to the pickle file
+        if not self.mode_append:
+            with open(pickle_path, "wb") as pickle_file:
                 pickle.dump(footpath_dict, pickle_file)
         else:
-            with open(f, 'rb') as pickle_file:
+            with open(pickle_path, 'rb') as pickle_file:
                 existing_data = pickle.load(pickle_file)
 
-            footpath_merge_dict = self.merge_dicts(
-                existing_data, footpath_dict)
+            # Merging dictionaries
+            for key, value in footpath_dict.items():
+                existing_data.setdefault(key, []).extend(value)
 
-            with open(f, 'wb') as pickle_file:
-                pickle.dump(footpath_merge_dict, pickle_file)
+            with open(pickle_path, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
 
-       
         return 1
 
     def build_stop_idx_in_route(self):

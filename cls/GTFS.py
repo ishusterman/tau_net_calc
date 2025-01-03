@@ -577,7 +577,7 @@ class GTFS ():
             for line in self.log_processing:
                 file.write(line + "\n")
         #################################        
-
+        """
         self.parent.setMessage(f'Building aerial paths...')
         QApplication.processEvents()
         self.create_footpath_AIR()
@@ -642,7 +642,7 @@ class GTFS ():
         QApplication.processEvents()
 
         self.converter.remove_temp_layer()
-
+        """
         return 1
 
     def found_repeated_in_trips_stops(self):
@@ -750,6 +750,31 @@ class GTFS ():
             self.log_processing.extend(logs)
             self.log_processing.append(self.line_break)
 
+    
+    ##################
+    # For testing algo!!!!!!!!
+    ##################
+    def filter_trips(self, nth=2):
+        """
+        Filters self.stop_times_df, keeping every nth trip for each route.
+    
+        :param nth: The filtering parameter; every nth trip will be retained.
+        """
+        # Group trip_id by route_id
+        trips_by_route = self.trips_df.groupby('route_id')['trip_id'].apply(list)
+    
+        # Collect all trip_ids that should be kept
+        filtered_trip_ids = []
+        for trip_ids in trips_by_route:
+            # Select every nth trip
+            filtered_trip_ids.extend(trip_ids[::nth])
+    
+        # Filter self.stop_times_df based on the selected trip_ids
+        self.stop_times_df = self.stop_times_df[self.stop_times_df['trip_id'].isin(filtered_trip_ids)]
+
+
+
+
     def save_GTFS(self):
         
         self.parent.setMessage('Saving stops ...')
@@ -766,6 +791,15 @@ class GTFS ():
         
         selected_columns = ['trip_id', 'arrival_time',
                             'departure_time', 'stop_id', 'stop_sequence', ]
+        
+        ##################
+        # For testing algo!!!!!!!!
+        ##################
+        self.filter_trips(nth=2)
+        ##################
+        ##################
+        ##################
+
         self.stop_times_df[selected_columns].to_csv(
             f'{self.__path_to_file}//stop_times.txt', index=False)
 
