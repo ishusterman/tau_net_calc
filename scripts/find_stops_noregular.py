@@ -9,21 +9,27 @@ data = pd.read_csv(file_path, names=columns, skiprows=1)
 for col in ["arrival_time", "departure_time"]:
     data[col] = pd.to_datetime(data[col], format="%H:%M:%S", errors='coerce')
 
-# Добавление временного интервала
-conditions = [
-    (data['arrival_time'].dt.hour >= 6) & (data['arrival_time'].dt.hour < 10),
-    (data['arrival_time'].dt.hour >= 10) & (data['arrival_time'].dt.hour < 16),
-    (data['arrival_time'].dt.hour >= 16) & (data['arrival_time'].dt.hour < 22)
-]
-time_labels = ["morning", "daytime", "evening"]
-data['time_interval'] = pd.cut(data['arrival_time'].dt.hour, bins=[5, 10, 16, 22], labels=time_labels, right=False)
+# Определение временных интервалов и меток
+bins = [5, 10, 16, 21]  # Утро, день, вечер
+time_labels = ["morning", "daytime", "evening"]  # Метки для 3 интервалов
+
+# Преобразование arrival_time в интервалы
+data['time_interval'] = pd.cut(data['arrival_time'].dt.hour, bins=bins, labels=time_labels, right=False)
 
 # Группировка по stop_id и временным интервалам
 stop_activity = data.groupby(['stop_id', 'time_interval']).size().unstack(fill_value=0)
 
-# Фильтрация stop_id с высокой дневной активностью
-stop_activity['day_vs_others'] = (stop_activity['daytime'] > 1.3 * stop_activity['morning']) & (stop_activity['daytime'] > 1.3 * stop_activity['evening'])
-frequent_stops = stop_activity[stop_activity['day_vs_others']]
+# Фильтрация stop_id с высокой активностью в одном из временных интервалов
+stop_activity['peak_increase'] = (
+    (stop_activity['morning'] > 1.3 * stop_activity['daytime']) | 
+    (stop_activity['evening'] > 1.3 * stop_activity['daytime'])
+) & (stop_activity['daytime'] > 5)  # Условие на дневную активность
 
-frequent_stops.to_csv(r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\frequent_stops.csv")
-print("Ok")
+# Отбор остановок, соответствующих условиям
+frequent_peak_stops = stop_activity[stop_activity['peak_increase']]
+
+# Сохранение результата в CSV
+output_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\frequent_peak_stops.csv"
+frequent_peak_stops.to_csv(output_path)
+
+print("Анализ завершён. Результаты сохранены в:", output_path)

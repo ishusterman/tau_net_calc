@@ -35,6 +35,7 @@ if __name__ == "__main__":
         )
     print ("plot4")
 
+    """
 
     plot_generator.add_line(
         base_dir=r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\gesher_6_00_22_00_50_proc\\schedule_from\\",        
@@ -91,6 +92,7 @@ if __name__ == "__main__":
         label="fixed_to_30proc",
         )
     print ("plot12")
+    """
 
     plot_generator.save_data_to_excel(r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\plot_data9-1.xlsx")
 

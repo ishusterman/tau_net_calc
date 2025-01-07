@@ -24,6 +24,9 @@ class PlotGenerator:
         self.title = title
         self.lines = []  # List to store line data
         self.colors = list(mcolors.TABLEAU_COLORS.values())  # Using Tableau color palette
+        self.output_lines = []
+        self.output_lines.append(f"type,time,jaccard_similarity,new_ratio,removed_ratio,value")
+        
 
     @staticmethod
     def count_rows(df, **kwargs):
@@ -147,6 +150,16 @@ class PlotGenerator:
             transfers += 1
         return transfers
 
+    def get_sorted_dirs(self, base_dir):
+        dir_pattern = re.compile(r"-(\d+)$")
+        # Получаем список всех подкаталогов
+        all_dirs = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
+    
+        # Сортируем каталоги, извлекая числовой постфикс
+        sorted_dirs = sorted(all_dirs, key=lambda d: int(dir_pattern.search(d).group(1)) if dir_pattern.search(d) else float('inf'))
+    
+        return sorted_dirs
+
     def add_line(self, base_dir, 
                     min_transfer = 0, 
                     max_transfer = 2, 
@@ -192,69 +205,100 @@ class PlotGenerator:
         x_values = []
         y_values = []
 
+        prev_ids = set() 
+        sorted_dirs = self.get_sorted_dirs(base_dir)
         # Searching the directory for log files
-        for root, dirs, files in os.walk(base_dir):
-            log_files = [f for f in files if f.startswith("log_") and f.endswith(".txt")]
-            if log_files:
-                log_file = log_files[0]  # Take the first log file found
-                log_path = os.path.join(root, log_file)
+        for dir_name in sorted_dirs:
+            dir_path = os.path.join(base_dir, dir_name)
+            for root, dirs, files in os.walk(dir_path):
+                log_files = [f for f in files if f.startswith("log_") and f.endswith(".txt")]
+                if log_files:
+                    log_file = log_files[0]  # Take the first log file found
+                    log_path = os.path.join(root, log_file)
 
-                # Read the log file
-                with open(log_path, 'r') as log:
-                    log_content = log.read()
-                    time_matches = list(time_pattern.finditer(log_content))  # Find all matches
-                    if time_matches:
-                        last_match = time_matches[-1]  # Take the last match
-                        if last_match.group(1):
-                            time_str = last_match.group(1)
-                        elif last_match.group(2):
-                            time_str = last_match.group(2)
-                        elif last_match.group(3):
-                            time_str = last_match.group(3)    
-                        elif last_match.group(4):
-                            time_str = last_match.group(4)    
+                    # Read the log file
+                    with open(log_path, 'r') as log:
+                        log_content = log.read()
+                        time_matches = list(time_pattern.finditer(log_content))  # Find all matches
+                        if time_matches:
+                            last_match = time_matches[-1]  # Take the last match
+                            if last_match.group(1):
+                                time_str = last_match.group(1)
+                            elif last_match.group(2):
+                                time_str = last_match.group(2)
+                            elif last_match.group(3):
+                                time_str = last_match.group(3)    
+                            elif last_match.group(4):
+                                time_str = last_match.group(4)    
         
-                        time_without_seconds = time_str[:5]  # Keep only hh:mm part
-                        x_values.append(time_without_seconds)  # Add time to X
+                            time_without_seconds = time_str[:5]  # Keep only hh:mm part
+                            x_values.append(time_without_seconds)  # Add time to X
 
-                        # Find the corresponding CSV file (assuming only one in the directory)
-                        base_name = log_file.replace("log_", "").replace(".txt", "")
-                        csv_file_path = None
-                        for file in files:
-                            if file.startswith(base_name) and file.endswith(".csv"):
-                                csv_file_path = os.path.join(root, file)
-                                break
+                            # Find the corresponding CSV file (assuming only one in the directory)
+                            base_name = log_file.replace("log_", "").replace(".txt", "")
+                            csv_file_path = None
+                            for file in files:
+                                if file.startswith(base_name) and file.endswith(".csv"):
+                                    csv_file_path = os.path.join(root, file)
+                                    break
 
-                        if csv_file_path:
-                            # Read the CSV file using pandas
-                            df = pd.read_csv(csv_file_path)
+                            if csv_file_path:
+                                # Read the CSV file using pandas
+                                df = pd.read_csv(csv_file_path)
                                                       
-                            # Apply the transfer conditions
-                            if min_transfer == 0 and max_transfer == 2:
-                                filtered_df = df[df['Start_time'].notna()]
-                            else:
-                                if 'Transfers' not in df.columns:
-                                    df['Transfers'] = df.apply(self.count_transfers, axis=1)
-                                    df.to_csv(csv_file_path, index=False)
-                                filtered_df = df[(df['Transfers'] >= min_transfer) & (df['Transfers'] <= max_transfer)]
+                                # Apply the transfer conditions
+                                if min_transfer == 0 and max_transfer == 2:
+                                    filtered_df = df[df['Start_time'].notna()]
+                                else:
+                                    if 'Transfers' not in df.columns:
+                                        df['Transfers'] = df.apply(self.count_transfers, axis=1)
+                                        df.to_csv(csv_file_path, index=False)
+                                    filtered_df = df[(df['Transfers'] >= min_transfer) & (df['Transfers'] <= max_transfer)]
+                                ###########
+                                current_ids = set(df['Destination_ID'])
 
-                            # Calculate the Y value using the provided method
-                            # Если calculation_method — это функция для расчёта коэффициента удобства
-                            if calculation_method == PlotGenerator.calculate_convenience_coefficient:
-                                y_value = calculation_method(filtered_df, 
+                                # Вычисляем метрику изменения между текущим и предыдущим набором
+                                jaccard_similarity = 0
+                                new_ratio = 0
+                                removed_ratio = 0
+                                if prev_ids:
+                                    intersection = len(current_ids & prev_ids)
+                                    union = len(current_ids | prev_ids)
+
+                                    # Jaccard Similarity
+                                    jaccard_similarity = intersection / union if union > 0 else 1
+
+                                    # Доля новых значений
+                                    new_ratio = len(current_ids - prev_ids) / len(current_ids) if current_ids else 0
+
+                                    # Доля исчезнувших значений
+                                    removed_ratio = len(prev_ids - current_ids) / len(prev_ids) if prev_ids else 0
+
+                                    if removed_ratio == 0:
+                                        print (f' len(prev_ids - current_ids) {len(prev_ids - current_ids)} len(prev_ids) {len(prev_ids)}')
+                                
+                                prev_ids = current_ids    
+                            
+                                ###########
+                                # Calculate the Y value using the provided method
+                                # Если calculation_method — это функция для расчёта коэффициента удобства
+                                if calculation_method == PlotGenerator.calculate_convenience_coefficient:
+                                    y_value = calculation_method(filtered_df, 
                                                              average_travel_time, 
                                                              average_wait_time, 
                                                              count_transfers, 
                                                              average_walk_time
                                                              )
+                                else:
+                                    y_value = calculation_method(filtered_df)
+                                y_values.append(y_value)
+                                self.output_lines.append(f"{label},{time_without_seconds},{jaccard_similarity:.2f},{new_ratio:.2f},{removed_ratio:.2f},{y_value}")
                             else:
-                                y_value = calculation_method(filtered_df)
-                            y_values.append(y_value)
-                        else:
-                            y_values.append(0)
-                            print(f"CSV file corresponding to {log_file} not found. {csv_file_path}")
+                                y_values.append(0)
+                                print(f"CSV file corresponding to {log_file} not found. {csv_file_path}")
 
         print(f"len(x_values): {len(x_values)}, len(y_values): {len(y_values)}")
+        
 
         if x_values and y_values:
             datetime_x_values = [datetime.strptime(time, "%H:%M") for time in x_values]
@@ -397,6 +441,13 @@ class PlotGenerator:
 
         # Save the workbook with formulas
         wb.save(filename)
+
+        
+        filename_csv = os.path.splitext(filename)[0] + ".csv"
+      
+        with open(filename_csv, "w") as file:
+            file.write("\n".join(self.output_lines))
+
         print(f"Data successfully saved to {filename}")
 
 
