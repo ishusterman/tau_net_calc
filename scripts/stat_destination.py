@@ -2,7 +2,7 @@ import os
 import re
 import pandas as pd
 
-class StatDestination:
+class DayStat_DestinationID:
     def __init__(self, base_path, output_path):
         """
         Initialize the processor with the base path (directory containing folders with CSV files)
@@ -111,10 +111,12 @@ class StatDestination:
         # Replace NaN values with zeros
         # ?????????????????????????????
         if self.result is not None:
-            self.result.fillna(0, inplace=True)
+            #self.result.fillna(0, inplace=True)
 
             # Sort columns by name, keeping Destination_ID first
             duration_columns = [col for col in self.result.columns if col != "Destination_ID"]
+            self.result[duration_columns] = self.result[duration_columns].astype('Int64')
+            #self.result[duration_columns] = self.result[duration_columns].astype(int)
             sorted_columns = sorted(duration_columns)
             self.result = self.result[["Destination_ID"] + sorted_columns]
 
@@ -122,7 +124,11 @@ class StatDestination:
             self.add_statistics()
 
             # Save the final result to a CSV file
+            numeric_cols = ['variance', 'std_dev', 'cv']
+            self.result[numeric_cols] = self.result[numeric_cols].apply(pd.to_numeric, errors='coerce')
+            self.result[numeric_cols] = self.result[numeric_cols].round(3)
             self.result.to_csv(self.output_path, index=False)
+
             print("Processing completed.")
         else:
             print("No valid CSV files processed.")
@@ -156,16 +162,11 @@ class StatDestination:
             lambda row: row["std_dev"] / row[duration_columns].mean() if row[duration_columns].mean() > 0 else 0, axis=1
         )
 
-        # Round the statistics
-        self.result["variance"] = self.result["variance"].round(3)
-        self.result["std_dev"] = self.result["std_dev"].round(3)
-        self.result["cv"] = self.result["cv"].round(3)
-
 
 # Example usage
 #base_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo Bek"
-base_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\gesher_6_00_22_00\fixed_from"
-output_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo Bek\\StatDestination.csv"
+base_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00"
+output_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00\\StatDestination2.csv"
 
-processor = StatDestination(base_path, output_path)
+processor = DayStat_DestinationID(base_path, output_path)
 processor.process_files()

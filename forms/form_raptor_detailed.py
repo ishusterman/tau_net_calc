@@ -771,7 +771,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             if self.shift_mode:
                 START_TIME = time_to_seconds(self.config['Settings']['TIME'])
                 self.folder_name_copy = self.folder_name
-                for i in range(54): 
+                for i in range(40): 
                     D_TIME = START_TIME + i * 1200 
                     D_TIME_str = seconds_to_time(D_TIME)
                     if not self.timetable_mode:
