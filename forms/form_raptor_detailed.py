@@ -31,6 +31,7 @@ from PyQt5 import uic
 
 from query_file import runRaptorWithProtocol, myload_all_dict
 from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias, seconds_to_time, time_to_seconds
+from stat_destination import DayStat_DestinationID
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui')
@@ -477,6 +478,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if 'TimeGap' not in self.config['Settings']:
             self.config['Settings']['TimeGap'] = '0'
 
+        if 'Admin_time_delta' not in self.config['Settings']:
+            self.config['Settings']['Admin_time_delta'] = '1200'    
+
+        if 'Admin_iteration' not in self.config['Settings']:
+            self.config['Settings']['Admin_iteration'] = '40'        
+
     # update config file
 
     def saveParameters(self):
@@ -770,9 +777,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             
             if self.shift_mode:
                 START_TIME = time_to_seconds(self.config['Settings']['TIME'])
+                time_delta = int(self.config['Settings']['Admin_time_delta'])
+                iter = int (self.config['Settings']['Admin_iteration'])
                 self.folder_name_copy = self.folder_name
-                for i in range(40): 
-                    D_TIME = START_TIME + i * 1200 
+                for i in range(iter): 
+                    D_TIME = START_TIME + i * time_delta 
                     D_TIME_str = seconds_to_time(D_TIME)
                     if not self.timetable_mode:
                         if self.mode == 1:
@@ -804,6 +813,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   dictionary2,
                                   self.shift_mode
                                   )
+                    
+                base_path = self.txtPathToProtocols.text()
+                output_path = os.path.join(base_path, f"stat_{self.aliase}.csv")
+                processor = DayStat_DestinationID(base_path, output_path)
+                processor.process_files()
+
             if not(self.shift_mode):
                 if not os.path.exists(self.folder_name):
                     os.makedirs(self.folder_name)

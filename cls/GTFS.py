@@ -538,12 +538,10 @@ class GTFS ():
 
         
         ##############################
-        #  Exclude trips where 'stop_sequence' is monotonic increasing:
+        #  Correcting trips where 'stop_sequence' is monotonic increasing:
         ##############################
-        self.parent.setMessage(f'Filtering data ...')
+        self.parent.setMessage(f"Correcting 'stop_sequence' ...")
         self.parent.progressBar.setValue(5)
-
-        trips_with_correct_stop_sequence = []
 
         for i, (id, trip) in enumerate(trips_group):
             if i % 100 == 0:
@@ -551,15 +549,10 @@ class GTFS ():
                 if self.verify_break():
                     return 0
 
-            if trip['stop_sequence'].is_monotonic_increasing:
-                trips_with_correct_stop_sequence.append(id)
-            else:
+            if not trip['stop_sequence'].is_monotonic_increasing:
+                self.stop_times_df.loc[self.stop_times_df['trip_id'] == id, 'stop_sequence'] = range(1, len(trip) + 1)
+                self.log_processing.append(f"Renumbered stop_sequence for trip {id} due to incorrect order.")
 
-                self.log_processing.append(
-                    f"Excluded trip {id} due to incorrect stop_sequence order.")
-
-        self.stop_times_df = self.stop_times_df[self.stop_times_df['trip_id'].isin(
-            trips_with_correct_stop_sequence)]
         if self.verify_break():
             return 0
         QApplication.processEvents()
@@ -589,7 +582,7 @@ class GTFS ():
             for line in self.log_processing:
                 file.write(line + "\n")
         #################################        
-        
+        """
         self.parent.setMessage(f'Building aerial paths...')
         QApplication.processEvents()
         self.create_footpath_AIR()
@@ -654,7 +647,7 @@ class GTFS ():
         QApplication.processEvents()
 
         self.converter.remove_temp_layer()
-        
+        """
         return 1
 
     def found_repeated_in_trips_stops(self):
@@ -737,22 +730,23 @@ class GTFS ():
             # Merge with stop_times_df to identify rows to update
             stops_to_update = self.merged_df.merge(
                 new_stops_df, on=['route_id', 'stop_sequence'], how='inner')
+            update_index = stops_to_update.set_index(
+                ['trip_id', 'stop_sequence'])
 
             self.parent.setMessage(f'Cleaning duplicate stops...')
             QApplication.processEvents()
             if self.verify_break():
                 return 0
 
-            update_index = stops_to_update.set_index(
-                ['trip_id', 'stop_sequence'])
-            self.stop_times_df = self.stop_times_df.reset_index()
-            stop_times_index = self.stop_times_df.set_index(
-                ['trip_id', 'stop_sequence'])
-
-            # update `stop_id` in `stop_times_df`
-            stop_times_index.loc[update_index.index,
-                                 'stop_id'] = update_index['new_stop_id'].values
-
+            
+            #self.stop_times_df = self.stop_times_df.reset_index()
+            #self.stop_times_df.set_index(['trip_id', 'stop_sequence'], inplace=True)
+            update_df = update_index[['new_stop_id']]
+            common_indices = self.stop_times_df.index.intersection(update_df.index)
+            self.stop_times_df.loc[common_indices, 'stop_id'] = update_df.loc[common_indices, 'new_stop_id'].values
+            
+            self.stop_times_df.reset_index(inplace=True)            
+            
         if new_stops:
 
             logs = [

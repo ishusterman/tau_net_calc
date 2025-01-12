@@ -2,6 +2,8 @@ import os
 import re
 import pandas as pd
 
+from qgis.core import QgsProject, QgsVectorLayer
+
 class DayStat_DestinationID:
     def __init__(self, base_path, output_path):
         """
@@ -124,12 +126,19 @@ class DayStat_DestinationID:
             self.add_statistics()
 
             # Save the final result to a CSV file
-            numeric_cols = ['variance', 'std_dev', 'cv']
+            numeric_cols = ['mean', 'std_dev', 'cv']
             self.result[numeric_cols] = self.result[numeric_cols].apply(pd.to_numeric, errors='coerce')
             self.result[numeric_cols] = self.result[numeric_cols].round(3)
             self.result.to_csv(self.output_path, index=False)
 
-            print("Processing completed.")
+            path_protokol = os.path.normpath(self.output_path)
+            path_protokol = path_protokol.replace("\\", "/")
+            alias = os.path.splitext(os.path.basename(path_protokol))[0]
+            uri = f"file:///{path_protokol}?type=csv&maxFields=10000&detectTypes=yes&geomType=none&subsetIndex=no&watchFile=no"
+            print (uri)
+            self.protocol_layer = QgsVectorLayer(uri, alias, "delimitedtext")
+            QgsProject.instance().addMapLayer(self.protocol_layer)
+
         else:
             print("No valid CSV files processed.")
 
@@ -146,27 +155,24 @@ class DayStat_DestinationID:
         self.result[duration_columns] = self.result[duration_columns].apply(pd.to_numeric, errors='coerce')
 
         # Calculate min and max for the duration columns
+        self.result["count"] = self.result[duration_columns].count(axis=1)
         self.result["min"] = self.result[duration_columns].min(axis=1, skipna=True)
         self.result["min_in_time"] = self.result[duration_columns].idxmin(axis=1, skipna=True)
         self.result["max"] = self.result[duration_columns].max(axis=1, skipna=True)
         self.result["max_in_time"] = self.result[duration_columns].idxmax(axis=1, skipna=True)
+        self.result["mean"] = self.result[duration_columns].mean(axis=1, skipna=True)
 
-        # Calculate variance with Bessel's correction (N-1)
-        self.result["variance"] = self.result[duration_columns].apply(lambda row: row.var(ddof=1), axis=1)
-    
-        # Calculate standard deviation based on variance
-        self.result["std_dev"] = self.result["variance"].apply(lambda x: x ** 0.5)
-    
+        # Calculate standard deviation directly
+        self.result["std_dev"] = self.result[duration_columns].std(axis=1, skipna=True, ddof=1)
+
         # Calculate coefficient of variation
         self.result["cv"] = self.result.apply(
-            lambda row: row["std_dev"] / row[duration_columns].mean() if row[duration_columns].mean() > 0 else 0, axis=1
-        )
+            lambda row: row["std_dev"] / row["mean"] if row["mean"] > 0 else 0, axis=1
+            )
 
 
-# Example usage
-#base_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo Bek"
-base_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00"
-output_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00\\StatDestination2.csv"
+base_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00_60m-test"
+output_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00_60m-test\\stat_osm_id_188133030-test.csv"
 
 processor = DayStat_DestinationID(base_path, output_path)
 processor.process_files()
