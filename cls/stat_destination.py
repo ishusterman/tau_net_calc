@@ -2,9 +2,11 @@ import os
 import re
 import pandas as pd
 
-from qgis.core import QgsProject, QgsVectorLayer
+#rom qgis.core import QgsProject, QgsVectorLayer
 
 class DayStat_DestinationID:
+    TIME_DELTA = 1000
+
     def __init__(self, base_path, output_path):
         """
         Initialize the processor with the base path (directory containing folders with CSV files)
@@ -126,11 +128,12 @@ class DayStat_DestinationID:
             self.add_statistics()
 
             # Save the final result to a CSV file
-            numeric_cols = ['mean', 'std_dev', 'cv']
+            numeric_cols = ['mean', 'std_dev', 'cv', 'percentage_lt_min_plus_delta']
             self.result[numeric_cols] = self.result[numeric_cols].apply(pd.to_numeric, errors='coerce')
             self.result[numeric_cols] = self.result[numeric_cols].round(3)
             self.result.to_csv(self.output_path, index=False)
 
+            """
             path_protokol = os.path.normpath(self.output_path)
             path_protokol = path_protokol.replace("\\", "/")
             alias = os.path.splitext(os.path.basename(path_protokol))[0]
@@ -138,6 +141,7 @@ class DayStat_DestinationID:
             print (uri)
             self.protocol_layer = QgsVectorLayer(uri, alias, "delimitedtext")
             QgsProject.instance().addMapLayer(self.protocol_layer)
+            """
 
         else:
             print("No valid CSV files processed.")
@@ -169,10 +173,17 @@ class DayStat_DestinationID:
         self.result["cv"] = self.result.apply(
             lambda row: row["std_dev"] / row["mean"] if row["mean"] > 0 else 0, axis=1
             )
+        
+        
 
+        self.result["percentage_lt_min_plus_delta"] = self.result.apply(
+            lambda row: sum(row[duration_columns] < (row["min"] + DayStat_DestinationID.TIME_DELTA)) / row["count"] * 100
+            if row["count"] > 0 else 0, axis=1
+            )
 
-base_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00_60m-test"
-output_path = r"C:\\Users\\geosimlab\\Documents\\Igor\\experiments\\Leo_Bek_7_00_20_00_60m-test\\stat_osm_id_188133030-test.csv"
-
-processor = DayStat_DestinationID(base_path, output_path)
-processor.process_files()
+if __name__ == "__main__":
+    base_path = r'C:\Users\geosimlab\Documents\Igor\experiments\Gesher-2'
+    output_path = os.path.join(base_path, f"stat_new-1.csv")
+    processor = DayStat_DestinationID(base_path, output_path)
+    processor.process_files()
+    print ("ok")
