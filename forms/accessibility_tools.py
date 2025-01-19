@@ -15,9 +15,11 @@ from .form_car import CarAccessibility
 from .form_pkl import form_pkl
 from .form_pkl_car import form_pkl_car
 from .form_relative import form_relative
+
 from .form_roads_clean import form_roads_clean
 from .form_visualization_clean import form_visualization_clean
-from .form_visualization_clean_h import form_visualization_clean_h
+#from .form_visualization_clean_h import form_visualization_clean_h
+from .form_buildings_clean import form_buildings_clean
 
 
 class AccessibilityTools(QWidget):
@@ -42,15 +44,17 @@ class AccessibilityTools(QWidget):
             project.write()
 
         self.tree_widget.setHeaderHidden(True)
-        group1 = QTreeWidgetItem(self.tree_widget, ['Constructing databases'])
+        group1 = QTreeWidgetItem(self.tree_widget, ['Data preprocessing'])
         group1.setExpanded(True)
-        self.item2 = QTreeWidgetItem(group1, ['Road database'])
+        self.item2 = QTreeWidgetItem(group1, ['Clean road network'])
         self.item20 = QTreeWidgetItem(
-            group1, ['Buidings and visuailization database (Voronoi)'])
+            group1, ['Clean layer of buildings'])
         self.item19 = QTreeWidgetItem(
-            group1, ['Buidings and visuailization database (hexagon)'])
-        self.item3 = QTreeWidgetItem(group1, ['Transit routing database'])
-        self.item17 = QTreeWidgetItem(group1, ['Car routing database'])
+            group1, ['Build visualizalization layers'])
+        group8 = QTreeWidgetItem(self.tree_widget, ['Construct databases'])
+        group8.setExpanded(True)
+        self.item3 = QTreeWidgetItem(group8, ['Transit routing database'])
+        self.item17 = QTreeWidgetItem(group8, ['Car routing database'])
 
         group2 = QTreeWidgetItem(self.tree_widget, ['Transit accessibility'])
         group2.setExpanded(True)
@@ -150,14 +154,14 @@ class AccessibilityTools(QWidget):
             roads_clean.exec_()
 
         if item == self.item20:
-            visualization_clean = form_visualization_clean(
-                title="Constructing databases. Buidings and visuailization database (Voronoi)")
-            visualization_clean.exec_()
+            buildings_clean = form_buildings_clean(
+                title="Constructing databases. Clean layer of buildings")
+            buildings_clean.exec_()
 
         if item == self.item19:
-            visualization_clean_h = form_visualization_clean_h(
-                title="Constructing databases. Buidings and visuailization database (hexagon)")
-            visualization_clean_h.exec_()    
+            visualization_clean = form_visualization_clean(
+                title="Constructing databases. Build visualizalization layers")
+            visualization_clean.exec_()    
 
         if item == self.item3:
             pkl = form_pkl(

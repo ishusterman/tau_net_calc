@@ -1,4 +1,5 @@
 import os
+import sys
 import webbrowser
 import configparser
 from time import sleep
@@ -28,16 +29,16 @@ from PyQt5 import uic
 
 
 from common import get_qgis_info
-from visualization_clean_h import cls_clean_visualization_h
+from visualization_clean import cls_clean_visualization
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'visualization_clean.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'visualization_clean.ui')
-)    
+)
 
-class form_visualization_clean_h(QDialog, FORM_CLASS):
+class form_visualization_clean(QDialog, FORM_CLASS):
     def __init__(self, title):
         super().__init__()
         self.setupUi(self)
@@ -162,12 +163,12 @@ class form_visualization_clean_h(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
 
         self.layer_road = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['layer_clean-visualization_h'])[0]
+            self.config['Settings']['layer_clean-visualization'])[0]
         self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[
             0]
         self.textLog.append(
             f"<a>Initial layer of buildings: {self.layer_road_path}</a>")
-        self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization_h']
+        self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization']
         self.textLog.append(
             f"<a>Folder to store database: {self.folder_name}</a>")
 
@@ -178,7 +179,7 @@ class form_visualization_clean_h(QDialog, FORM_CLASS):
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         self.break_on = False
 
-        self.task = cls_clean_visualization_h(
+        self.task = cls_clean_visualization(
             self, begin_computation_time, self.layer_road, self.folder_name)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
@@ -202,11 +203,11 @@ class form_visualization_clean_h(QDialog, FORM_CLASS):
 
         self.config.read(file_path)
 
-        if 'layer_clean-visualization_h' not in self.config['Settings']:
-            self.config['Settings']['layer_clean-visualization_h'] = ''
+        if 'layer_clean-visualization' not in self.config['Settings']:
+            self.config['Settings']['layer_clean-visualization'] = ''
 
-        if 'PathToProtocols_clean-visualization_h' not in self.config['Settings']:
-            self.config['Settings']['PathToProtocols_clean-visualization_h'] = 'C:/'
+        if 'PathToProtocols_clean-visualization' not in self.config['Settings']:
+            self.config['Settings']['PathToProtocols_clean-visualization'] = 'C:/'
 
     # update config file
 
@@ -214,17 +215,17 @@ class form_visualization_clean_h(QDialog, FORM_CLASS):
 
         project_directory = os.path.dirname(QgsProject.instance().fileName())
         f = os.path.join(project_directory, 'parameters_accessibility.txt')
-        self.config['Settings']['Layer_clean-visualization_h'] = self.cmbLayers.currentText()
-        self.config['Settings']['PathToProtocols_clean-visualization_h'] = self.txtPathToProtocols.text()
+        self.config['Settings']['Layer_clean-visualization'] = self.cmbLayers.currentText()
+        self.config['Settings']['PathToProtocols_clean-visualization'] = self.txtPathToProtocols.text()
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
     def ParametrsShow(self):
         self.readParameters()
         self.cmbLayers.setCurrentText(
-            self.config['Settings']['Layer_clean-visualization_h'])
+            self.config['Settings']['Layer_clean-visualization'])
         self.txtPathToProtocols.setText(
-            self.config['Settings']['PathToProtocols_clean-visualization_h'])
+            self.config['Settings']['PathToProtocols_clean-visualization'])
 
     def setMessage(self, message):
         self.lblMessages.setText(message)

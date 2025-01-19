@@ -5,7 +5,7 @@ import pandas as pd
 #rom qgis.core import QgsProject, QgsVectorLayer
 
 class DayStat_DestinationID:
-    TIME_DELTA = 1000
+    TIME_DELTA = 420
 
     def __init__(self, base_path, output_path):
         """
@@ -174,16 +174,14 @@ class DayStat_DestinationID:
             lambda row: row["std_dev"] / row["mean"] if row["mean"] > 0 else 0, axis=1
             )
         
-        
-
         self.result["percentage_lt_min_plus_delta"] = self.result.apply(
             lambda row: sum(row[duration_columns] < (row["min"] + DayStat_DestinationID.TIME_DELTA)) / row["count"] * 100
             if row["count"] > 0 else 0, axis=1
             )
 
 if __name__ == "__main__":
-    base_path = r'C:\Users\geosimlab\Documents\Igor\experiments\Gesher-2'
-    output_path = os.path.join(base_path, f"stat_new-1.csv")
+    base_path = r'C:\Users\geosimlab\Documents\Igor\experiments\Gesher-8'
+    output_path = os.path.join(base_path, f"stat_8.csv")
     processor = DayStat_DestinationID(base_path, output_path)
     processor.process_files()
     print ("ok")
