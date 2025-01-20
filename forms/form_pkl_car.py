@@ -384,9 +384,10 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.textLog.append(
             f"<a>  link type: {self.config['Settings']['LayerRoad_type_road_car_pkl']}</a>")
         self.textLog.append(
-            f"<a>  speed: {self.config['Settings']['FieldSpeed_car_pkl']}</a>")
-        self.textLog.append(
             f"<a>  direction: {self.cmbFieldsDirection.currentText()}</a>")
+        self.textLog.append(
+            f"<a>  speed: {self.config['Settings']['FieldSpeed_car_pkl']}</a>")
+        
 
         self.textLog.append(
             f"<a> Layer of buildings: {self.layer_origins_path}</a>")

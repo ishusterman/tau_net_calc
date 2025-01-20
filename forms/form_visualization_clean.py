@@ -43,6 +43,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.user_home = os.path.expanduser("~")
 
         self.setWindowTitle(title)
+        self.label.setText("Folder to store layers for visualization")
 
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
@@ -57,6 +58,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.progressBar.setMaximum(5)
         self.progressBar.setValue(0)
 
+        self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog ())
+
         self.toolButton_protocol.clicked.connect(
             lambda: self.showFoldersDialog(self.txtPathToProtocols))
 
@@ -65,7 +68,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.showAllLayersInCombo(self.cmbLayers)
         self.cmbLayers.installEventFilter(self)
-
+        
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
         self.run_button = self.buttonBox.addButton(
@@ -84,6 +87,36 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.show()
         self.ParametrsShow()
+
+    def get_layer_buildings(self):
+        selected_item = self.cmbLayers.currentText()
+        if os.path.isfile(selected_item):
+            layer_building = QgsVectorLayer(selected_item, "LayerBuildings", "ogr")
+        else:
+            layers = QgsProject.instance().mapLayersByName(selected_item)
+            if layers:  
+                layer_building = layers[0]
+            else:
+                layer_building = None  
+        return layer_building
+    
+    def open_file_dialog(self):
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Choose a File",
+            "",
+            "Shapefile (*.shp);"
+        )
+
+        if file_path:
+            file_name = os.path.splitext(os.path.basename(file_path))[0]
+            layer = QgsVectorLayer(file_path, file_name, "ogr")
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
+                self.cmbLayers.addItem(file_path, file_path)
+                index = self.cmbLayers.findText(file_path)
+                self.cmbLayers.setCurrentIndex(index)
 
     def showAllLayersInCombo(self, cmb, geometry_type=QgsWkbTypes.PolygonGeometry):
         """
@@ -144,6 +177,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             return 0
 
+        self.layer_buildings  = self.get_layer_buildings()
+        self.layer_buildings_path = self.layer_buildings.dataProvider().dataSourceUri().split("|")[
+            0]
+        
         if not (self.check_type_layer_buildings()):
             self.run_button.setEnabled(True)
             return 0
@@ -167,17 +204,16 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
 
-        self.layer_buildings = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['layer_clean-visualization'])[0]
-        self.layer_buildings_path = self.layer_buildings.dataProvider().dataSourceUri().split("|")[
-            0]
+        #self.layer_buildings = QgsProject.instance().mapLayersByName(
+        #    self.config['Settings']['layer_clean-visualization'])[0]
+        
        
         self.textLog.append(
             f"<a>Initial layer of buildings: {self.layer_buildings_path}</a>")
                 
         self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization']
         self.textLog.append(
-            f"<a>Folder to store database: {self.folder_name}</a>")
+            f"<a>Folder to store layers for visualization: {self.folder_name}</a>")
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
@@ -229,16 +265,19 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
     def ParametrsShow(self):
         self.readParameters()
+
+        if os.path.isfile(self.config['Settings']['Layer_clean-visualization']):
+            self.cmbLayers.addItem(self.config['Settings']['Layer_clean-visualization'])
         self.cmbLayers.setCurrentText(self.config['Settings']['Layer_clean-visualization'])
+        
         self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_clean-visualization'])
 
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
     def check_type_layer_buildings(self):
-
-        layer = self.cmbLayers.currentText()
-        layer = QgsProject.instance().mapLayersByName(layer)[0]
+        
+        layer = self.layer_buildings
 
         try:
             features = layer.getFeatures()

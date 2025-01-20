@@ -168,7 +168,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
             f"<a>Initial road network: {self.layer_road_path}</a>")
         self.folder_name = self.config['Settings']['PathToProtocols_clean']
         self.textLog.append(
-            f"<a>Folder for the cleaned road network: {self.folder_name}</a>")
+            f"<a>Folder to store clean road network: {self.folder_name}</a>")
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(

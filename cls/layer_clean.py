@@ -24,7 +24,7 @@ from common import getDateTime
 
 
 class cls_clean_roads(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="v.clean Task"):
+    def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="Roads clean task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time

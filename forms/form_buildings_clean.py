@@ -47,7 +47,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.user_home = os.path.expanduser("~")
 
         self.setWindowTitle(title)
-
+        self.toolButtonBuildings.setVisible(False)
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
@@ -170,7 +170,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             f"<a>Initial layer of buildings: {self.layer_road_path}</a>")
         self.folder_name = self.config['Settings']['PathToProtocols_clean-buildings']
         self.textLog.append(
-            f"<a>Folder to store database: {self.folder_name}</a>")
+            f"<a>Folder to store clean layer of buildings: {self.folder_name}</a>")
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(

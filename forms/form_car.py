@@ -170,8 +170,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.ParametrsShow()
 
         if mode == 2:
-            self.label_17.setText("Destinations of the region")
-            self.label_5.setText("Facilities")
+            self.label_17.setText("Layer of destinations")
+            self.label_5.setText("Layer of facilities")
             self.label_11.setText("Arrive at (hh:mm:ss)")
 
     # for widget with checkbox
@@ -309,12 +309,22 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.textLog.append(
             f"<a> Output folder: {self.config['Settings']['pathtoprotocols_car']}</a>")
 
-        if self.mode == 1:
-            name1 = "facilities"
-            name2 = "destinations of the region"
-        else:
-            name2 = "facilities"
-            name1 = "destinations of the region"
+        if self.protocol_type == 2:
+            if self.mode == 1:
+                name1 = "facilities"
+                name2 = "destinations"
+            else:
+                name2 = "facilities"
+                name1 = "destinations"
+
+        if self.protocol_type == 1:
+            if self.mode == 1:
+                name1 = "of all origins in the region"
+                name2 = "destinations"
+            else:
+                name2 = "of all origins in the region"
+                name1 = "destinations"        
+
         self.textLog.append(
             f'<a> Layer of {name1}: {self.layer_origins_path}</a>')
         self.textLog.append(

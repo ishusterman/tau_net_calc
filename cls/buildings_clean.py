@@ -15,7 +15,7 @@ from common import getDateTime, convert_meters_to_degrees
 
 
 class cls_clean_buildings(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="Clean layer of buildings"):
+    def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="Buildings clean task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
