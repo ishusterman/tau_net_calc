@@ -50,7 +50,7 @@ class AccessibilityTools(QWidget):
         self.item20 = QTreeWidgetItem(
             group1, ['Clean layer of buildings'])
         self.item19 = QTreeWidgetItem(
-            group1, ['Build visualizalization layers'])
+            group1, ['Build visualization layers'])
         group8 = QTreeWidgetItem(self.tree_widget, ['Construct databases'])
         group8.setExpanded(True)
         self.item3 = QTreeWidgetItem(group8, ['Transit routing database'])
@@ -160,7 +160,7 @@ class AccessibilityTools(QWidget):
 
         if item == self.item19:
             visualization_clean = form_visualization_clean(
-                title="Constructing databases. Build visualizalization layers")
+                title="Constructing databases. Build visualization layers")
             visualization_clean.exec_()    
 
         if item == self.item3:

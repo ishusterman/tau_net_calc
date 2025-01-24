@@ -30,9 +30,6 @@ from PyQt5 import uic
 from car import car_accessibility
 from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias
 
-#FORM_CLASS, _ = uic.loadUiType(os.path.join(
-#    os.path.dirname(__file__), 'car.ui'))
-
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'car.ui')
 )
@@ -170,11 +167,16 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.ParametrsShow()
 
         if mode == 2:
-            self.label_17.setText("Layer of destinations")
+            self.label_17.setText("Layer of origins")
             self.label_5.setText("Layer of facilities")
             self.label_11.setText("Arrive at (hh:mm:ss)")
-
-    # for widget with checkbox
+        
+        if self.protocol_type == 1:    
+            if self.mode == 2:
+                self.label_5.setText("Layer of all destinations in the region")
+            if self.mode == 1:    
+                self.label_17.setText("Layer of all origins in the region")
+  
 
     def fillComboBoxWithLayerFields2(self):
         self.cmbFields_ch.clear()
@@ -315,15 +317,15 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 name2 = "destinations"
             else:
                 name2 = "facilities"
-                name1 = "destinations"
+                name1 = "origins"
 
         if self.protocol_type == 1:
             if self.mode == 1:
-                name1 = "of all origins in the region"
+                name1 = "all origins in the region"
                 name2 = "destinations"
             else:
-                name2 = "of all origins in the region"
-                name1 = "destinations"        
+                name2 = "all destinations in the region"
+                name1 = "origins"              
 
         self.textLog.append(
             f'<a> Layer of {name1}: {self.layer_origins_path}</a>')

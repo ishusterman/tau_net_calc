@@ -5,7 +5,6 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerJoinInfo,
     QgsVectorFileWriter,
-    QgsProcessingFeedback,
     QgsFeatureRequest,
     QgsExpression,
     QgsWkbTypes,
@@ -13,15 +12,12 @@ from qgis.core import (
     QgsFields,
     QgsTask,
     QgsProject
-)
-
-from PyQt5.QtCore import QSettings
+    )
 
 from qgis import processing
 from PyQt5.QtWidgets import QApplication
 
-from common import getDateTime
-
+from common import getDateTime, convert_meters_to_degrees
 
 class cls_clean_roads(QgsTask):
     def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="Roads clean task"):
@@ -36,21 +32,62 @@ class cls_clean_roads(QgsTask):
 
     def run(self):
        
-        self.parent.progressBar.setValue(1)
+        self.parent.progressBar.setValue(0)
         try:
+
+            units = self.layer.crs().mapUnits()
+            crs_grad = (units == 6)
+            first_feature = next(self.layer.getFeatures())
+            first_point = first_feature.geometry().centroid().asPoint()
+            threshold = 1
+            if crs_grad:
+                threshold = convert_meters_to_degrees(
+                    threshold, first_point.y())
+                
             uri = self.layer.dataProvider().dataSourceUri()
             input_layer_path = uri.split("|")[0] if "|" in uri else uri
+            
             file_name = os.path.basename(input_layer_path)
             name, ext = os.path.splitext(file_name)
             cleaned_layer_name = f"{name}_c"
             cleaned_layer_error_name = f"{name}_e"
-            
 
-            # first clean
+            threshold = str (threshold)
+            # snapping geometries
+            self.parent.setMessage('Snap geometries ...')
+            result0 = processing.run("grass:v.clean", {
+                        'input': input_layer_path,
+                        'type': [0, 1, 2, 3, 4, 5, 6],
+                        'tool': [1],
+                        'threshold': threshold,
+                        '-b': False,  
+                        '-c': False,  
+                        'output': 'TEMPORARY_OUTPUT',
+                        'error': 'TEMPORARY_OUTPUT',
+                        'GRASS_REGION_PARAMETER': None,
+                        'GRASS_SNAP_TOLERANCE_PARAMETER': -1,
+                        'GRASS_MIN_AREA_PARAMETER': 0.0001,
+                        'GRASS_OUTPUT_TYPE_PARAMETER': 0,
+                        'GRASS_VECTOR_DSCO': '',
+                        'GRASS_VECTOR_LCO': '',
+                        'GRASS_VECTOR_EXPORT_NOCAT': False
+                        })
+
+
             if self.break_on:
                 return 0
+            snapped_layer_path = result0['output']
+            self.parent.progressBar.setValue(1)  
+            QApplication.processEvents()    
+            snapped_layer = QgsVectorLayer(snapped_layer_path, "Snapped Layer", "ogr")
+            QgsProject.instance().addMapLayer(snapped_layer)
+                        
+            #######################################################
+            # first clean
+            
+            self.parent.setMessage('Clean layer of roads (1 of 2) ...')
             result1 = processing.run("grass7:v.clean", {
-                'input': input_layer_path,
+                'input': snapped_layer_path,
                 'type': [0, 1, 2, 3, 4, 5, 6],
                 'tool': [0],
                 'threshold': [0.0, 0.0],
@@ -70,7 +107,7 @@ class cls_clean_roads(QgsTask):
             cleaned_layer_path1 = result1['output']
             
             # second clean
-
+            self.parent.setMessage('Clean layer of roads (2 of 2) ...')
             result2 = processing.run("grass7:v.clean", {
                 'input': cleaned_layer_path1,
                 'type': [0, 1, 2, 3, 4, 5, 6],
@@ -96,6 +133,7 @@ class cls_clean_roads(QgsTask):
                 f'<a>Number of errors: {error_count}</a>')
 
             # join errors
+            self.parent.setMessage('Filtering ...')
             join_info = QgsVectorLayerJoinInfo()
             join_info.setJoinLayer(errors_layer_2)
             join_info.setJoinFieldName("cat")
@@ -146,6 +184,7 @@ class cls_clean_roads(QgsTask):
             self.parent.progressBar.setValue(5)
 
             #####
+            self.parent.setMessage('Saving ...')
             file_dir = self.folder_name
             self.output_file_name = f"{name}_topo_cleaned{ext}"
             output_path = os.path.join(file_dir, self.output_file_name)
@@ -173,6 +212,7 @@ class cls_clean_roads(QgsTask):
 
         except Exception as e:
             self.exception = e
+            print (self.exception)
             return False
 
     def write_finish_info(self):

@@ -44,6 +44,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
+        
 
         self.setWindowTitle(title)
         self.splitter.setSizes(
@@ -115,12 +116,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         if self.mode == 2:
             self.label_21.setText("Arrive before (hh:mm:ss)")
-            self.label_17.setText("Layer of destinations")
+            self.label_17.setText("Layer of origins")
             self.label_5.setText("Layer of facilities")
         
         if self.protocol_type == 1:    
             if self.mode == 2:
-                self.label_5.setText("Layer of all origins in the region")
+                self.label_5.setText("Layer of all destinations in the region")
             if self.mode == 1:    
                 self.label_17.setText("Layer of all origins in the region")
 
@@ -338,15 +339,15 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 name2 = "destinations"
             else:
                 name2 = "facilities"
-                name1 = "destinations"
+                name1 = "origins"
 
         if self.protocol_type == 1:
             if self.mode == 1:
-                name1 = "of all origins in the region"
+                name1 = "all origins in the region"
                 name2 = "destinations"
             else:
-                name2 = "of all origins in the region"
-                name1 = "destinations"    
+                name2 = "all destinations in the region"
+                name1 = "origins"    
         self.textLog.append(
             f'<a> Layer of {name1}: {self.layer_origins_path}</a>')
         self.textLog.append(
