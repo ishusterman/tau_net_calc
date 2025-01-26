@@ -28,7 +28,7 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
 from car import car_accessibility
-from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias
+from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias, check_file_parameters_accessibility
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'car.ui')
@@ -45,6 +45,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
+        check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
         self.splitter.setSizes(

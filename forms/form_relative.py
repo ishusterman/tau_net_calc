@@ -25,7 +25,7 @@ from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
 
 from visualization import visualization
-from common import getDateTime, get_qgis_info, is_valid_folder_name
+from common import getDateTime, get_qgis_info, is_valid_folder_name, check_file_parameters_accessibility
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'relative.ui'))
@@ -41,6 +41,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
+        check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
         self.splitter.setSizes(

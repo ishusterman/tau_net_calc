@@ -11,24 +11,49 @@ from qgis.core import (
     QgsFeature,
     QgsFields,
     QgsTask,
-    QgsProject
+    QgsProject,
+    QgsProcessingContext
     )
+from qgis.core import QgsProcessingFeedback
 
 from qgis import processing
 from PyQt5.QtWidgets import QApplication
 
 from common import getDateTime, convert_meters_to_degrees
 
+
+class CustomFeedback(QgsProcessingFeedback):
+    def __init__(self):
+        super().__init__()
+        self.logs = []  # Список для хранения логов
+
+    def pushInfo(self, info):
+        self.logs.append(f"INFO: {info}")
+    
+    def pushCommandInfo(self, command):
+        self.logs.append(f"COMMAND: {command}")
+
+    def pushDebugInfo(self, debugInfo):
+        self.logs.append(f"DEBUG: {debugInfo}")
+
+    def pushWarning(self, warning):
+        self.logs.append(f"WARNING: {warning}")
+
+    def pushError(self, error):
+        self.logs.append(f"ERROR: {error}")
+
 class cls_clean_roads(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="Roads clean task"):
+    def __init__(self, parent, begin_computation_time, layer, layer_path, folder_name, task_name="Roads clean task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
         self.layer = layer
+        self.layer_path = layer_path
         self.initial_layer_count = self.layer.featureCount()
         self.folder_name = folder_name
         self.exception = None
         self.break_on = False
+        
 
     def run(self):
        
@@ -44,10 +69,12 @@ class cls_clean_roads(QgsTask):
                 threshold = convert_meters_to_degrees(
                     threshold, first_point.y())
                 
-            uri = self.layer.dataProvider().dataSourceUri()
-            input_layer_path = uri.split("|")[0] if "|" in uri else uri
+            #uri = self.layer.dataProvider().dataSourceUri()
+            #input_layer_path = uri.split("|")[0] if "|" in uri else uri
+            #self.parent.textLog.append(
+            #f'<a>Input_layer_path {input_layer_path}</a>')
             
-            file_name = os.path.basename(input_layer_path)
+            file_name = os.path.basename(self.layer_path)
             name, ext = os.path.splitext(file_name)
             cleaned_layer_name = f"{name}_c"
             cleaned_layer_error_name = f"{name}_e"
@@ -55,9 +82,10 @@ class cls_clean_roads(QgsTask):
             threshold = str (threshold)
             # snapping geometries
             self.parent.setMessage('Snap geometries ...')
+            feedback = CustomFeedback()
             result0 = processing.run("grass:v.clean", {
-                        'input': input_layer_path,
-                        'type': [0, 1, 2, 3, 4, 5, 6],
+                        'input': self.layer_path,
+                        'type': [1],
                         'tool': [1],
                         'threshold': threshold,
                         '-b': False,  
@@ -71,7 +99,10 @@ class cls_clean_roads(QgsTask):
                         'GRASS_VECTOR_DSCO': '',
                         'GRASS_VECTOR_LCO': '',
                         'GRASS_VECTOR_EXPORT_NOCAT': False
-                        })
+                        }, feedback=feedback)
+            
+            for log_entry in feedback.logs:
+                print(log_entry)
 
 
             if self.break_on:
@@ -79,8 +110,8 @@ class cls_clean_roads(QgsTask):
             snapped_layer_path = result0['output']
             self.parent.progressBar.setValue(1)  
             QApplication.processEvents()    
-            snapped_layer = QgsVectorLayer(snapped_layer_path, "Snapped Layer", "ogr")
-            QgsProject.instance().addMapLayer(snapped_layer)
+            #snapped_layer = QgsVectorLayer(snapped_layer_path, "Snapped Layer", "ogr")
+            #QgsProject.instance().addMapLayer(snapped_layer)
                         
             #######################################################
             # first clean
@@ -213,6 +244,7 @@ class cls_clean_roads(QgsTask):
         except Exception as e:
             self.exception = e
             print (self.exception)
+            self.parent.textLog.append(f'<a>Error: {self.exception} links</a>')
             return False
 
     def write_finish_info(self):

@@ -26,7 +26,7 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
 from pkl_car import pkl_car
-from common import get_qgis_info
+from common import get_qgis_info, check_file_parameters_accessibility
 
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
@@ -47,6 +47,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
+        check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
 

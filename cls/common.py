@@ -10,6 +10,8 @@ import math
 import pandas as pd
 from zipfile import ZipFile
 from datetime import datetime
+from qgis.core import QgsProject
+import shutil
 
 
 def getDateTime():
@@ -125,3 +127,13 @@ def seconds_to_time(seconds):
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
     return "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+
+def check_file_parameters_accessibility ():
+    project_directory = os.path.dirname(QgsProject.instance().fileName())
+    parameters_path = os.path.join(project_directory, 'parameters_accessibility.txt')
+
+    current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(current_dir, 'config')
+    source_path = os.path.join(config_path, 'parameters_accessibility_shablon.txt')
+    if not os.path.exists(parameters_path):
+        shutil.copy(source_path, parameters_path)

@@ -29,7 +29,7 @@ from GTFS import GTFS
 from PKL import PKL
 from datetime import datetime
 
-from common import get_qgis_info, zip_directory, getDateTime
+from common import get_qgis_info, zip_directory, getDateTime, check_file_parameters_accessibility
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'pkl.ui'))
@@ -45,6 +45,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
+        check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
 

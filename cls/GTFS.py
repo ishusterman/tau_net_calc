@@ -548,8 +548,14 @@ class GTFS ():
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
+               
 
             if not trip['stop_sequence'].is_monotonic_increasing:
+
+                trip_rows = self.stop_times_df[self.stop_times_df['trip_id'] == id]
+                if len(trip_rows) != len(trip):
+                    continue  
+
                 self.stop_times_df.loc[self.stop_times_df['trip_id'] == id, 'stop_sequence'] = range(1, len(trip) + 1)
                 self.log_processing.append(f"Renumbered stop_sequence for trip {id} due to incorrect order.")
 
@@ -582,7 +588,7 @@ class GTFS ():
             for line in self.log_processing:
                 file.write(line + "\n")
         #################################        
-        """
+        
         self.parent.setMessage(f'Building aerial paths...')
         QApplication.processEvents()
         self.create_footpath_AIR()
@@ -647,7 +653,7 @@ class GTFS ():
         QApplication.processEvents()
 
         self.converter.remove_temp_layer()
-        """
+        
         return 1
 
     def found_repeated_in_trips_stops(self):

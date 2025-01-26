@@ -30,7 +30,14 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
 from query_file import runRaptorWithProtocol, myload_all_dict
-from common import getDateTime, get_qgis_info, is_valid_folder_name, get_prefix_alias, seconds_to_time, time_to_seconds
+from common import (getDateTime, 
+                    get_qgis_info, 
+                    is_valid_folder_name, 
+                    get_prefix_alias, 
+                    seconds_to_time, 
+                    time_to_seconds, 
+                    check_file_parameters_accessibility
+                    )
 from stat_destination import DayStat_DestinationID
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -44,7 +51,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
-        
+        check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
         self.splitter.setSizes(

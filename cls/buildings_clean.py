@@ -101,8 +101,9 @@ class cls_clean_buildings(QgsTask):
         
         self.parent.btnBreakOn.setEnabled(False)
         self.parent.close_button.setEnabled(True)
+        self.parent.progressBar.setValue(5)
         self.parent.setMessage('Finished')
-        #self.parent.progressBar.setValue(6)
+        
         return True
 
     def write_finish_info(self):

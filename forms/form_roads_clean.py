@@ -26,7 +26,7 @@ from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
 
 
-from common import get_qgis_info
+from common import get_qgis_info, check_file_parameters_accessibility
 from layer_clean import cls_clean_roads
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -43,6 +43,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
+        check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
 
@@ -178,7 +179,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.break_on = False
 
         self.task = cls_clean_roads(
-            self, begin_computation_time, self.layer_road, self.folder_name)
+            self, begin_computation_time, self.layer_road, self.layer_road_path, self.folder_name)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
         QApplication.processEvents()

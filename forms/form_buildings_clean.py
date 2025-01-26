@@ -28,7 +28,7 @@ from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
 
 
-from common import get_qgis_info
+from common import get_qgis_info, check_file_parameters_accessibility
 from buildings_clean import cls_clean_buildings
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -45,6 +45,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
+        check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
         self.toolButtonBuildings.setVisible(False)

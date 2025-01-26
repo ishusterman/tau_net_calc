@@ -18,7 +18,6 @@ from .form_relative import form_relative
 
 from .form_roads_clean import form_roads_clean
 from .form_visualization_clean import form_visualization_clean
-#from .form_visualization_clean_h import form_visualization_clean_h
 from .form_buildings_clean import form_buildings_clean
 
 
