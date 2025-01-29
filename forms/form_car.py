@@ -268,8 +268,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.run_button.setEnabled(False)
 
         if not (is_valid_folder_name(self.txtAlias.text())):
-            self.setMessage(
-                f"'{self.txtAlias.text()}' is not a valid directory/file name")
+            self.setMessage(f"'{self.txtAlias.text()}' is not a valid directory/file name")
             self.run_button.setEnabled(True)
             return 0
 
@@ -307,10 +306,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
         self.textLog.append(f"<a> Output alias: {self.alias}</a>")
 
-        self.textLog.append(
-            f"<a> Car routing database folder: {self.config['Settings']['PathToPKL_car']}</a>")
-        self.textLog.append(
-            f"<a> Output folder: {self.config['Settings']['pathtoprotocols_car']}</a>")
+        self.textLog.append(f"<a> Car routing database folder: {self.config['Settings']['PathToPKL_car']}</a>")
+        self.textLog.append(f"<a> Output folder: {self.config['Settings']['pathtoprotocols_car']}</a>")
 
         if self.protocol_type == 2:
             if self.mode == 1:
@@ -328,41 +325,27 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 name2 = "all destinations in the region"
                 name1 = "origins"              
 
-        self.textLog.append(
-            f'<a> Layer of {name1}: {self.layer_origins_path}</a>')
-        self.textLog.append(
-            f"<a> Selected {name1}: {self.config['Settings']['selectedonly1_car']}</a>")
-        self.textLog.append(
-            f"<a> Layer of {name2}: {self.layer_destinations_path}</a>")
-        self.textLog.append(
-            f"<a> Selected {name2}: {self.config['Settings']['selectedonly2_car']}</a>")
+        self.textLog.append(f'<a> Layer of {name1}: {self.layer_origins_path}</a>')
+        self.textLog.append(f"<a> Selected {name1}: {self.config['Settings']['selectedonly1_car']}</a>")
+        self.textLog.append(f"<a> Layer of {name2}: {self.layer_destinations_path}</a>")
+        self.textLog.append(f"<a> Selected {name2}: {self.config['Settings']['selectedonly2_car']}</a>")
 
-        self.textLog.append(
-            "<a style='font-weight:bold;'>[Parameters of a trip]</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Parameters of a trip]</a>")
 
-        self.textLog.append(
-            f"<a> Maximum total travel time: {self.config['Settings']['maxtimetravel_car']} min</a>")
+        self.textLog.append(f"<a> Maximum total travel time: {self.config['Settings']['maxtimetravel_car']} min</a>")
 
-        self.textLog.append(
-            f"<a> Walking distance from origin to car parking: {self.config['Settings']['Walk_to_car_car']} m</a>")
-        self.textLog.append(
-            f"<a> Walking distance from parking to destination: {self.config['Settings']['Walk_to_destination_car']} m</a>")
-        self.textLog.append(
-            f"<a> Walking speed: {self.config['Settings']['Walking_speed_car']} km/h</a>")
+        self.textLog.append(f"<a> Walking distance from origin to car parking: {self.config['Settings']['Walk_to_car_car']} m</a>")
+        self.textLog.append(f"<a> Walking distance from parking to destination: {self.config['Settings']['Walk_to_destination_car']} m</a>")
+        self.textLog.append(f"<a> Walking speed: {self.config['Settings']['Walking_speed_car']} km/h</a>")
         if self.mode == 1:
-            self.textLog.append(
-                f"<a> Start at (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
+            self.textLog.append(f"<a> Start at (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
         else:
-            self.textLog.append(
-                f"<a> Arrive at (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
+            self.textLog.append(f"<a> Arrive at (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
 
-        self.textLog.append(
-            f"<a> Driving start/finish gap: {self.config['Settings']['timegap_car']} s</a>")
+        self.textLog.append(f"<a> Driving start/finish gap: {self.config['Settings']['timegap_car']} s</a>")
         if self.protocol_type == 1:  # MAP mode
-            self.textLog.append(
-                "<a style='font-weight:bold;'>[Aggregation]</a>")
-            self.textLog.append(
-                f"<a> Number of bins: {self.config['Settings']['timeinterval_car']}</a>")
+            self.textLog.append("<a style='font-weight:bold;'>[Aggregation]</a>")
+            self.textLog.append(f"<a> Number of bins: {self.config['Settings']['timeinterval_car']}</a>")
 
             if self.mode == 1:
                 count_features = self.count_layer_destinations
@@ -377,8 +360,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.textLog.append(f'<a> Aggregated fields: {print_fields}</a>')
 
         self.textLog.append("<a style='font-weight:bold;'>[Visualization]</a>")
-        self.textLog.append(
-            f'<a> Layer for visualization: {self.layer_visualization_path}</a>')
+        self.textLog.append(f'<a> Layer for visualization: {self.layer_visualization_path}</a>')
 
         self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
 
@@ -615,8 +597,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         if not os.path.exists(self.txtPathToPKL.text()):
-            self.setMessage(
-                f"Folder '{self.txtPathToPKL.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToPKL.text()}' does not exist")
             return False
 
         required_files = ['dict_building_vertex.pkl',
@@ -631,13 +612,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
         if missing_files:
             limited_files = missing_files[:2]
             missing_files_message = ", ".join(limited_files)
-            self.setMessage(
-                f"Files are missing in  '{self.txtPathToPKL.text()}' folder: {missing_files_message}")
+            self.setMessage(f"Files are missing in  '{self.txtPathToPKL.text()}' folder: {missing_files_message}")
             return False
 
         if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(
-                f"Folder '{self.txtPathToProtocols.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
             return False
 
         try:
@@ -647,8 +626,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(
-                f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
+            self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
 
         return True

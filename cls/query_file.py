@@ -68,7 +68,7 @@ def myload_all_dict(self,
     stop_ids_set = set(stop_ids)
     self.progressBar.setValue(2)
 
-    self.setMessage("Loading routes ...")
+    self.setMessage("Loading transit routes ...")
     QApplication.processEvents()
     with open(path + '/routes_by_stop.pkl', 'rb') as file:
         routes_by_stop_dict = pickle.load(file)
@@ -94,14 +94,14 @@ def myload_all_dict(self,
     self.progressBar.setValue(3)
 
     if mode == 1:
-        self.setMessage("Loading stops ...")
+        self.setMessage("Loading transit stops ...")
         QApplication.processEvents()
         with open(path + '/stops_dict_pkl.pkl', 'rb') as file:
             stops_dict = pickle.load(file)
 
         self.progressBar.setValue(4)
 
-        self.setMessage("Loading time schedule ...")
+        self.setMessage("Loading transit time schedule ...")
         QApplication.processEvents()
         with open(path + '/stoptimes_dict_pkl.pkl', 'rb') as file:
             stoptimes_dict = pickle.load(file)
@@ -116,14 +116,14 @@ def myload_all_dict(self,
         self.progressBar.setValue(6)
 
     else:
-        self.setMessage("Loading stops ...")
+        self.setMessage("Loading transit stops ...")
         QApplication.processEvents()
         with open(path + '/stops_dict_reversed_pkl.pkl', 'rb') as file:  # reversed
             stops_dict = pickle.load(file)
 
         self.progressBar.setValue(4)
 
-        self.setMessage("Loading time schedule ...")
+        self.setMessage("Loading transit time schedule ...")
         QApplication.processEvents()
         with open(path + '/stoptimes_dict_reversed_pkl.pkl', 'rb') as file:  # reversed
             stoptimes_dict = pickle.load(file)
@@ -184,8 +184,7 @@ def verify_break(self,
 
     if self.break_on:
 
-        self.textLog.append(
-            f'<a><b><font color="red">Raptor algorithm is interrupted</font> </b></a>')
+        self.textLog.append(f'<a><b><font color="red">Raptor Algorithm is interrupted by user</font> </b></a>')
         time_after_computation = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.textLog.append(f'<a>Time break: {time_after_computation}</a>')
 
@@ -202,7 +201,7 @@ def verify_break(self,
 
                        )
         self.progressBar.setValue(0)
-        self.setMessage("Interrupted (Raptor Algorithm)")
+        self.setMessage("Raptor Algorithm is interrupted by user")
         return True
     return False
 
@@ -371,14 +370,12 @@ def runRaptorWithProtocol(self,
             for nr in numbers_routes:
                 res = route_dict.get(nr, 0)
                 if res == 0:
-                    self.textLog.append(
-                        f'<a><b><font color="blue">The route {nr} was not found in routes.txt and will not be excluded from calculations</font> </b></a>')
+                    self.textLog.append(f'<a><b><font color="blue">The route {nr} was not found in routes.txt and will not be excluded from calculations</font> </b></a>')
 
             numbers_routes = [
                 nr for nr in numbers_routes if route_dict.get(nr, 0) != 0]
             list_exclude_routes = ', '.join(numbers_routes)
-            self.textLog.append(
-                f'<a><b><font color="red"> These routes are excluded from calculations: {list_exclude_routes}.</font> </b></a>')
+            self.textLog.append(f'<a><b><font color="red"> These routes are excluded from calculations: {list_exclude_routes}.</font> </b></a>')
 
         else:
             exlude_routes = False
@@ -429,8 +426,7 @@ def runRaptorWithProtocol(self,
             layer_road = get_roads_from_file(add_routes_path)
 
             if layer_road != 0:
-                self.textLog.append(
-                    f'<a><b>Run recalculate pkl<font color="blue"></font> </b></a>')
+                self.textLog.append(f'<a><b>Run recalculate pkl<font color="blue"></font> </b></a>')
                 converter = MultiLineStringToLineStringConverter(
                     self, layer_road)
                 layer_road = converter.execute()
@@ -462,8 +458,7 @@ def runRaptorWithProtocol(self,
                 calc_PKL.create_files()
 
             else:
-                self.textLog.append(
-                    f'<a><b>No run recalculate pkl. Missing or damaged road layer<font color="blue"></font> </b></a>')
+                self.textLog.append(f'<a><b>No run recalculate pkl. Missing or damaged road layer<font color="blue"></font> </b></a>')
                 add_routes = False
             # return 0, 0
 
@@ -589,8 +584,7 @@ def runRaptorWithProtocol(self,
                         attribute_dict[int(feature[field_name_id])] = int(
                             feature[field])
                     else:
-                        self.textLog.append(
-                            f'<a><b><font color="red"> WARNING: type of field "{field}" to aggregate  is no digital, aggregate no run</font> </b></a>')
+                        self.textLog.append(f'<a><b><font color="red"> WARNING: type of field "{field}" to aggregate  is no digital, aggregate no run</font> </b></a>')
                         # aggregate_this_fields[field] = False
 
                         break
@@ -797,8 +791,7 @@ def runRaptorWithProtocol(self,
     self.textLog.append(f'<a>Finished {after_computation_str}</a>')
     duration_computation = after_computation_time - begin_computation_time
     duration_without_microseconds = str(duration_computation).split('.')[0]
-    self.textLog.append(
-        f'<a>Processing time: {duration_without_microseconds}</a>')
+    self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
     write_info(self,
                Layer,
@@ -897,8 +890,7 @@ def write_info(self,
 
                 save_layer_to_zip(LayerDest, zip_filename2, filename2)
 
-    self.textLog.append(
-        f'<a href="file:///{self.folder_name}" target="_blank" >Output in folder</a>')
+    self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Output in folder</a>')
 
 
 # for type_protokol = 1

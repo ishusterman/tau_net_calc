@@ -216,8 +216,7 @@ class GTFS ():
 
         for i, (route_id, route_group) in enumerate(grouped_routes):
             if i % 50 == 0:
-                self.parent.setMessage(
-                    f'Separating route {i} of {len(grouped_routes)}...')
+                self.parent.setMessage(f'Separating route {i} of {len(grouped_routes)}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -429,8 +428,7 @@ class GTFS ():
                 if self.verify_break():
                     return 0
                 QApplication.processEvents()
-                self.parent.setMessage(
-                    f'Interpolation arrival times of the trip {i} from {num_groups}...')
+                self.parent.setMessage(f'Interpolating trips’ arrival times {i} from {num_groups}...')
 
             group = group.sort_values('stop_sequence')
             if group['arrival_time'].isna().any() or group['departure_time'].isna().any():
@@ -540,7 +538,7 @@ class GTFS ():
         ##############################
         #  Correcting trips where 'stop_sequence' is monotonic increasing:
         ##############################
-        self.parent.setMessage(f"Correcting 'stop_sequence' ...")
+        self.parent.setMessage(f"Correcting sequence of stops...")
         self.parent.progressBar.setValue(5)
 
         for i, (id, trip) in enumerate(trips_group):
@@ -589,7 +587,7 @@ class GTFS ():
                 file.write(line + "\n")
         #################################        
         
-        self.parent.setMessage(f'Building aerial paths...')
+        self.parent.setMessage(f'Building aerial paths between buildings and stops...')
         QApplication.processEvents()
         self.create_footpath_AIR()
         self.parent.progressBar.setValue(9)
@@ -690,7 +688,7 @@ class GTFS ():
         self.stop_times_df = self.stop_times_df.set_index(
             ['trip_id', 'stop_sequence'])
 
-        self.parent.setMessage(f'Correcting repeated stops...')
+        self.parent.setMessage(f'Correcting duplicated stops...')
 
         QApplication.processEvents()
 
@@ -707,8 +705,7 @@ class GTFS ():
         for count, (route_id, group) in enumerate(grouped):
             if count % 100 == 0:
 
-                self.parent.setMessage(
-                    f'Cleaning duplicate stops, route {count} of {all_routes}')
+                self.parent.setMessage(f'Cleaning duplicate stops, route {count} of {all_routes}')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -739,7 +736,7 @@ class GTFS ():
             update_index = stops_to_update.set_index(
                 ['trip_id', 'stop_sequence'])
 
-            self.parent.setMessage(f'Cleaning duplicate stops...')
+            self.parent.setMessage(f'Cleaning duplicated stops...')
             QApplication.processEvents()
             if self.verify_break():
                 return 0
@@ -954,8 +951,7 @@ class GTFS ():
             for j in nearest_centroids_buildings:
                 current_combination = current_combination + 1
                 if current_combination % 5000 == 0:
-                    self.parent.setMessage(
-                        f'Processing build<->stop combination {current_combination}')
+                    self.parent.setMessage(f'Processing building-stop pair {current_combination}')
                     QApplication.processEvents()
                     if self.verify_break():
                         return 0
@@ -985,8 +981,7 @@ class GTFS ():
                     continue
                 current_combination += 1
                 if current_combination % 1000 == 0:
-                    self.parent.setMessage(
-                        f'Processing stop<->stop combination {current_combination}')
+                    self.parent.setMessage(f'Processing stop-stop pair {current_combination}')
                     QApplication.processEvents()
                     if self.verify_break():
                         return 0
@@ -1013,10 +1008,9 @@ class GTFS ():
 
     def verify_break(self):
         if self.parent.break_on:
-            self.parent.setMessage("Interrupted (Dictionary construction)")
+            self.parent.setMessage("Database construction is interrupted by user")
             if not self.already_display_break:
-                self.parent.textLog.append(
-                    f'<a><b><font color="red">Interrupted (Dictionary construction)</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Database construction is interrupted by user</font> </b></a>')
                 self.already_display_break = True
             self.parent.progressBar.setValue(0)
             return True
@@ -1043,7 +1037,7 @@ class GTFS ():
         
         for i, freq_row in frequencies_df.iterrows():
             if i % 1 == 0:
-                self.parent.setMessage(f'Processing frequencies.txt ({i} from {total_frequencies})')
+                self.parent.setMessage(f'Processing line schedule ({i} from {total_frequencies})')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0

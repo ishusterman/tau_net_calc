@@ -173,8 +173,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.break_on = False
 
         if not (is_valid_folder_name(self.txtAliase.text())):
-            self.setMessage(
-                f"'{self.txtAliase.text()}' is not a valid  directory/file name")
+            self.setMessage(f"'{self.txtAliase.text()}' is not a valid  directory/file name")
             self.run_button.setEnabled(True)
             return 0
 
@@ -209,7 +208,7 @@ class form_relative(QDialog, FORM_CLASS):
                 and not (self.cb_difference.isChecked())  \
                 and not (self.cb_relative_difference.isChecked()):
 
-            self.setMessage('Choose one calculation mode at least')
+            self.setMessage('Choose calculation mode')
             self.run_button.setEnabled(True)
             return 0
 
@@ -312,20 +311,13 @@ class form_relative(QDialog, FORM_CLASS):
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
         self.textLog.append(f'<a> Scenario name: {self.aliase}</a>')
-        self.textLog.append(
-            f"<a>Results_1 folder: {self.config['Settings']['PathToPT_relative']}</a>")
-        self.textLog.append(
-            f"<a>Results_2 folder: {self.config['Settings']['PathToCAR_relative']}</a>")
-        self.textLog.append(
-            f"<a>Output folder: {self.config['Settings']['PathToOutput_relative']}</a>")
-        self.textLog.append(
-            f"<a>Visualization layer : {self.layer_vis_path}</a>")
-        self.textLog.append(
-            f"<a>Calc ratio: {self.config['Settings']['calc_ratio_relative']}</a>")
-        self.textLog.append(
-            f"<a>Calc difference: {self.config['Settings']['calc_difference_relative']}</a>")
-        self.textLog.append(
-            f"<a>Calc difference relative: {self.config['Settings']['calc_relative_difference_relative']}</a>")
+        self.textLog.append(f"<a>Results_1 folder: {self.config['Settings']['PathToPT_relative']}</a>")
+        self.textLog.append(f"<a>Results_2 folder: {self.config['Settings']['PathToCAR_relative']}</a>")
+        self.textLog.append(f"<a>Output folder: {self.config['Settings']['PathToOutput_relative']}</a>")
+        self.textLog.append(f"<a>Visualization layer : {self.layer_vis_path}</a>")
+        self.textLog.append(f"<a>Calc ratio: {self.config['Settings']['calc_ratio_relative']}</a>")
+        self.textLog.append(f"<a>Calc difference: {self.config['Settings']['calc_difference_relative']}</a>")
+        self.textLog.append(f"<a>Calc difference relative: {self.config['Settings']['calc_relative_difference_relative']}</a>")
 
         LayerVis = self.config['Settings']['VisLayer_relative']
         fieldname_layer = self.config['Settings']['VisLayers_fields_relative']
@@ -434,8 +426,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.textLog.append(
-            f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
         text = self.textLog.toHtml()
         filelog_name = f'{self.folder_name}//log_{self.aliase}.html'
         with open(filelog_name, "w") as file:
@@ -444,8 +435,7 @@ class form_relative(QDialog, FORM_CLASS):
         for file_name in list_file_name:
             self.textLog.append(f'<a>{file_name}</a>')
 
-        self.textLog.append(
-            f'<a href="file:///{self.folder_name}" target="_blank" >Protocol in folder</a>')
+        self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Protocol in folder</a>')
 
         self.setMessage("Finished")
         self.progressBar.setValue(6)
@@ -563,8 +553,7 @@ class form_relative(QDialog, FORM_CLASS):
     def check_output_folder(self):
         self.setMessage("")
         if not os.path.exists(self.txtPathToOutput.text()):
-            self.setMessage(
-                f"Output folder '{self.txtPathToOutput.text()}' does not exist")
+            self.setMessage(f"Output folder '{self.txtPathToOutput.text()}' does not exist")
             return False
 
         try:
@@ -574,8 +563,7 @@ class form_relative(QDialog, FORM_CLASS):
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(
-                f"Access to the output folder '{self.txtPathToOutput.text()}' is denied")
+            self.setMessage(f"Access to the output folder '{self.txtPathToOutput.text()}' is denied")
             return False
 
         return True
@@ -709,8 +697,7 @@ class form_relative(QDialog, FORM_CLASS):
 
         if missing_files:
             missing_files_message = ", ".join(missing_files)
-            self.setMessage(
-                f"Files are missing in '{path}': {missing_files_message}")
+            self.setMessage(f"Files are missing in '{path}': {missing_files_message}")
             return False
 
         return True

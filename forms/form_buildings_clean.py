@@ -126,8 +126,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             self.task.cancel() 
             self.progressBar.setValue(0) 
             if not (self.already_show_info):
-                self.textLog.append(
-                    f'<a><b><font color="red">Process is break</font> </b></a>')
+                self.textLog.append(f'<a><b><font color="red">Process is interrupted by user</font> </b></a>')
                 self.already_show_info = True
             self.setMessage("")
 
@@ -167,11 +166,9 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             self.config['Settings']['layer_clean-buildings'])[0]
         self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[
             0]
-        self.textLog.append(
-            f"<a>Initial layer of buildings: {self.layer_road_path}</a>")
+        self.textLog.append(f"<a>Initial layer of buildings: {self.layer_road_path}</a>")
         self.folder_name = self.config['Settings']['PathToProtocols_clean-buildings']
-        self.textLog.append(
-            f"<a>Folder to store clean layer of buildings: {self.folder_name}</a>")
+        self.textLog.append(f"<a>Folder to store clean layer of buildings: {self.folder_name}</a>")
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
@@ -239,8 +236,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         try:
             features = layer.getFeatures()
         except:
-            self.setMessage(
-                f"The layer '{self.cmbLayers.currentText()}' is empty")
+            self.setMessage(f"Layer '{self.cmbLayers.currentText()}' is empty")
             return 0
 
         for feature in features:
@@ -249,8 +245,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             break
         
         if not (feature_geometry_type in {QgsWkbTypes.PolygonGeometry}):
-            self.setMessage(
-                f"Features in the layer '{self.cmbLayers.currentText()}' must be polygones")
+            self.setMessage(f"Features in the layer '{self.cmbLayers.currentText()}' must be polygones")
             return 0
 
         return 1
@@ -258,8 +253,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(
-                f"The folder '{self.txtPathToProtocols.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
             return False
 
         """
@@ -267,7 +261,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         if os.path.isdir(self.txtPathToProtocols.text()):
             for file in os.listdir(self.txtPathToProtocols.text()):
                 if file.lower().endswith('.shp'):
-                    self.setMessage(f"The folder '{self.txtPathToProtocols.text()}' is not empty")
+                    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' is not empty")
                     return False
         """
 
@@ -278,8 +272,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(
-                f"An access to the folder '{self.txtPathToProtocols.text()}' is denied")
+            self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
 
         return True

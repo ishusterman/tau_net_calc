@@ -1,5 +1,7 @@
 import os
 from datetime import datetime
+from random import choice
+from matplotlib.colors import CSS4_COLORS
 
 from PyQt5.QtCore import QVariant
 
@@ -11,6 +13,7 @@ from qgis.core import (
     QgsFeature,
     QgsField,
     QgsSpatialIndex,
+    QgsFillSymbol,
     edit)
 
 from qgis import processing
@@ -31,7 +34,7 @@ class cls_clean_visualization(QgsTask):
         #self.spacing = [800]
         self.layer_result_list = []
         self.dist_buffer = 50
-
+        
     def run(self):
 
         uri = self.layer.dataProvider().dataSourceUri()
@@ -39,11 +42,8 @@ class cls_clean_visualization(QgsTask):
         self.file_name = os.path.basename(self.input_layer_path)
         self.name, self.ext = os.path.splitext(self.file_name)
         input_layer = QgsVectorLayer(self.input_layer_path, "Layer Name", "ogr")
-        
-        #centroids_layer = self.layer_centroids
-
         #############################################
-        self.parent.setMessage('Constructing centroids ...')
+        self.parent.setMessage('Constructing buildings’ centroids ...')
         centroid_layer_id, centroids_layer = self.make_centroids(self.layer)
         self.centroids_layer_id = centroid_layer_id
         
@@ -111,7 +111,7 @@ class cls_clean_visualization(QgsTask):
                 return 0
             self.parent.progressBar.setValue(7 + i*4)
             #############################################
-            self.parent.setMessage(f'Add nearest osm_id to hexogons {spacing}m...')
+            self.parent.setMessage(f'Matching between buildings and hexagons {spacing}m...')
             self.add_nearest_osm_id(hexagones_layer, centroids_layer)
         
 
@@ -120,7 +120,7 @@ class cls_clean_visualization(QgsTask):
             self.parent.progressBar.setValue(8 + i*4)
 
             #############################################
-            self.parent.setMessage(f'Dissolving hexogons {spacing}m on osm_id...')
+            self.parent.setMessage(f'Dissolving adjacent hexagons with the same ID {spacing}m on osm_id...')
             dissolve_result = processing.run("native:dissolve", 
                         {
                         'INPUT': hexagones_layer,
@@ -156,6 +156,7 @@ class cls_clean_visualization(QgsTask):
             saved_layer = QgsVectorLayer(self.unique_output_path, self.layer_name, "ogr")
             if saved_layer.isValid():
                 QgsProject.instance().addMapLayer(saved_layer)
+                self.style_polygon_layer(saved_layer)
             if self.break_on:
                 return 0
             
@@ -178,8 +179,7 @@ class cls_clean_visualization(QgsTask):
         self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(
-            f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
         text = self.parent.textLog.toPlainText()
         postfix = getDateTime()
@@ -189,12 +189,10 @@ class cls_clean_visualization(QgsTask):
         with open(filelog_name, "w") as file:
             file.write(text)
 
-        self.parent.textLog.append(
-            f'"{self.voronoi_layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        self.parent.textLog.append(f'"{self.voronoi_layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
                 
         for item in self.layer_result_list:
-            self.parent.textLog.append(
-                f'"{item}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+            self.parent.textLog.append(f'"{item}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
 
         self.parent.setMessage(f'Finished')
 
@@ -286,7 +284,7 @@ class cls_clean_visualization(QgsTask):
             if i % 1000 == 0:
                 if self.break_on:
                     return 0
-                self.parent.setMessage(f'Add nearest osm_id to hexagons {i} from {count}...')
+                self.parent.setMessage(f'Matching between buildings and hexagons {i} from {count}...')
         
             nearest_id = input_index.nearestNeighbor(hex_centroid.asPoint(), 1)
             if nearest_id:
@@ -348,7 +346,7 @@ class cls_clean_visualization(QgsTask):
     #########################
     def Voronoi (self):
       try:  
-        self.parent.setMessage('Constructing Voronoi polygones ...')
+        self.parent.setMessage('Constructing Voronoi polygons...')
         input_layer_path = self.centroids_layer_id
         voronoi_result = processing.run("native:voronoipolygons",
                                         {'INPUT': input_layer_path,
@@ -360,6 +358,7 @@ class cls_clean_visualization(QgsTask):
         voronoi_layer = voronoi_result['OUTPUT']
         
         QgsProject.instance().addMapLayer(voronoi_layer, False)
+        
         if self.break_on:
             return 0
         self.parent.progressBar.setValue(2)
@@ -374,7 +373,7 @@ class cls_clean_visualization(QgsTask):
         #########################
         # Buffer
         #########################
-        self.parent.setMessage('Constructing buffer ...')
+        self.parent.setMessage('Constructing buffers ...')
         buffer_result = processing.run("native:buffer",
                                        {'INPUT': self.input_layer_path,
                                         'DISTANCE': self.dist_buffer,
@@ -419,6 +418,7 @@ class cls_clean_visualization(QgsTask):
             self.unique_output_path, self.voronoi_layer_name, "ogr")
         if saved_layer.isValid():
             QgsProject.instance().addMapLayer(saved_layer)
+            self.style_polygon_layer(saved_layer)
         if self.break_on:
             return 0
         QgsProject.instance().removeMapLayer(voronoi_layer.id())
@@ -473,3 +473,14 @@ class cls_clean_visualization(QgsTask):
 
         result_layer.updateExtents()
         return result_layer
+
+    def style_polygon_layer(self, layer):
+        
+        color_list = list(CSS4_COLORS.values())
+        random_color = choice(color_list)
+
+        if layer.geometryType() == 2:
+            symbol = QgsFillSymbol.createSimple({'color': '0,0,0,0', 
+                                                 'outline_color': random_color})
+            layer.renderer().setSymbol(symbol)
+            layer.triggerRepaint()    

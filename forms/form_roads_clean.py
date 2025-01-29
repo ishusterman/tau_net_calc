@@ -118,14 +118,14 @@ class form_roads_clean(QDialog, FORM_CLASS):
         QDesktopServices.openUrl(url)
 
     def set_break_on(self):
+        QApplication.restoreOverrideCursor()
         self.break_on = True
         self.close_button.setEnabled(True)
         if self.task:
             self.task.cancel()  
             self.progressBar.setValue(0)  
             if not (self.already_show_info):
-                self.textLog.append(
-                    f'<a><b><font color="red">Process of topological cleaning is break</font> </b></a>')
+                self.textLog.append(f'<a><b><font color="red">Process of topological cleaning is interrupted by user</font> </b></a>')
                 self.already_show_info = True
             self.setMessage("")
 
@@ -145,7 +145,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.saveParameters()
         self.readParameters()
 
-        self.setMessage("Cleaning the layer of roads ...")
+        self.setMessage("Cleaning layer of roads ...")
         self.folder_name = f'{self.txtPathToProtocols.text()}'
         self.close_button.setEnabled(False)
         self.textLog.clear()
@@ -165,11 +165,9 @@ class form_roads_clean(QDialog, FORM_CLASS):
             self.config['Settings']['layerroad_clean'])[0]
         self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[
             0]
-        self.textLog.append(
-            f"<a>Initial road network: {self.layer_road_path}</a>")
+        self.textLog.append(f"<a>Initial road network: {self.layer_road_path}</a>")
         self.folder_name = self.config['Settings']['PathToProtocols_clean']
-        self.textLog.append(
-            f"<a>Folder to store clean road network: {self.folder_name}</a>")
+        self.textLog.append(f"<a>Folder to store clean road network: {self.folder_name}</a>")
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
@@ -181,7 +179,6 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.task = cls_clean_roads(
             self, begin_computation_time, self.layer_road, self.layer_road_path, self.folder_name)
         QgsApplication.taskManager().addTask(self.task)
-        sleep(1)
         QApplication.processEvents()
 
     def on_close_button_clicked(self):
@@ -233,7 +230,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
 
         layer = self.cmbLayersRoad.currentText()
         if layer == "":
-            self.setMessage(f"The layer is empty")
+            self.setMessage(f"Layer is empty")
             return 0
 
         layer = QgsProject.instance().mapLayersByName(layer)[0]
@@ -241,8 +238,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         try:
             features = layer.getFeatures()
         except:
-            self.setMessage(
-                f"The layer '{self.cmbLayersRoad.currentText()}' is empty")
+            self.setMessage(f"Layer '{self.cmbLayersRoad.currentText()}' is empty")
             return 0
 
         for feature in features:
@@ -251,8 +247,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
             break
         
         if not (feature_geometry_type in {QgsWkbTypes.LineGeometry}):
-            self.setMessage(
-                f"Features in the layer '{self.cmbLayersRoad.currentText()}' must be polylines")
+            self.setMessage(f"Features of the layer '{self.cmbLayersRoad.currentText()}' must be polylines")
             return 0
 
         return 1
@@ -260,8 +255,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(
-                f"The folder '{self.txtPathToProtocols.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
             return False
 
         """
@@ -270,7 +264,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         
             for file in os.listdir(self.txtPathToProtocols.text()):
                 if file.lower().endswith('.shp'):
-                    self.setMessage(f"The folder '{self.txtPathToProtocols.text()}' is not empty")
+                    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' is not empty")
                     return False
         """
 
@@ -281,8 +275,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(
-                f"An access to the folder '{self.txtPathToProtocols.text()}' is denied")
+            self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
 
         return True

@@ -182,7 +182,7 @@ class PKL ():
 
     def build_stops_dict(self):
 
-        self.parent.setMessage(f'Building dictionary ...')
+        self.parent.setMessage(f'Building database for from-accessibility ...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -208,7 +208,7 @@ class PKL ():
         return stops_dict
 
     def build_stopstimes_dict(self):
-        self.parent.setMessage(f'Building dictionary ...')
+        self.parent.setMessage(f'Building database for from-accessibility ...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -223,8 +223,7 @@ class PKL ():
 
             if cycle % 500 == 0:
 
-                self.parent.setMessage(
-                    f'Building dictionary for route {cycle} of {len_data}...')
+                self.parent.setMessage(f'Building database for route {cycle} of {len_data}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -361,8 +360,7 @@ class PKL ():
 
     def build_reversed_stops_dict(self):
 
-        self.parent.setMessage(
-            f'Building dictionary backward accessibility...')
+        self.parent.setMessage(f'Building database for to-accessibility...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -388,8 +386,7 @@ class PKL ():
 
     def build_reversed_stoptimes_dict(self):
 
-        self.parent.setMessage(
-            f'Building dictionary backward accessibility...')
+        self.parent.setMessage(f'Building database for to-accessibility...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -404,8 +401,7 @@ class PKL ():
 
             if cycle % 500 == 0:
 
-                self.parent.setMessage(
-                    f'Building dictionary, route {cycle} of {len_data}...')
+                self.parent.setMessage(f'Building database, route {cycle} of {len_data}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -444,8 +440,7 @@ class PKL ():
 
     def build_reverse_stoptimes_file_txt(self):
 
-        self.parent.setMessage(
-            f'Building dictionary backward accessibility...')
+        self.parent.setMessage(f'Building database for to-accessibility...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -475,8 +470,7 @@ class PKL ():
 
     def build_rev_stop_idx_in_route(self):
 
-        self.parent.setMessage(
-            f'Building dictionary backward accessibility...')
+        self.parent.setMessage(f'Building database for to-accessibility...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -517,8 +511,7 @@ class PKL ():
 
     def build__route_by_stop(self):
 
-        self.parent.setMessage(
-            f'Building dictionary backward accessibility...')
+        self.parent.setMessage(f'Building database for to-accessibility...')
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -548,10 +541,9 @@ class PKL ():
 
     def verify_break(self):
         if self.parent.break_on:
-            self.parent.setMessage("Interrupted (Building dictionary)")
+            self.parent.setMessage("Building database is interrupted by user")
             if not self.already_display_break:
-                self.parent.textLog.append(
-                    f'<a><b><font color="red">Interrupted (Building dictionary)</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Building database is interrupted by user</font> </b></a>')
                 self.already_display_break = True
             self.parent.progressBar.setValue(0)
             return True

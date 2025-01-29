@@ -1,5 +1,9 @@
 import os
+import processing
 from datetime import datetime
+from processing.tools import general
+
+from time import sleep
 
 from qgis.core import (
     QgsVectorLayer,
@@ -15,8 +19,12 @@ from qgis.core import (
     QgsProcessingContext
     )
 from qgis.core import QgsProcessingFeedback
+from qgis.core import QgsApplication
 
-from qgis import processing
+from PyQt5.QtCore import QTimer
+
+from PyQt5.QtCore import Qt
+
 from PyQt5.QtWidgets import QApplication
 
 from common import getDateTime, convert_meters_to_degrees
@@ -68,11 +76,6 @@ class cls_clean_roads(QgsTask):
             if crs_grad:
                 threshold = convert_meters_to_degrees(
                     threshold, first_point.y())
-                
-            #uri = self.layer.dataProvider().dataSourceUri()
-            #input_layer_path = uri.split("|")[0] if "|" in uri else uri
-            #self.parent.textLog.append(
-            #f'<a>Input_layer_path {input_layer_path}</a>')
             
             file_name = os.path.basename(self.layer_path)
             name, ext = os.path.splitext(file_name)
@@ -81,42 +84,46 @@ class cls_clean_roads(QgsTask):
 
             threshold = str (threshold)
             # snapping geometries
-            self.parent.setMessage('Snap geometries ...')
-            feedback = CustomFeedback()
-            result0 = processing.run("grass:v.clean", {
-                        'input': self.layer_path,
-                        'type': [1],
-                        'tool': [1],
-                        'threshold': threshold,
-                        '-b': False,  
-                        '-c': False,  
-                        'output': 'TEMPORARY_OUTPUT',
-                        'error': 'TEMPORARY_OUTPUT',
-                        'GRASS_REGION_PARAMETER': None,
-                        'GRASS_SNAP_TOLERANCE_PARAMETER': -1,
-                        'GRASS_MIN_AREA_PARAMETER': 0.0001,
-                        'GRASS_OUTPUT_TYPE_PARAMETER': 0,
-                        'GRASS_VECTOR_DSCO': '',
-                        'GRASS_VECTOR_LCO': '',
-                        'GRASS_VECTOR_EXPORT_NOCAT': False
-                        }, feedback=feedback)
+
             
-            for log_entry in feedback.logs:
-                print(log_entry)
+            self.parent.setMessage('Cleaning layer of roads, step 1 of 3, snapping road links’ ends...')
+            #feedback = CustomFeedback()
 
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            
+            result0 = processing.run("grass7:v.clean", {'input': self.layer_path,
+                                                        'type':[0,1,2,3,4,5,6],
+                                                        'tool':[1],
+                                                        'threshold':'1',
+                                                        '-b':False,
+                                                        '-c':False,
+                                                        'output':'TEMPORARY_OUTPUT',
+                                                        'error':'TEMPORARY_OUTPUT',
+                                                        'GRASS_REGION_PARAMETER':None,
+                                                        'GRASS_SNAP_TOLERANCE_PARAMETER':-1,
+                                                        'GRASS_MIN_AREA_PARAMETER':0.0001,
+                                                        'GRASS_OUTPUT_TYPE_PARAMETER':0,
+                                                        'GRASS_VECTOR_DSCO':'',
+                                                        'GRASS_VECTOR_LCO':'',
+                                                        'GRASS_VECTOR_EXPORT_NOCAT':False}
+                                                        )
 
+            
             if self.break_on:
                 return 0
             snapped_layer_path = result0['output']
             self.parent.progressBar.setValue(1)  
-            QApplication.processEvents()    
+            QApplication.processEvents()   
+             
             #snapped_layer = QgsVectorLayer(snapped_layer_path, "Snapped Layer", "ogr")
             #QgsProject.instance().addMapLayer(snapped_layer)
                         
             #######################################################
             # first clean
-            
-            self.parent.setMessage('Clean layer of roads (1 of 2) ...')
+            # !!!EXPERIMENT!!
+            #snapped_layer_path = self.layer_path
+
+            self.parent.setMessage('Cleaning layer of roads, step 2 of 3, breaking overlapping links...')
             result1 = processing.run("grass7:v.clean", {
                 'input': snapped_layer_path,
                 'type': [0, 1, 2, 3, 4, 5, 6],
@@ -138,7 +145,7 @@ class cls_clean_roads(QgsTask):
             cleaned_layer_path1 = result1['output']
             
             # second clean
-            self.parent.setMessage('Clean layer of roads (2 of 2) ...')
+            self.parent.setMessage('Cleaning layer of roads, step 3 of 3, deleting duplicated links...')
             result2 = processing.run("grass7:v.clean", {
                 'input': cleaned_layer_path1,
                 'type': [0, 1, 2, 3, 4, 5, 6],
@@ -160,8 +167,7 @@ class cls_clean_roads(QgsTask):
             errors_layer_2 = QgsVectorLayer(
                 errors_layer_2_path, cleaned_layer_error_name, "ogr")
             error_count = len(list(errors_layer_2.getFeatures()))
-            self.parent.textLog.append(
-                f'<a>Number of errors: {error_count}</a>')
+            self.parent.textLog.append(f'<a>Number of errors: {error_count}</a>')
 
             # join errors
             self.parent.setMessage('Filtering ...')
@@ -239,27 +245,30 @@ class cls_clean_roads(QgsTask):
             self.write_finish_info()
             self.parent.btnBreakOn.setEnabled(False)
             self.parent.close_button.setEnabled(True)
+            
             return True
 
         except Exception as e:
             self.exception = e
             print (self.exception)
-            self.parent.textLog.append(f'<a>Error: {self.exception} links</a>')
+            self.parent.textLog.append(f'<a> {self.exception}</a>')
+            #QApplication.setOverrideCursor(Qt.ArrowCursor)
             return False
+        
+        finally:
+            QApplication.setOverrideCursor(Qt.ArrowCursor)
+            QApplication.processEvents()
 
     def write_finish_info(self):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(
-            f'<a>Initial road network consists of {self.initial_layer_count} links</a>')
-        self.parent.textLog.append(
-            f'<a>After topological cleaning the road network consists of {self.saved_layer_count} links</a>')
+        self.parent.textLog.append(f'<a>Initial road network consists of {self.initial_layer_count} links</a>')
+        self.parent.textLog.append(f'<a>After topological cleaning the road network consists of {self.saved_layer_count} links</a>')
         self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(
-            f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
         text = self.parent.textLog.toPlainText()
         postfix = getDateTime()
@@ -268,10 +277,10 @@ class cls_clean_roads(QgsTask):
         with open(filelog_name, "w") as file:
             file.write(text)
 
-        self.parent.textLog.append(
-            f'"{self.layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        self.parent.textLog.append(f'"{self.layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
 
         self.parent.setMessage(f'Finished')
+
 
     def cancel(self):
         try:

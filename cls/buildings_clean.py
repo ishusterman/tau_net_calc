@@ -35,7 +35,7 @@ class cls_clean_buildings(QgsTask):
         input_layer = QgsVectorLayer(input_layer_path, "Layer Name", "ogr")
 
         ################################
-        self.parent.setMessage('Delete holes ...')
+        self.parent.setMessage('Deleting holes ...')
         deleteholes_result = processing.run("qgis:deleteholes", {
             'INPUT': input_layer,
             'OUTPUT': 'TEMPORARY_OUTPUT'
@@ -46,7 +46,7 @@ class cls_clean_buildings(QgsTask):
         self.parent.progressBar.setValue(1)
         ###############################
 
-        self.parent.setMessage('Remove null geometries ...')
+        self.parent.setMessage('Removing null geometries ...')
         empty_geometry_features = []
 
         for feature in layer_deleteholes.getFeatures():
@@ -75,7 +75,7 @@ class cls_clean_buildings(QgsTask):
 
         ############################################
 
-        self.parent.setMessage('Renumbering repeated osm_id ...')
+        self.parent.setMessage('Renumbering duplicated osm_id ...')
         osm_id_counter = {}
         layer_singlepart.startEditing()
 
@@ -113,8 +113,7 @@ class cls_clean_buildings(QgsTask):
         self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(
-            f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
         
         text = self.parent.textLog.toPlainText()
@@ -125,10 +124,8 @@ class cls_clean_buildings(QgsTask):
         with open(filelog_name, "w") as file:
             file.write(text)
         
-        self.parent.textLog.append(
-            f'"{self.layer_name_single_part}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
-                
-        self.parent.setMessage(f'Finished')
+        self.parent.textLog.append(f'"{self.layer_name_single_part}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        
 
     def cancel(self):
         try:
@@ -155,7 +152,7 @@ class cls_clean_buildings(QgsTask):
         return f"{base}_{index}{ext}"
     
     def save_layer_single_part (self, layer_single_part):
-        self.parent.setMessage('Saving buildings...')
+        self.parent.setMessage('Saving layer of buildings...')
         file_dir = self.folder_name
         output_file_name = f"{self.name}_corrected{self.ext}"
         output_path = os.path.join(file_dir, output_file_name)

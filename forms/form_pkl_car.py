@@ -379,25 +379,18 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.textLog.append(f'<a> {info_str}</a>')
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
-        self.textLog.append(
-            f"<a> Layer of roads: {self.config['Settings']['Roads_car_pkl']}</a>")
+        self.textLog.append(f"<a> Layer of roads: {self.config['Settings']['Roads_car_pkl']}</a>")
 
-        self.textLog.append(
-            f"<a>  link type: {self.config['Settings']['LayerRoad_type_road_car_pkl']}</a>")
-        self.textLog.append(
-            f"<a>  direction: {self.cmbFieldsDirection.currentText()}</a>")
-        self.textLog.append(
-            f"<a>  speed: {self.config['Settings']['FieldSpeed_car_pkl']}</a>")
+        self.textLog.append(f"<a>  link type: {self.config['Settings']['LayerRoad_type_road_car_pkl']}</a>")
+        self.textLog.append(f"<a>  direction: {self.cmbFieldsDirection.currentText()}</a>")
+        self.textLog.append(f"<a>  speed: {self.config['Settings']['FieldSpeed_car_pkl']}</a>")
         
 
-        self.textLog.append(
-            f"<a> Layer of buildings: {self.layer_origins_path}</a>")
+        self.textLog.append(f"<a> Layer of buildings: {self.layer_origins_path}</a>")
 
-        self.textLog.append(
-            f"<a> Default speed: {self.config['Settings']['speed_car_pkl']} km/h</a>")
+        self.textLog.append(f"<a> Default speed: {self.config['Settings']['speed_car_pkl']} km/h</a>")
 
-        self.textLog.append(
-            f"<a> Folder to store car database: {self.config['Settings']['pathtoprotocols_car_pkl']}</a>")
+        self.textLog.append(f"<a> Folder to store car database: {self.config['Settings']['pathtoprotocols_car_pkl']}</a>")
 
         self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
 
@@ -596,8 +589,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(
-                f"The folder '{self.txtPathToProtocols.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
             return False
 
         try:
@@ -607,8 +599,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(
-                f"An access to the folder '{self.txtPathToProtocols.text()}' is denied")
+            self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
 
         return True
@@ -620,18 +611,18 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         layer = self.layer_buildings
         if layer == "":
-            self.setMessage(f"The layer is empty")
+            self.setMessage(f"Layer is empty")
             return 0
         
         try:
             features = layer.getFeatures()
         except:
-            self.setMessage(f'The layer {layer} is empty')
+            self.setMessage(f'Layer {layer} is empty')
             return 0
         
         geometryType = layer.geometryType()
         if (geometryType != QgsWkbTypes.PointGeometry and geometryType != QgsWkbTypes.PolygonGeometry):
-            self.setMessage(f'Features in the layer in {self.cmbLayers_buildings.currentText()} must be polylines or points')
+            self.setMessage(f'Features of the layer {self.cmbLayers_buildings.currentText()} must be polylines or points')
             return 0
 
         return 1
@@ -641,14 +632,12 @@ class form_pkl_car(QDialog, FORM_CLASS):
         try:
             features = self.layer_road.getFeatures()
         except:
-            self.setMessage(
-                f"No features in the layer '{self.cbRoads.currentText()}'")
+            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
             return 0
 
         feature_count = self.layer_road.featureCount()
         if feature_count == 0:
-            self.setMessage(
-                f"No features in the layer '{self.cbRoads.currentText()}'")
+            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
             return 0
 
         features = self.layer_road.getFeatures()
@@ -658,8 +647,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
             break
 
         if (feature_geometry_type != QgsWkbTypes.LineGeometry):
-            self.setMessage(
-                f"Features in the layer in '{self.cbRoads.currentText()}' must be polylines")
+            self.setMessage(f"Features of the layer in '{self.cbRoads.currentText()}' must be polylines")
             return 0
 
         return 1

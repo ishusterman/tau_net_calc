@@ -282,14 +282,10 @@ class form_pkl(QDialog, FORM_CLASS):
         self.layer_buildings_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
 
-        self.textLog.append(
-            f"<a> Layer of roads: {self.config['Settings']['Roads_pkl']}</a>")
-        self.textLog.append(
-            f"<a> Layer of buildings: {self.layer_buildings_path}</a>")
-        self.textLog.append(
-            f"<a> GTFS folder: {self.config['Settings']['PathToGTFS_pkl']}</a>")
-        self.textLog.append(
-            f"<a> Folder to store transit database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
+        self.textLog.append(f"<a> Layer of roads: {self.config['Settings']['Roads_pkl']}</a>")
+        self.textLog.append(f"<a> Layer of buildings: {self.layer_buildings_path}</a>")
+        self.textLog.append(f"<a> GTFS folder: {self.config['Settings']['PathToGTFS_pkl']}</a>")
+        self.textLog.append(f"<a> Folder to store transit database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
 
         self.prepare()
         self.close_button.setEnabled(True)
@@ -374,18 +370,16 @@ class form_pkl(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         if self.cbRoads.currentText() == "":
-            self.setMessage(f"The layer of roads is empty")
+            self.setMessage(f"Layer of roads is empty")
             return False
 
         feature_count = self.layer_road.featureCount()
         if feature_count == 0:
-            self.setMessage(
-                f"No features in the layer '{self.cbRoads.currentText()}'")
+            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
             return False
 
         if not os.path.exists(self.txtPathToGTFS.text()):
-            self.setMessage(
-                f"Folder '{self.txtPathToGTFS.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToGTFS.text()}' does not exist")
             return False
 
         required_files = ['stops.txt', 'trips.txt',
@@ -396,13 +390,11 @@ class form_pkl(QDialog, FORM_CLASS):
         if missing_files:
             limited_files = missing_files[:2]
             missing_files_message = ", ".join(limited_files)
-            self.setMessage(
-                f"Files are missing in the '{self.txtPathToGTFS.text()}' forlder: {missing_files_message}")
+            self.setMessage(f"Files are missing in the '{self.txtPathToGTFS.text()}' forlder: {missing_files_message}")
             return False
 
         if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(
-                f"Folder '{self.txtPathToProtocols.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
             return False
 
         try:
@@ -412,8 +404,7 @@ class form_pkl(QDialog, FORM_CLASS):
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(
-                f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
+            self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
 
         return True
@@ -427,8 +418,7 @@ class form_pkl(QDialog, FORM_CLASS):
         try:
             features = layer.getFeatures()
         except:
-            self.setMessage(
-                f"The layer in '{self.cbRoads.currentText()}' is empty")
+            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
             return 0
 
         for feature in features:
@@ -437,8 +427,7 @@ class form_pkl(QDialog, FORM_CLASS):
             break
 
         if (feature_geometry_type != QgsWkbTypes.LineGeometry):
-            self.setMessage(
-                f"Features in the layer in '{self.cbRoads.currentText()}' must be polylines")
+            self.setMessage(f"Features of the layer '{self.cbRoads.currentText()}' must be polylines")
             return 0
 
         return 1
@@ -447,18 +436,18 @@ class form_pkl(QDialog, FORM_CLASS):
 
         layer = self.layer_building
         if layer == "":
-            self.setMessage(f"The layer is empty")
+            self.setMessage(f"Layer is empty")
             return 0
         
         try:
             features = layer.getFeatures()
         except:
-            self.setMessage(f'The layer {layer} is empty')
+            self.setMessage(f'Layer {layer} is empty')
             return 0
         
         geometryType = layer.geometryType()
         if (geometryType != QgsWkbTypes.PointGeometry and geometryType != QgsWkbTypes.PolygonGeometry):
-            self.setMessage(f'Features in the layer in {self.cmbLayers.currentText()} must be polylines or points')
+            self.setMessage(f'Features of the layer {self.cmbLayers.currentText()} must be polylines or points')
             return 0
 
         return 1
@@ -528,8 +517,7 @@ class form_pkl(QDialog, FORM_CLASS):
             duration_computation = after_computation_time - begin_computation_time
             duration_without_microseconds = str(
                 duration_computation).split('.')[0]
-            self.textLog.append(
-                f'<a>Processing time: {duration_without_microseconds}</a>')
+            self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
             text = self.textLog.toPlainText()
             postfix = getDateTime()
@@ -538,8 +526,7 @@ class form_pkl(QDialog, FORM_CLASS):
                 file.write(text)
 
             if res == 1:
-                self.textLog.append(
-                    f'<a href="file:///{pkl_path}" target="_blank" >pkl in folder</a>')
+                self.textLog.append(f'<a href="file:///{pkl_path}" target="_blank" >pkl in folder</a>')
 
             self.setMessage(f'Finished')
 

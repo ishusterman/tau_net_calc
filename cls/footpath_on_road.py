@@ -74,8 +74,7 @@ class footpath_on_road:
 
         for i, node in enumerate(self.graph_nodes_coords, start=1):
             if i % 10000 == 0:
-                self.parent.setMessage(
-                    f'Building dictionary, node №{i} of {self.len_graph_nodes_coords}...')
+                self.parent.setMessage(f'Building dictionary, node №{i} of {self.len_graph_nodes_coords}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -109,8 +108,7 @@ class footpath_on_road:
         for i, feature in enumerate(features_list):
         
             if i % 10000 == 0:
-                self.parent.setMessage(
-                    f'Building dictionary {comment}, link №{i} of {count}...')
+                self.parent.setMessage(f'Building dictionary {comment}, link №{i} of {count}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -147,8 +145,7 @@ class footpath_on_road:
             QApplication.processEvents()
             
             if i % 100 == 0:
-                self.parent.setMessage(
-                    f'Building dictionary, node №{i} of {count}...')
+                self.parent.setMessage(f'Building dictionary, node №{i} of {count}...')
                 self.parent.progressBar.setValue(i + 3)
                 QApplication.processEvents()
                 if self.verify_break():
@@ -202,8 +199,7 @@ class footpath_on_road:
         for i, feature in enumerate(features_list):
             QApplication.processEvents()
             if i % 1000 == 0:
-                self.parent.setMessage(
-                    f'Building dictionary, node №{i} of {count}...')
+                self.parent.setMessage(f'Building dictionary, node №{i} of {count}...')
                 self.parent.progressBar.setValue(i + 3)
                 QApplication.processEvents()
                 if self.verify_break():
@@ -253,8 +249,7 @@ class footpath_on_road:
         for feature in roads.getFeatures():
             i += 1
             if i % 10000 == 0:
-                self.parent.setMessage(
-                    f'Building dictionary,  link №{i} of {count}...')
+                self.parent.setMessage(f'Building dictionary,  link №{i} of {count}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -363,8 +358,7 @@ class footpath_on_road:
         for i, feature in enumerate(features):
 
             if i % 10000 == 0:
-                self.parent.setMessage(
-                    f'Building dictionary {comment}, node №{i} of {count}...')
+                self.parent.setMessage(f'Building dictionary {comment}, node №{i} of {count}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -400,8 +394,7 @@ class footpath_on_road:
 
         for i, node in enumerate(self.graph_nodes_coords, start=1):
             if i % 10000 == 0:
-                self.parent.setMessage(
-                    f' Building dictionary, node №{i} of {self.len_graph_nodes_coords}...')
+                self.parent.setMessage(f' Building dictionary, node №{i} of {self.len_graph_nodes_coords}...')
                 QApplication.processEvents()
 
             distances, indices = self.kd_tree_buildings.query(
@@ -416,8 +409,7 @@ class footpath_on_road:
 
     def run_b_b(self):
         self.create_head_files_b_b()
-        self.parent.textLog.append(
-            f'<a>Starting calculating footpath building to building on road</a>')
+        self.parent.textLog.append(f'<a>Starting calculating footpath building to building on road</a>')
 
         QApplication.processEvents()
         self.parent.setMessage(f'Building graph ...')
@@ -436,8 +428,7 @@ class footpath_on_road:
 
         self.find_shortest_paths_b_b()
         computation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(
-            f'<a>Founded shortest path building to building on time {computation_time}</a>')
+        self.parent.textLog.append(f'<a>Founded shortest path building to building on time {computation_time}</a>')
 
         self.node_pairs_b_b = [(source, stop, dist) for (
             source, stop), dist in self.node_pairs_dict_b_b.items()]
@@ -449,8 +440,7 @@ class footpath_on_road:
                     file.write(f'{id_source},{id_destination},{dist}\n')
                     count += 1
                     if count % 100000 == 0:
-                        self.parent.setMessage(
-                            f'Storing walking paths {count}...')
+                        self.parent.setMessage(f'Storing walking paths {count}...')
                         QApplication.processEvents()
 
         self.parent.setMessage(f'Finished')
@@ -496,11 +486,9 @@ class footpath_on_road:
 
     def verify_break(self):
         if self.parent.break_on:
-            self.parent.setMessage(
-                "Interrupted (Network walking paths calculations)")
+            self.parent.setMessage("Interrupted (Network walking paths calculations)")
             if not self.already_display_break:
-                self.parent.textLog.append(
-                    f'<a><b><font color="red">Interrupted (Network walking paths calculations)</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Interrupted (Network walking paths calculations)</font> </b></a>')
                 self.already_display_break = True
             self.parent.progressBar.setValue(0)
             return True

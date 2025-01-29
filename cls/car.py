@@ -122,8 +122,7 @@ class car_accessibility:
                 return 0
             i += 1
 
-            self.parent.setMessage(
-                f'Building thematic map for the feature №{i} of {count}')
+            self.parent.setMessage(f'Building thematic map for the feature №{i} of {count}')
             QApplication.processEvents()
 
             self.source = source
@@ -342,8 +341,7 @@ class car_accessibility:
                 for field in fields_aggregate:
 
                     attribute_dict = {}
-                    self.parent.setMessage(
-                        f"Building dictionary for '{field}' ...")
+                    self.parent.setMessage(f"Building database for '{field}' ...")
                     QApplication.processEvents()
 
                     self.aggregate_this_fields[field] = True
@@ -404,25 +402,21 @@ class car_accessibility:
 
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(
-            f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
         if not (self.writed_info):
             self.write_info()
 
-        self.parent.textLog.append(
-            f'<a href="file:///{self.parent.folder_name}" target="_blank" >Output in folder</a>')
+        self.parent.textLog.append(f'<a href="file:///{self.parent.folder_name}" target="_blank" >Output in folder</a>')
         self.parent.setMessage(f'Finished')
 
         return self.parent.folder_name
 
     def verify_break(self):
         if self.parent.break_on:
-            self.parent.setMessage(
-                "Interrupted (Car accessibility computations)")
+            self.parent.setMessage("Car accessibility computations are interrupted by user")
             if not self.already_display_break:
-                self.parent.textLog.append(
-                    f'<a><b><font color="red">Process calculation car accessibility is break</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Car accessibility computations are interrupted by user</font> </b></a>')
                 if self.parent.folder_name != "":
                     self.write_info()
                 self.already_display_break = True

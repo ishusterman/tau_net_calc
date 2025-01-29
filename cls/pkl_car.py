@@ -87,14 +87,13 @@ class pkl_car ():
                 if count % 50000 == 0:
                     if self.verify_break():
                         return 0
-                    self.parent.setMessage(f'Checking layer of roads ...')
+                    self.parent.setMessage(f'Validating layer of roads ...')
                     QApplication.processEvents()
 
                 field_value = feature.attribute(
                     self.parent.idx_field_direction)
                 if not (field_value in valid_values):
-                    self.parent.textLog.append(
-                        f'<a><b><font color="red"> WARNING: The field with direction value "{field.name()}" must use values ​​(T,F,B). The direction of movement field will not be included in the calculations</font> </b></a>')
+                    self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field with direction value "{field.name()}" must use values ​​(T,F,B). The direction of movement field will not be included in the calculations</font> </b></a>')
                     self.idx_field_direction = -1
                     break
 
@@ -102,8 +101,7 @@ class pkl_car ():
         field_type = field.type()
 
         if not (field_type in [QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong]):
-            self.parent.textLog.append(
-                f'<a><b><font color="red"> WARNING: The field with speed value "{field.name()}" must be a digilal type. The speed of movement field will not be included in the calculations</font> </b></a>')
+            self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field with speed value "{field.name()}" must be a digilal type. The speed of movement field will not be included in the calculations</font> </b></a>')
             self.parent.idx_field_speed = -1
 
         self.parent.progressBar.setValue(3)
@@ -142,8 +140,7 @@ class pkl_car ():
         self.parent.textLog.append(f'<a>Finished {after_computation_str}</a>')
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(
-            f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
         text = self.parent.textLog.toPlainText()
         postfix = getDateTime()
@@ -151,8 +148,7 @@ class pkl_car ():
         with open(filelog_name, "w") as file:
             file.write(text)
 
-        self.parent.textLog.append(
-            f'<a href="file:///{self.parent.path_to_protocol}" target="_blank" >pkl in folder</a>')
+        self.parent.textLog.append(f'<a href="file:///{self.parent.path_to_protocol}" target="_blank" >pkl in folder</a>')
         self.parent.setMessage('Finished.')
 
     def create_spatial_index_graph(self):
@@ -206,7 +202,7 @@ class pkl_car ():
         comment = ""
         if self.mode == 2:
             comment = "backward "
-        self.parent.setMessage(f'Constructing {comment}graph  ...')
+        self.parent.setMessage(f'Constructing {comment}network graph  ...')
 
         QApplication.processEvents()
         if self.verify_break():
@@ -216,7 +212,7 @@ class pkl_car ():
             return 0
         self.graph = builder.graph()
 
-        self.parent.setMessage(f'Saving {comment}graph...')
+        self.parent.setMessage(f'Saving {comment}network graph...')
         QApplication.processEvents()
         file_path = os.path.join(self.parent.path_to_protocol, 'graph.pkl')
         if self.mode == 2:
@@ -295,7 +291,7 @@ class pkl_car ():
         comment = ""
         if self.mode == 2:
             comment = "backward "
-        self.parent.setMessage(f'Modifying {comment}roads ...')
+        self.parent.setMessage(f'Modifying {comment}road links ...')
         QApplication.processEvents()
         features = self.layer_roads.getFeatures()
         new_features = []
@@ -305,8 +301,7 @@ class pkl_car ():
             if count % 50000 == 0:
                 if self.verify_break():
                     return 0
-                self.parent.setMessage(
-                    f'Modifying {comment}roads (link №{count}) ... ')
+                self.parent.setMessage(f'Modifying {comment}road links (link №{count}) ... ')
                 QApplication.processEvents()
             new_feature = QgsFeature(feature)
 
@@ -387,10 +382,9 @@ class pkl_car ():
 
     def verify_break(self):
         if self.parent.break_on:
-            self.parent.setMessage("Interrupted (Building CAR dictionary)")
+            self.parent.setMessage("Building car routing database is interrupted by user")
             if not self.already_display_break:
-                self.parent.textLog.append(
-                    f'<a><b><font color="red">Interrupted (Building CAR dictionary)</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Building car routing database is interrupted by user</font> </b></a>')
                 self.already_display_break = True
             self.parent.progressBar.setValue(0)
             return True
@@ -412,8 +406,7 @@ class pkl_car ():
                 if self.verify_break():
                     return 0
                 QApplication.processEvents()
-                self.parent.setMessage(
-                    f'Constructing dictionary №{c} of {self.count_item}...')
+                self.parent.setMessage(f'Constructing database №{c} of {self.count_item}...')
             building_id = id
             # create a circle with a radius of 250 meters around the building
             point_coords = [point.x(), point.y()]
@@ -453,8 +446,7 @@ class pkl_car ():
                 if self.verify_break():
                     return 0
                 QApplication.processEvents()
-                self.parent.setMessage(
-                    f'Reading buildings item №{c} of {self.count_item}...')
+                self.parent.setMessage(f'Retrieving building features item №{c} of {self.count_item}...')
 
             geom = feature.geometry()
 
@@ -476,8 +468,7 @@ class pkl_car ():
             if c % 50000 == 0:
                 if self.verify_break():
                     return 0
-                self.parent.setMessage(
-                    f'Constructing dictionary №{c} of {self.count_item}...')
+                self.parent.setMessage(f'Constructing database №{c} of {self.count_item}...')
                 QApplication.processEvents()
 
             point_coords = [point.x(), point.y()]

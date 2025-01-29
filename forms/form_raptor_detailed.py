@@ -297,8 +297,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.break_on = False
 
         if not (is_valid_folder_name(self.txtAliase.text())):
-            self.setMessage(
-                f"'{self.txtAliase.text()}' is not a valid directory/file name")
+            self.setMessage(f"'{self.txtAliase.text()}' is not a valid directory/file name")
             self.run_button.setEnabled(True)
             return 0
 
@@ -335,10 +334,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
         self.textLog.append(f'<a> Output alias: {self.aliase}</a>')
-        self.textLog.append(
-            f"<a> Transit routing database folder: {self.config['Settings']['pathtopkl']}</a>")
-        self.textLog.append(
-            f"<a> Output folder: {self.config['Settings']['pathtoprotocols']}</a>")
+        self.textLog.append(f"<a> Transit routing database folder: {self.config['Settings']['pathtopkl']}</a>")
+        self.textLog.append(f"<a> Output folder: {self.config['Settings']['pathtoprotocols']}</a>")
         
         if self.protocol_type == 2:
             if self.mode == 1:
@@ -355,57 +352,37 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             else:
                 name2 = "all destinations in the region"
                 name1 = "origins"    
-        self.textLog.append(
-            f'<a> Layer of {name1}: {self.layer_origins_path}</a>')
-        self.textLog.append(
-            f"<a> Selected {name1}: {self.config['Settings']['SelectedOnly1']}</a>")
-        self.textLog.append(
-            f'<a> Layer of {name2}: {self.layer_destinations_path}</a>')
-        self.textLog.append(
-            f"<a> Selected {name2}: {self.config['Settings']['SelectedOnly2']}</a>")
+        self.textLog.append(f'<a> Layer of {name1}: {self.layer_origins_path}</a>')
+        self.textLog.append(f"<a> Selected {name1}: {self.config['Settings']['SelectedOnly1']}</a>")
+        self.textLog.append(f'<a> Layer of {name2}: {self.layer_destinations_path}</a>')
+        self.textLog.append(f"<a> Selected {name2}: {self.config['Settings']['SelectedOnly2']}</a>")
 
-        self.textLog.append(
-            "<a style='font-weight:bold;'>[Parameters of a trip]</a>")
-        self.textLog.append(
-            f"<a> Aerial distance: {self.config['Settings']['RunOnAir']}</a>")
-        self.textLog.append(
-            f"<a> Minimum number of transfers: {self.config['Settings']['min_transfer']}</a>")
-        self.textLog.append(
-            f"<a> Maximum number of transfers: {self.config['Settings']['max_transfer']}</a>")
-        self.textLog.append(
-            f"<a> Maximum walk distance to the initial PT stop: {self.config['Settings']['maxwalkdist1']} m</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Parameters of a trip]</a>")
+        self.textLog.append(f"<a> Aerial distance: {self.config['Settings']['RunOnAir']}</a>")
+        self.textLog.append(f"<a> Minimum number of transfers: {self.config['Settings']['min_transfer']}</a>")
+        self.textLog.append(f"<a> Maximum number of transfers: {self.config['Settings']['max_transfer']}</a>")
+        self.textLog.append(f"<a> Maximum walk distance to the initial PT stop: {self.config['Settings']['maxwalkdist1']} m</a>")
 
-        self.textLog.append(
-            f"<a> Maximum walk distance between at the transfer: {self.config['Settings']['maxwalkdist2']} m</a>")
-        self.textLog.append(
-            f"<a> Maximum walk distance from the last PT stop: {self.config['Settings']['maxwalkdist3']} m</a>")
-        self.textLog.append(
-            f"<a> Walking speed: {self.config['Settings']['speed']} km/h</a>")
+        self.textLog.append(f"<a> Maximum walk distance between at the transfer: {self.config['Settings']['maxwalkdist2']} m</a>")
+        self.textLog.append(f"<a> Maximum walk distance from the last PT stop: {self.config['Settings']['maxwalkdist3']} m</a>")
+        self.textLog.append(f"<a> Walking speed: {self.config['Settings']['speed']} km/h</a>")
 
         if not self.timetable_mode:
-            self.textLog.append(
-                f"<a> Maximum waiting time at the initial stop: {self.config['Settings']['maxwaittime']} min</a>")
+            self.textLog.append(f"<a> Maximum waiting time at the initial stop: {self.config['Settings']['maxwaittime']} min</a>")
 
-        self.textLog.append(
-            f"<a> Maximum waiting time at the transfer stop: {self.config['Settings']['maxwaittimetransfer']} min</a>")
+        self.textLog.append(f"<a> Maximum waiting time at the transfer stop: {self.config['Settings']['maxwaittimetransfer']} min</a>")
 
-        self.textLog.append(
-            f"<a> Boarding time gap: {self.config['Settings']['timegap']} s</a>")
+        self.textLog.append(f"<a> Boarding time gap: {self.config['Settings']['timegap']} s</a>")
 
         if not self.timetable_mode:
             if self.mode == 1:
-                self.textLog.append(
-                    f"<a> Start at (hh:mm:ss): {self.config['Settings']['time']}</a>")
+                self.textLog.append(f"<a> Start at (hh:mm:ss): {self.config['Settings']['time']}</a>")
             else:
-                self.textLog.append(
-                    f"<a> Arrive before (hh:mm:ss): {self.config['Settings']['time']}</a>")
-        self.textLog.append(
-            f"<a> Maximum travel time: {self.config['Settings']['maxtimetravel']} min</a>")
+                self.textLog.append(f"<a> Arrive before (hh:mm:ss): {self.config['Settings']['time']}</a>")
+        self.textLog.append(f"<a> Maximum travel time: {self.config['Settings']['maxtimetravel']} min</a>")
         if self.protocol_type == 1:  # MAP mode
-            self.textLog.append(
-                "<a style='font-weight:bold;'>[Aggregation]</a>")
-            self.textLog.append(
-                f"<a> Number of bins: {self.config['Settings']['timeinterval']}</a>")
+            self.textLog.append("<a style='font-weight:bold;'>[Aggregation]</a>")
+            self.textLog.append(f"<a> Number of bins: {self.config['Settings']['timeinterval']}</a>")
 
             if self.mode == 1:
                 count_features = self.count_layer_destinations
@@ -420,24 +397,18 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.textLog.append(f'<a> Aggregated fields: {print_fields}</a>')
 
         if self.timetable_mode:
-            self.textLog.append(
-                "<a style='font-weight:bold;'>[Time schedule]</a>")
+            self.textLog.append("<a style='font-weight:bold;'>[Time schedule]</a>")
 
             if self.mode == 1:
-                self.textLog.append(
-                    f"<a> The earliest start time: {self.config['Settings']['time']}</a>")
-                self.textLog.append(
-                    f"<a> Maximum delay at the start: {self.config['Settings']['maxextratime']} min</a>")
+                self.textLog.append(f"<a> The earliest start time: {self.config['Settings']['time']}</a>")
+                self.textLog.append(f"<a> Maximum delay at the start: {self.config['Settings']['maxextratime']} min</a>")
                 
             if self.mode == 2:
-                self.textLog.append(
-                    f"<a> The earliest arrival time: {self.config['Settings']['time']}</a>")
-                self.textLog.append(
-                    f"<a> Maximum lateness at the arrival, min: {self.config['Settings']['maxextratime']} min</a>")
+                self.textLog.append(f"<a> The earliest arrival time: {self.config['Settings']['time']}</a>")
+                self.textLog.append(f"<a> Maximum lateness at the arrival, min: {self.config['Settings']['maxextratime']} min</a>")
                 
         self.textLog.append("<a style='font-weight:bold;'>[Visualization]</a>")
-        self.textLog.append(
-            f'<a> Visualization layer: {self.layer_visualization_path}</a>')
+        self.textLog.append(f'<a> Visualization layer: {self.layer_visualization_path}</a>')
 
         self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
 
@@ -645,8 +616,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         if not os.path.exists(self.txtPathToPKL.text()):
-            self.setMessage(
-                f"Folder '{self.txtPathToPKL.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToPKL.text()}' does not exist")
             return False
 
         required_files = [  # 'dict_building_vertex.pkl',
@@ -677,13 +647,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if missing_files:
             limited_files = missing_files[:2]
             missing_files_message = ", ".join(limited_files)
-            self.setMessage(
-                f"Files are missing in the '{self.txtPathToPKL.text()}' forlder: {missing_files_message}")
+            self.setMessage(f"Files are missing in the '{self.txtPathToPKL.text()}' forlder: {missing_files_message}")
             return False
         
         if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(
-                f"Folder '{self.txtPathToProtocols.text()}' does not exist")
+            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
             return False
 
         try:
@@ -693,8 +661,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(
-                f"Access to the '{self.txtPathToProtocols.text()}' folder is denied")
+            self.setMessage(f"Access to the '{self.txtPathToProtocols.text()}' folder is denied")
             return False
 
         return True
@@ -810,11 +777,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     D_TIME_str = seconds_to_time(D_TIME)
                     if not self.timetable_mode:
                         if self.mode == 1:
-                            self.textLog.append(
-                                f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
+                            self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
                         else:
-                            self.textLog.append(
-                                f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
+                            self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
                     if self.timetable_mode:
                        if self.mode == 1:
                            self.textLog.append(f"<a style='font-weight:bold;'> The earliest start time: {D_TIME_str}</a>")

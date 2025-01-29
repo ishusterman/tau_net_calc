@@ -54,7 +54,7 @@ class cls_footpath_on_projection:
 
         self.new_field_id = f'{layer_buildings_field_id}_add'
 
-        self.parent.setMessage(f'Making a copy of the roads layer...')
+        self.parent.setMessage(f'Making a copy of the layer of roads...')
         QApplication.processEvents()
         # create a new temporary layer based on the type of the source layer
         layer_type = self.layer_roads.wkbType()
@@ -74,8 +74,7 @@ class cls_footpath_on_projection:
         # transfer all features (geometry and attributes) from the source layer to the new layer
         for i, feature in enumerate(self.layer_roads.getFeatures()):
             if i % 10000 == 0:
-                self.parent.setMessage(
-                    f'Making a copy of the roads layer №{i} of {count}...')
+                self.parent.setMessage(f'Making a copy of the layer of roads№{i} of {count}...')
                 QApplication.processEvents()
 
                 if self.verify_break():
@@ -98,13 +97,13 @@ class cls_footpath_on_projection:
             self.cloned_layer.updateFields()  # update the fields of the cloned layer
         
         self.cloned_layer.updateExtents()
-        QgsProject.instance().addMapLayer(self.cloned_layer)
+        #QgsProject.instance().addMapLayer(self.cloned_layer)
 
         self.osm_id_index = self.provider.fields().indexOf(self.new_field_id)
         self.distance_index = self.provider.fields().indexOf("distance")
         self.type_index = self.provider.fields().indexOf("type")
 
-        self.parent.setMessage(f'Building the index for the roads layer...')
+        self.parent.setMessage(f'Building the index for the layer of roads...')
         QApplication.processEvents()
         # create a spatial index for the road layer
         self.index = QgsSpatialIndex(self.cloned_layer.getFeatures())
@@ -116,8 +115,7 @@ class cls_footpath_on_projection:
         count = len(features_list)
         for i, feature in enumerate(features_list):
             if i % 5000 == 0:
-                self.parent.setMessage(
-                    f'Projecting stops on links №{i} off {count}...')
+                self.parent.setMessage(f'Projecting stops on links №{i} off {count}...')
 
                 QApplication.processEvents()
                 if self.verify_break():
@@ -131,8 +129,7 @@ class cls_footpath_on_projection:
         # loop through all the polygons in the buildings layer
         for i, polygon_feat in enumerate(self.layer_buildings.getFeatures()):
             if i % 5000 == 0:
-                self.parent.setMessage(
-                    f'Projecting buildings on links №{i} of {count}...')
+                self.parent.setMessage(f'Projecting buildings on links №{i} of {count}...')
 
                 QApplication.processEvents()
                 if self.verify_break():
@@ -143,7 +140,7 @@ class cls_footpath_on_projection:
                 polygon_geom.centroid().asPoint(), osm_id, type="b")
        
         self.cloned_layer.updateExtents()
-        QgsProject.instance().addMapLayer(self.cloned_layer)
+        #QgsProject.instance().addMapLayer(self.cloned_layer)
         return self.cloned_layer
 
     def add_point_to_layer(self, polygon_geom, osm_id, type):
@@ -226,8 +223,7 @@ class cls_footpath_on_projection:
 
         for i, feature in enumerate(roads.getFeatures()):
             if i % 50000 == 0:
-                self.parent.setMessage(
-                    f'Constructing road graph №{i} of {count}...')
+                self.parent.setMessage(f'Constructing road network graph №{i} of {count}...')
                 QApplication.processEvents()
 
                 if self.verify_break():
@@ -298,7 +294,7 @@ class cls_footpath_on_projection:
             pickle.dump(graph_data, f)
 
     def load_graph(self, file_path):
-        self.parent.setMessage(f'Loading road graph...')
+        self.parent.setMessage(f'Loading road network graph...')
         QApplication.processEvents()
         # read the saved graph.
         graph_path = os.path.join(file_path, 'graph_projection.pkl')
@@ -323,7 +319,7 @@ class cls_footpath_on_projection:
         return nx_graph
 
     def load_dict_osm_vertex(self, file_path):
-        self.parent.setMessage(f'Loading dictionary...')
+        self.parent.setMessage(f'Loading database...')
         QApplication.processEvents()
         dict_path = os.path.join(file_path, 'dict_osm_vertex.pkl')
         with open(dict_path, 'rb') as f:
@@ -331,7 +327,7 @@ class cls_footpath_on_projection:
         return osm_vertex
 
     def load_dict_vertex_osm(self, file_path):
-        self.parent.setMessage(f'Loading dictionary...')
+        self.parent.setMessage(f'Loading database...')
         QApplication.processEvents()
         dict_path = os.path.join(file_path, 'dict_vertex_osm.pkl')
         with open(dict_path, 'rb') as f:
@@ -363,8 +359,7 @@ class cls_footpath_on_projection:
             for i, feature in enumerate(features_list):
                 
                 if i % 100 == 0:
-                    self.parent.setMessage(
-                        f'Constructing stop-stop walks, stop №{i} of {count}...')
+                    self.parent.setMessage(f'Constructing walk routes between stops, stop №{i} of {count}...')
 
                     QApplication.processEvents()
                     if self.verify_break():
@@ -384,8 +379,7 @@ class cls_footpath_on_projection:
             for i, feature in enumerate(features):
             
                 if i % 500 == 0:
-                    self.parent.setMessage(
-                        f'Constructing building-stops walks, building №{i} of {count}...')
+                    self.parent.setMessage(f'Constructing walk routes between buildings and stops, building №{i} of {count}...')
                     QApplication.processEvents()
 
                     if self.verify_break():
@@ -478,10 +472,9 @@ class cls_footpath_on_projection:
 
     def verify_break(self):
         if self.parent.break_on:
-            self.parent.setMessage("Interrupted (Dictionary construction)")
+            self.parent.setMessage("Database construction is interrupted by user")
             if not self.already_display_break:
-                self.parent.textLog.append(
-                    f'<a><b><font color="red">Interrupted (Dictionary construction)</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Database construction is interrupted by user</font> </b></a>')
                 self.already_display_break = True
             self.parent.progressBar.setValue(0)
             return True
