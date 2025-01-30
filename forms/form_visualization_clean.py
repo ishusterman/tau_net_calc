@@ -209,7 +209,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         #    self.config['Settings']['layer_clean-visualization'])[0]
         
        
-        self.textLog.append(f"<a>Initial layer of buildings: {self.layer_buildings_path}</a>")
+        self.textLog.append(f"<a>Layer of buildings: {self.layer_buildings_path}</a>")
                 
         self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization']
         self.textLog.append(f"<a>Folder to store layers for visualization: {self.folder_name}</a>")

@@ -104,13 +104,7 @@ def convert_meters_to_degrees(distance_in_meters, latitude):
 
 
 def convert_distance_to_meters(distance_in_degrees, latitude):
-    # average length of one degree at the equator (in meters)
-    meters_per_degree_latitude = 111132.92 - 559.82 * \
-        math.cos(2 * math.radians(latitude)) + 1.175 * \
-        math.cos(4 * math.radians(latitude))
-    meters_per_degree_longitude = meters_per_degree_latitude * \
-        math.cos(math.radians(latitude))
-    return round(distance_in_degrees * meters_per_degree_longitude)
+    return distance_in_degrees * 111132.92 * math.cos(math.radians(latitude))
 
 def time_to_seconds(t):
     if pd.isna(t):

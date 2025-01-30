@@ -74,7 +74,7 @@ class cls_footpath_on_projection:
         # transfer all features (geometry and attributes) from the source layer to the new layer
         for i, feature in enumerate(self.layer_roads.getFeatures()):
             if i % 10000 == 0:
-                self.parent.setMessage(f'Making a copy of the layer of roads№{i} of {count}...')
+                self.parent.setMessage(f'Making a copy of the layer of roads№ {i} of {count}...')
                 QApplication.processEvents()
 
                 if self.verify_break():

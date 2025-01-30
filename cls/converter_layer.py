@@ -70,9 +70,9 @@ class MultiLineStringToLineStringConverter:
 
     def verify_break(self):
         if self.parent.break_on:
-            self.parent.setMessage("Layer of roads: conversion features into lines is interrupted by user")
+            self.parent.setMessage("Layer of roads: conversion into lines is interrupted by user")
             if not self.already_display_break:
-                self.parent.textLog.append(f'<a><b><font color="red">Layer of roads: conversion features into lines is interrupted by user</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Layer of roads: conversion into lines is interrupted by user</font> </b></a>')
                 self.already_display_break = True
             self.parent.progressBar.setValue(0)
             return True

@@ -315,9 +315,9 @@ class form_relative(QDialog, FORM_CLASS):
         self.textLog.append(f"<a>Results_2 folder: {self.config['Settings']['PathToCAR_relative']}</a>")
         self.textLog.append(f"<a>Output folder: {self.config['Settings']['PathToOutput_relative']}</a>")
         self.textLog.append(f"<a>Visualization layer : {self.layer_vis_path}</a>")
-        self.textLog.append(f"<a>Calc ratio: {self.config['Settings']['calc_ratio_relative']}</a>")
-        self.textLog.append(f"<a>Calc difference: {self.config['Settings']['calc_difference_relative']}</a>")
-        self.textLog.append(f"<a>Calc difference relative: {self.config['Settings']['calc_relative_difference_relative']}</a>")
+        self.textLog.append(f"<a>Calculate ratio: {self.config['Settings']['calc_ratio_relative']}</a>")
+        self.textLog.append(f"<a>Calculate difference: {self.config['Settings']['calc_difference_relative']}</a>")
+        self.textLog.append(f"<a>Calculate difference relative: {self.config['Settings']['calc_relative_difference_relative']}</a>")
 
         LayerVis = self.config['Settings']['VisLayer_relative']
         fieldname_layer = self.config['Settings']['VisLayers_fields_relative']

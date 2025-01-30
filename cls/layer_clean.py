@@ -51,7 +51,7 @@ class CustomFeedback(QgsProcessingFeedback):
         self.logs.append(f"ERROR: {error}")
 
 class cls_clean_roads(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, layer_path, folder_name, task_name="Roads clean task"):
+    def __init__(self, parent, begin_computation_time, layer, layer_path, folder_name, feedback, task_name="Roads clean task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
@@ -61,6 +61,7 @@ class cls_clean_roads(QgsTask):
         self.folder_name = folder_name
         self.exception = None
         self.break_on = False
+        self.feedback = feedback
         
 
     def run(self):
@@ -105,7 +106,8 @@ class cls_clean_roads(QgsTask):
                                                         'GRASS_OUTPUT_TYPE_PARAMETER':0,
                                                         'GRASS_VECTOR_DSCO':'',
                                                         'GRASS_VECTOR_LCO':'',
-                                                        'GRASS_VECTOR_EXPORT_NOCAT':False}
+                                                        'GRASS_VECTOR_EXPORT_NOCAT':False},
+                                                        feedback=self.feedback
                                                         )
 
             
@@ -263,9 +265,9 @@ class cls_clean_roads(QgsTask):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Initial road network consists of {self.initial_layer_count} links</a>')
-        self.parent.textLog.append(f'<a>After topological cleaning the road network consists of {self.saved_layer_count} links</a>')
-        self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
+        self.parent.textLog.append(f'<a>Initial road network contains {self.initial_layer_count} links</a>')
+        self.parent.textLog.append(f'<a>After topological cleaning the road network contains of {self.saved_layer_count} links</a>')
+        self.parent.textLog.append(f'<a>Finished {after_computation_str}</a>')
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
@@ -284,11 +286,13 @@ class cls_clean_roads(QgsTask):
 
     def cancel(self):
         try:
+            #self.feedback.cancel()
             self.parent.progressBar.setValue(0)
             self.parent.setMessage(f'')
             self.break_on = True
             super().cancel()
-        except:
+        except Exception as e:
+            print(f"Error during cancellation: {e}")
             return
 
     def get_unique_path(self, base_path):

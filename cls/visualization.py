@@ -77,7 +77,7 @@ class visualization:
         values = [feature[self.targetField] for feature in layer.getFeatures(
         ) if feature[self.targetField] is not None]
         if values == []:
-            self.parent.textLog.append(f'<a><b><font color="red">Need to verify field {self.fieldname_layer}. Visualization not performed.</font> </b></a>')
+            self.parent.textLog.append(f'<a><b><font color="red">Verify field {self.fieldname_layer}. Visualization skipped.</font> </b></a>')
             return
 
         percentiles = np.percentile(
@@ -194,11 +194,11 @@ class visualization:
             self.add_name_field2 = fields[-2].name()
 
         if self.protocol_layer.featureCount() == 0:
-            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} is empty. Visualization not performed.</font> </b></a>')
+            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} is empty. Visualization skipped.</font> </b></a>')
             return
 
         if self.protocol_layer.featureCount() == 1:
-            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} consist only 1 record. Visualization not performed.</font> </b></a>')
+            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} contains 1 record only. Visualization skipped.</font> </b></a>')
             return
 
         if self.protocol_layer.featureCount() > 0:
@@ -252,7 +252,7 @@ class visualization:
                     abs(self.max_value - self.min_value)) / self.count_diapazone
 
             if self.interval == 0:
-                self.parent.textLog.append(f'<a><b><font color="red">Num of the interval = 0. Visualization not performed.</font> </b></a>')
+                self.parent.textLog.append(f'<a><b><font color="red">Zero number of intervals. Visualization skipped.</font> </b></a>')
                 return
 
         # make clone

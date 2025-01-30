@@ -22,8 +22,7 @@ from qgis.analysis import (
     QgsNetworkDistanceStrategy
 )
 from converter_layer import MultiLineStringToLineStringConverter
-from common import getDateTime
-
+from common import getDateTime, convert_distance_to_meters
 
 class pkl_car ():
 
@@ -40,7 +39,7 @@ class pkl_car ():
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Started: {begin_computation_str}</a>')
+        self.parent.textLog.append(f'<a>Started at {begin_computation_str}</a>')
         QApplication.processEvents()
 
         self.parent.progressBar.setMaximum(8)
@@ -78,30 +77,21 @@ class pkl_car ():
         self.parent.progressBar.setValue(2)
 
         if self.parent.idx_field_direction != -1:
-
+            
+            self.parent.setMessage(f'Validating layer of roads ...')
             valid_values = {"T", "F", "B"}
-
-            field = self.layer_roads.fields().at(self.parent.idx_field_direction)
-            for count, feature in enumerate(self.layer_roads.getFeatures()):
-
-                if count % 50000 == 0:
-                    if self.verify_break():
-                        return 0
-                    self.parent.setMessage(f'Validating layer of roads ...')
-                    QApplication.processEvents()
-
-                field_value = feature.attribute(
-                    self.parent.idx_field_direction)
-                if not (field_value in valid_values):
-                    self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field with direction value "{field.name()}" must use values ​​(T,F,B). The direction of movement field will not be included in the calculations</font> </b></a>')
-                    self.idx_field_direction = -1
-                    break
+            field_name = self.layer_roads.fields().at(self.parent.idx_field_direction).name()
+            if any(feature.attribute(self.parent.idx_field_direction) not in valid_values 
+                    for feature in self.layer_roads.getFeatures()):
+                self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field of traffic direction "{field_name}" can contain only "T", "F", or "B". Two-way traffic assigned.</font></b></a>')
+                self.idx_field_direction = -1
+      
 
         field = self.layer_roads.fields().at(self.parent.idx_field_speed)
         field_type = field.type()
 
         if not (field_type in [QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong]):
-            self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field with speed value "{field.name()}" must be a digilal type. The speed of movement field will not be included in the calculations</font> </b></a>')
+            self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field of speed "{field.name()}" must be numeric type. The default speed is assigned</font> </b></a>')
             self.parent.idx_field_speed = -1
 
         self.parent.progressBar.setValue(3)
@@ -148,7 +138,7 @@ class pkl_car ():
         with open(filelog_name, "w") as file:
             file.write(text)
 
-        self.parent.textLog.append(f'<a href="file:///{self.parent.path_to_protocol}" target="_blank" >pkl in folder</a>')
+        self.parent.textLog.append(f'<a href="file:///{self.parent.path_to_protocol}" target="_blank" >database in folder</a>')
         self.parent.setMessage('Finished.')
 
     def create_spatial_index_graph(self):
@@ -390,12 +380,6 @@ class pkl_car ():
             return True
         return False
 
-    def convert_distance_to_meters(self, distance_in_degrees, latitude):
-        # length of one degree of longitude at a given latitude in meters
-        meters_per_degree_longitude = 111320 * math.cos(math.radians(latitude))
-        # convert distance from degrees to meters
-        return distance_in_degrees * meters_per_degree_longitude
-
     def create_dict_vertex_buildings(self):
 
         dict_vertex_nearest_buildings = {}
@@ -418,7 +402,7 @@ class pkl_car ():
 
             for index, distance in zip(indices, distances):
                 if self.crs_grad:
-                    distance = self.convert_distance_to_meters(
+                    distance = convert_distance_to_meters(
                         distance, latitude)
                 if distance <= buffer_radius:  # check that the distance does not exceed the radius
                     nearest_vertex_id = index
@@ -476,7 +460,7 @@ class pkl_car ():
             distance, nearest_vertex_index = self.graph_vertex_index.query(
                 point_coords, k=1)
             if self.crs_grad:
-                distance = self.convert_distance_to_meters(distance, latitude)
+                distance = convert_distance_to_meters(distance, latitude)
             point_to_vertex_dict[int(id)] = (
                 (nearest_vertex_index, round(distance)))
 

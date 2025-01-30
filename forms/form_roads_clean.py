@@ -4,6 +4,8 @@ import configparser
 from time import sleep
 from datetime import datetime
 
+from qgis.core import QgsProcessingFeedback
+
 from qgis.PyQt import QtCore
 
 from qgis.core import (QgsApplication,
@@ -88,6 +90,8 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
 
+        self.feedback = QgsProcessingFeedback()
+
     def showAllLayersInCombo_Line(self, cmb):
         layers = QgsProject.instance().mapLayers().values()
         line_layers = [layer for layer in layers
@@ -125,7 +129,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
             self.task.cancel()  
             self.progressBar.setValue(0)  
             if not (self.already_show_info):
-                self.textLog.append(f'<a><b><font color="red">Process of topological cleaning is interrupted by user</font> </b></a>')
+                self.textLog.append(f'<a><b><font color="red">Topological cleaning is interrupted by user</font> </b></a>')
                 self.already_show_info = True
             self.setMessage("")
 
@@ -177,7 +181,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.break_on = False
 
         self.task = cls_clean_roads(
-            self, begin_computation_time, self.layer_road, self.layer_road_path, self.folder_name)
+            self, begin_computation_time, self.layer_road, self.layer_road_path, self.folder_name,self.feedback)
         QgsApplication.taskManager().addTask(self.task)
         QApplication.processEvents()
 

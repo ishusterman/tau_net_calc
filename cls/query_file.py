@@ -186,7 +186,7 @@ def verify_break(self,
 
         self.textLog.append(f'<a><b><font color="red">Raptor Algorithm is interrupted by user</font> </b></a>')
         time_after_computation = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.textLog.append(f'<a>Time break: {time_after_computation}</a>')
+        self.textLog.append(f'<a>Interrupted at: {time_after_computation}</a>')
 
         if self.folder_name != "":
             write_info(self,
@@ -584,7 +584,7 @@ def runRaptorWithProtocol(self,
                         attribute_dict[int(feature[field_name_id])] = int(
                             feature[field])
                     else:
-                        self.textLog.append(f'<a><b><font color="red"> WARNING: type of field "{field}" to aggregate  is no digital, aggregate no run</font> </b></a>')
+                        self.textLog.append(f'<a><b><font color="red"> WARNING: The field "{field}" is not numeric, excluded from aggregation</font> </b></a>')
                         # aggregate_this_fields[field] = False
 
                         break
