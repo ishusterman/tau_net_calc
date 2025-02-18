@@ -11,10 +11,11 @@ from qgis.core import (QgsProject,
                        )
 
 from PyQt5.QtWidgets import (
-    QDialogButtonBox,
-    QDialog,
-    QFileDialog,
-    )
+                        QDialogButtonBox,
+                        QDialog,
+                        QFileDialog,
+                        QMessageBox
+                        )
 
 from PyQt5.QtCore import (Qt,
                           QRegExp,
@@ -591,6 +592,19 @@ class form_pkl_car(QDialog, FORM_CLASS):
         if not os.path.exists(self.txtPathToProtocols.text()):
             self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
             return False
+        
+        file_path = os.path.join(self.txtPathToProtocols.text(), "graph.pkl")
+        if  os.path.isfile(file_path):
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setWindowTitle("Confirm")
+            msgBox.setText(
+                f"The folder '{self.txtPathToProtocols.text()}' already contains a database. Overwrite?")
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
+            result = msgBox.exec_()
+            if result == QMessageBox.No:
+                return False
 
         try:
             tmp_prefix = "write_tester"

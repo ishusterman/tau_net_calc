@@ -324,8 +324,9 @@ class cls_clean_visualization(QgsTask):
         self.unique_output_path = self.get_unique_path(output_path)
         self.layer_name = os.path.splitext(
             os.path.basename(self.unique_output_path))[0]
-
+        
         output_path = self.unique_output_path
+        
         QgsVectorFileWriter.writeAsVectorFormat(
             centroid_layer,
             output_path,

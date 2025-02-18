@@ -77,7 +77,7 @@ class visualization:
         values = [feature[self.targetField] for feature in layer.getFeatures(
         ) if feature[self.targetField] is not None]
         if values == []:
-            self.parent.textLog.append(f'<a><b><font color="red">Verify field {self.fieldname_layer}. Visualization skipped.</font> </b></a>')
+            self.parent.textLog.append(f'<a><b><font color="red">Verify field "{self.fieldname_layer}". Visualization skipped.</font> </b></a>')
             return
 
         percentiles = np.percentile(
@@ -100,7 +100,9 @@ class visualization:
 
             symbol.setColor(fill_color)
             symbol.setOpacity(opacity)
-            symbol.symbolLayer(0).setStrokeColor(fill_color)
+            #symbol.symbolLayer(0).setStrokeColor(fill_color)
+            symbol.symbolLayer(0).setStrokeColor(QColor(0, 0, 0, 0))
+            symbol.symbolLayer(0).setStrokeWidth(1.0)
 
             renderer_range = QgsRendererRange(
                 lower_bound, upper_bound, symbol, label)
@@ -142,7 +144,10 @@ class visualization:
 
             symbol.setColor(fill_color)
             symbol.setOpacity(opacity)
-            symbol.symbolLayer(0).setStrokeColor(fill_color)
+
+            #symbol.symbolLayer(0).setStrokeColor(fill_color)
+            symbol.symbolLayer(0).setStrokeColor(QColor(0, 0, 0, 0))
+            symbol.symbolLayer(0).setStrokeWidth(1.0) 
 
             renderer_range = QgsRendererRange(
                 lower_bound, upper_bound, symbol, label)
@@ -214,6 +219,7 @@ class visualization:
                 parent_group.insertChildNode(
                     0, QgsLayerTreeLayer(self.protocol_layer))
 
+            """
             # filter on first value Origin_ID
             
             if self.mode == 2: # AREA
@@ -221,7 +227,7 @@ class visualization:
                 origin_id_value = first_feature['Origin_ID']
                 expression = f'"Origin_ID" = {origin_id_value}'
                 self.protocol_layer.setSubsetString(expression)
-            
+            """
 
             self.max_value = 0
             self.min_value = float('inf')

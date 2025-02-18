@@ -315,9 +315,10 @@ class form_relative(QDialog, FORM_CLASS):
         self.textLog.append(f"<a>Results_2 folder: {self.config['Settings']['PathToCAR_relative']}</a>")
         self.textLog.append(f"<a>Output folder: {self.config['Settings']['PathToOutput_relative']}</a>")
         self.textLog.append(f"<a>Visualization layer : {self.layer_vis_path}</a>")
+                
         self.textLog.append(f"<a>Calculate ratio: {self.config['Settings']['calc_ratio_relative']}</a>")
         self.textLog.append(f"<a>Calculate difference: {self.config['Settings']['calc_difference_relative']}</a>")
-        self.textLog.append(f"<a>Calculate difference relative: {self.config['Settings']['calc_relative_difference_relative']}</a>")
+        self.textLog.append(f"<a>Calculate relative difference: {self.config['Settings']['calc_relative_difference_relative']}</a>")
 
         LayerVis = self.config['Settings']['VisLayer_relative']
         fieldname_layer = self.config['Settings']['VisLayers_fields_relative']
@@ -382,6 +383,10 @@ class form_relative(QDialog, FORM_CLASS):
                              mode_compare=False
                              )
         df1 = pd.read_csv(self.file1)
+        
+        df1 = df1[df1[field_name].notna()]
+        df1[field_name] = pd.to_numeric(df1[field_name], errors='coerce')
+        
 
         df1 = df1[~df1[field_name].isin(self.result_merge[field_name])]
 
@@ -403,7 +408,12 @@ class form_relative(QDialog, FORM_CLASS):
         QApplication.processEvents()
         df2 = pd.read_csv(self.file2)
 
+        df2 = df2[df2[field_name].notna()]
+        df2[field_name] = pd.to_numeric(df2[field_name], errors='coerce')
+
+
         df2 = df2[~df2[field_name].isin(self.result_merge[field_name])]
+        df2[field_name] = df2[field_name].astype(str)
         self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name2}_only'
 
         columns_to_keep = ['Origin_ID', 'Destination_ID']
@@ -602,7 +612,7 @@ class form_relative(QDialog, FORM_CLASS):
         mode_value_file2 = params_file2.pop('Mode', 'XXX')
 
         comparison_array.append({
-            'parameter': 'Mode',
+            'parameter': 'Accessibility computation options',
             'value_file1': mode_value_file1,
             'value_file2': mode_value_file2
         })
@@ -631,7 +641,7 @@ class form_relative(QDialog, FORM_CLASS):
 
     def generate_html_table(self, comparison_array):
         html = "<table border='1' cellpadding='5' cellspacing='0'>"
-        html += "<tr><th>Params</th><th>File1</th><th>File2</th></tr>"
+        html += "<tr><th>Settings</th><th>File1</th><th>File2</th></tr>"
 
         for entry in comparison_array:
             html += f"<tr><td>{entry['parameter']}</td><td>{entry['value_file1']}</td><td>{entry['value_file2']}</td></tr>"
@@ -780,6 +790,7 @@ class form_relative(QDialog, FORM_CLASS):
     def calc_AREA(self, file1, file2):
 
         df1 = pd.read_csv(file1)
+        
         column_name1 = df1.columns[-1]
         df2 = pd.read_csv(file2)
         column_name2 = df2.columns[-1]
@@ -790,15 +801,21 @@ class form_relative(QDialog, FORM_CLASS):
             postfix2 = "_2"
 
         # filtering data by the first value of Origin_ID
+        
         origin_id = df1['Origin_ID'].iloc[0]
+        
         df1_filtered = df1[df1['Origin_ID'] == origin_id]
         df2_filtered = df2[df2['Origin_ID'] == origin_id]
 
         result_df = pd.DataFrame()
 
-        # saving the Destination_ID values from the first file
+        # Saving the Destination_ID values from the first file
         result_df['Destination_ID'] = df1_filtered['Destination_ID']
 
+        # Convert Destination_ID to numeric
+        df1_filtered["Destination_ID"] = pd.to_numeric(df1_filtered["Destination_ID"].astype(str).str.strip(), errors="coerce")
+        df2_filtered["Destination_ID"] = pd.to_numeric(df2_filtered["Destination_ID"].astype(str).str.strip(), errors="coerce")
+        
         # joining by Destination_ID
         merged_df = pd.merge(df1_filtered[['Origin_ID', 'Destination_ID', column_name1]],
                              df2_filtered[['Destination_ID', column_name2]],

@@ -500,8 +500,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['Walk_to_car_car'] = self.txtWalkToCAR.text()
         self.config['Settings']['Walk_to_destination_car'] = self.txtWalkToDestination.text()
         self.config['Settings']['Walking_speed_car'] = self.txtWalkingSpeed.text()
-        self.config['Settings']['Start_time_car'] = self.dtStartTime.dateTime(
-        ).toString("HH:mm:ss")
+        self.config['Settings']['Start_time_car'] = self.dtStartTime.dateTime().toString("HH:mm:ss")
 
         self.config['Settings']['TimeGap_car'] = self.txtTimeGap.text()
 
@@ -512,14 +511,24 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer_car'])[0]
-        self.count_layer_origins = layer.featureCount()
         self.layer_origins_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
+        if self.mode == 2:
+            layer = QgsProject.instance().mapLayersByName(
+            self.config['Settings']['LayerDest_car'])[0]
+             
+        self.count_layer_origins = layer.featureCount()
+        
 
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest_car'])[0]
         self.layer_destinations_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
+        if self.mode == 2:
+            layer = QgsProject.instance().mapLayersByName(
+            self.config['Settings']['Layer_car'])[0]
+
+        
         self.count_layer_destinations = layer.featureCount()
 
         layer = QgsProject.instance().mapLayersByName(
@@ -637,6 +646,10 @@ class CarAccessibility(QDialog, FORM_CLASS):
     def get_feature_from_layer(self):
 
         layer = self.config['Settings']['Layer_car']
+        isChecked = self.cbSelectedOnly1.isChecked()
+        if self.mode == 2:
+            layer = self.config['Settings']['LayerDest_car']
+            isChecked = self.cbSelectedOnly2.isChecked()
 
         layer = QgsProject.instance().mapLayersByName(layer)[0]
 
@@ -650,7 +663,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
             return 0
 
-        if self.cbSelectedOnly1.isChecked():
+        if isChecked:
             features = layer.selectedFeatures()
 
             if len(features) == 0:
@@ -668,7 +681,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         feature_id_field = self.layer_field
 
         features = layer.getFeatures()
-        if self.cbSelectedOnly1.isChecked():
+        if isChecked:
             features = layer.selectedFeatures()
 
         for feature in features:
@@ -685,15 +698,23 @@ class CarAccessibility(QDialog, FORM_CLASS):
     def call_car_accessibility(self):
 
         self.layer_origins_name = self.config['Settings']['Layer_Car']
+        if self.mode == 2:
+            self.layer_origins_name = self.config['Settings']['LayerDest_Car']
         layer_origins = QgsProject.instance().mapLayersByName(
             self.layer_origins_name)[0]
 
         layer_dest = self.config['Settings']['LayerDest_Car']
+        if self.mode == 2:
+            layer_dest = self.config['Settings']['Layer_Car']
         layer_dest = QgsProject.instance().mapLayersByName(layer_dest)[0]
 
         self.pathtopkl = self.config['Settings']['pathtopkl_car']
+
         self.selected_only1 = self.config['Settings']['SelectedOnly1_car'] == "True"
         self.selected_only2 = self.config['Settings']['SelectedOnly2_car'] == "True"
+        if self.mode == 2:
+            self.selected_only1 = self.config['Settings']['SelectedOnly2_car'] == "True"
+            self.selected_only2 = self.config['Settings']['SelectedOnly1_car'] == "True"
 
         self.layer_origins = layer_origins
         self.layer_dest = layer_dest
@@ -704,7 +725,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
         time_step_minutes = int(self.config['Settings']['TimeInterval_car'])
 
         layer_vis = self.config['Settings']['layervis_car']
+
         layerdest_field = self.config['Settings']['LayerDest_field_car']
+        if self.mode == 2:
+            layerdest_field = self.config['Settings']['Layer_field_car']
+
         layer_vis_field = self.config['Settings']['VisLayer_field_car']
 
         if 'Field_ch_car' in self.config['Settings']:
@@ -752,7 +777,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.points = self.get_feature_from_layer()
 
         if self.points == 0:
-            # self.setMessage (f"No features in the layer '{self.cmbLayers.currentText()}'")
             self.run_button.setEnabled(True)
             return 0
 

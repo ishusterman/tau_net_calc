@@ -76,21 +76,29 @@ class cls_clean_buildings(QgsTask):
         ############################################
 
         self.parent.setMessage('Renumbering duplicated osm_id ...')
-        osm_id_counter = {}
+        max_osm_id = max(int(feature['osm_id']) for feature in layer_singlepart.getFeatures() if feature['osm_id'].isdigit())
+        osm_id_counter = set()
         layer_singlepart.startEditing()
 
         for feature in layer_singlepart.getFeatures():
             osm_id = feature['osm_id']
-            if osm_id in osm_id_counter:
-                osm_id_counter[osm_id] += 1
-                new_id = f"{osm_id}_{osm_id_counter[osm_id]}"
+    
+            if osm_id.isdigit():
+                osm_id_int = int(osm_id)
             else:
-
-                osm_id_counter[osm_id] = 1
-                new_id = osm_id
-            feature['osm_id'] = new_id
+                max_osm_id += 1
+                osm_id_int = max_osm_id
+    
+            if osm_id_int in osm_id_counter:
+                max_osm_id += 1
+                osm_id_int = max_osm_id
+    
+            osm_id_counter.add(osm_id_int)
+            feature['osm_id'] = str(osm_id_int)
             layer_singlepart.updateFeature(feature)
+
         layer_singlepart.commitChanges()
+        
         if self.break_on:
             return 0
         self.parent.progressBar.setValue(4)

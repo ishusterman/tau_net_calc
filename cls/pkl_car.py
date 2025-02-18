@@ -163,11 +163,14 @@ class pkl_car ():
 
         self.mode = mode
         self.layer_roads_mod = self.change_road_layer()
+        
+
         if self.verify_break():
             return 0
+                
         director = QgsVectorLayerDirector(self.layer_roads_mod,
                                           self.parent.idx_field_direction,
-                                          '', '', '',
+                                          '0', '1', '2',      
                                           QgsVectorLayerDirector.DirectionBoth
                                           )
 

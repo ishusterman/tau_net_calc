@@ -531,14 +531,23 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer'])[0]
-        self.count_layer_origins = layer.featureCount()
-
         self.layer_origins_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
+        if self.mode == 2:
+            layer = QgsProject.instance().mapLayersByName(
+            self.config['Settings']['LayerDest'])[0]
+        self.count_layer_origins = layer.featureCount()
+      
+        
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest'])[0]
         self.layer_destinations_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
+        if self.mode == 2:
+            layer = QgsProject.instance().mapLayersByName(
+            self.config['Settings']['Layer'])[0]
+
+        
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerViz'])[0]
         self.layer_visualization_path = layer.dataProvider().dataSourceUri().split("|")[
@@ -671,8 +680,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     def get_feature_from_layer(self):
         layer = self.config['Settings']['Layer']
-        #D_TIME = time_to_seconds(self.config['Settings']['TIME'])
         feature_id_field = self.config['Settings']['Layer_field']
+        isChecked = self.cbSelectedOnly1.isChecked()
+
+        if self.mode == 2:
+            layer = self.config['Settings']['LayerDest']
+            feature_id_field = self.config['Settings']['LayerDest_field']
+            isChecked = self.cbSelectedOnly2.isChecked()
+
         layer = QgsProject.instance().mapLayersByName(layer)[0]
         ids = []
         try:
@@ -681,7 +696,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.setMessage(f'Layer {layer} is empty')
             return 0
 
-        if self.cbSelectedOnly1.isChecked():
+        if isChecked:
             features = layer.selectedFeatures()
             if len(features) == 0:
                 msgBox = QMessageBox()
@@ -695,7 +710,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 return 0
 
         features = layer.getFeatures()
-        if self.cbSelectedOnly1.isChecked():
+        if isChecked:
             features = layer.selectedFeatures()
 
         i = 0
@@ -746,10 +761,19 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
             Layer = self.config['Settings']['Layer']
             LayerDest = self.config['Settings']['LayerDest']
+
+            if self.mode == 2:
+                Layer = self.config['Settings']['LayerDest']
+                LayerDest = self.config['Settings']['Layer']
+
             layer_origin = QgsProject.instance().mapLayersByName(Layer)[0]
             layer_dest = QgsProject.instance().mapLayersByName(LayerDest)[0]    
             MaxWalkDist1 = int(self.config['Settings']['MaxWalkDist1'])
             layer_dest_field = self.config['Settings']['LayerDest_field']
+
+            if self.mode == 2:
+                layer_dest_field = self.config['Settings']['Layer_field']
+
             Speed = float(self.config['Settings']['Speed'].replace(',', '.')) * 1000 / 3600  # from km/h to m/sec
 
             dictionary, dictionary2 = myload_all_dict(self,
