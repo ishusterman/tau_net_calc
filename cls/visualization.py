@@ -189,6 +189,8 @@ class visualization:
         uri = f"file:///{self.path_protokol}?type=csv&maxFields=10000&detectTypes=yes&geomType=none&subsetIndex=no&watchFile=no"
 
         self.protocol_layer = QgsVectorLayer(uri, aliase, "delimitedtext")
+        print (f'uri {uri}')
+        print (f'aliase {aliase}')
 
         fields = self.protocol_layer.fields()
         self.targetField_base = fields[-1].name()

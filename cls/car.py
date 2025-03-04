@@ -149,7 +149,7 @@ class car_accessibility:
         count = len(self.parent.points)
         self.parent.progressBar.setMaximum(count) 
         self.parent.progressBar.setValue(1)
-        
+
         self.calc_min_cost_onAir()
         
         if self.parent.protocol_type == 2:
@@ -168,6 +168,9 @@ class car_accessibility:
         if self.parent.protocol_type == 2 and count > 1:
             self.f = self.make_service_area_report(
                 self.parent.folder_name, self.parent.file_name, self.prefix_alias)        
+
+        if self.verify_break():
+            return 0    
 
     def make_service_area_report(self, folder_name, aliase, prefix_alias):
 
@@ -284,6 +287,9 @@ class car_accessibility:
             self.parent.setMessage(f'Building thematic map for the feature №{i+1} of {count}')
             self.parent.progressBar.setValue(i+1)
             QApplication.processEvents()
+            
+            if self.parent.break_on:    
+                return 0
 
             orig_geom = orig_feature.geometry()
                 
