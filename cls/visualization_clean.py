@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from random import choice
 from matplotlib.colors import CSS4_COLORS
+import math
 
 from PyQt5.QtCore import QVariant
 
@@ -14,7 +15,10 @@ from qgis.core import (
     QgsField,
     QgsSpatialIndex,
     QgsFillSymbol,
+    QgsRectangle,
     edit)
+
+from qgis.core import QgsProcessing
 
 from qgis import processing
 
@@ -30,13 +34,17 @@ class cls_clean_visualization(QgsTask):
         self.exception = None
         self.break_on = False
         self.parent.progressBar.setMaximum(25)
-        self.spacing = [100, 200, 400, 800]
+        self.spacing = [50*math.sqrt(3), 100*math.sqrt(3), 200*math.sqrt(3), 400*math.sqrt(3)]
+        if self.parent.add_hex != "" and int (self.parent.add_hex) not in (50,100,200,400):
+            self.spacing.append(int(self.parent.add_hex) * math.sqrt(3))
+
         #self.spacing = [800]
         self.layer_result_list = []
         self.dist_buffer = 50
+        self.voronoi_layer_name = ""
         
     def run(self):
-
+       try: 
         uri = self.layer.dataProvider().dataSourceUri()
         self.input_layer_path = uri.split("|")[0] if "|" in uri else uri
         self.file_name = os.path.basename(self.input_layer_path)
@@ -70,7 +78,8 @@ class cls_clean_visualization(QgsTask):
         
         for i, spacing in enumerate(self.spacing):
 
-            self.parent.setMessage(f'Constructing hexagons {spacing}m ...')
+            spacing_info = round (spacing/math.sqrt(3))
+            self.parent.setMessage(f'Constructing hexagons {spacing_info}m ...')
             spacing_current_x = spacing
             spacing_current_y = spacing
             
@@ -81,7 +90,14 @@ class cls_clean_visualization(QgsTask):
                 spacing_current_y = convert_meters_to_degrees(
                 spacing_current_y, first_point.y())
 
+            buffer_x = spacing_current_x / 2
+            buffer_y = spacing_current_y / 2
+            
             extent = input_layer.extent()
+            extent = QgsRectangle(extent.xMinimum() - buffer_x,
+                      extent.yMinimum() - buffer_y,
+                      extent.xMaximum() + buffer_x,
+                      extent.yMaximum() + buffer_y)
             width = extent.width()
             height = extent.height()
             if width < spacing_current_x or height < spacing_current_y:
@@ -104,14 +120,14 @@ class cls_clean_visualization(QgsTask):
                 return 0
             self.parent.progressBar.setValue(6 + i*4)
             #############################################
-            self.parent.setMessage(f'Filtering hexagons {spacing}m...')
+            self.parent.setMessage(f'Filtering hexagons {spacing_info}m...')
             self.filter_hexagons_by_intersection(hexagones_layer, self.layer)
         
             if self.break_on:
                 return 0
             self.parent.progressBar.setValue(7 + i*4)
             #############################################
-            self.parent.setMessage(f'Matching between buildings and hexagons {spacing}m...')
+            self.parent.setMessage(f'Matching between buildings and hexagons {spacing_info}m...')
             self.add_nearest_osm_id(hexagones_layer, centroids_layer)
         
 
@@ -120,7 +136,7 @@ class cls_clean_visualization(QgsTask):
             self.parent.progressBar.setValue(8 + i*4)
 
             #############################################
-            self.parent.setMessage(f'Dissolving adjacent hexagons with the same ID {spacing}m on osm_id...')
+            self.parent.setMessage(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on osm_id...')
             dissolve_result = processing.run("native:dissolve", 
                         {
                         'INPUT': hexagones_layer,
@@ -138,7 +154,7 @@ class cls_clean_visualization(QgsTask):
         
             self.parent.setMessage('Saving ...')
             file_dir = self.folder_name
-            self.output_file_name = f"{self.name}_hexagons_{spacing}m{self.ext}"
+            self.output_file_name = f"{self.name}_hexagons_{spacing_info}m{self.ext}"
             output_path = os.path.join(file_dir, self.output_file_name)
             self.unique_output_path = self.get_unique_path(output_path)
         
@@ -163,14 +179,21 @@ class cls_clean_visualization(QgsTask):
             self.parent.progressBar.setValue(10 + i*4)
             ###################################
 
-        QgsProject.instance().removeMapLayer(self.centroids_layer_id)    
-        self.parent.progressBar.setValue(25)    
+        QgsProject.instance().removeMapLayer(self.centroids_layer_id) 
+        self.parent.progressBar.setValue(25)
+
+        ###
+        #self.voronoi_layer_name = "test"    
+        ###
+
         self.write_finish_info()
         self.parent.btnBreakOn.setEnabled(False)
         self.parent.close_button.setEnabled(True)
+
+       except Exception as e:
+            print(f"Error h: {e}") 
         
-        
-        return True
+       return True
     
     def write_finish_info(self):
         after_computation_time = datetime.now()
@@ -189,7 +212,8 @@ class cls_clean_visualization(QgsTask):
         with open(filelog_name, "w") as file:
             file.write(text)
 
-        self.parent.textLog.append(f'"{self.voronoi_layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        if self.voronoi_layer_name != "":
+            self.parent.textLog.append(f'"{self.voronoi_layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
                 
         for item in self.layer_result_list:
             self.parent.textLog.append(f'"{item}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
@@ -395,6 +419,7 @@ class cls_clean_visualization(QgsTask):
         self.parent.setMessage('Clipping ...')
 
         clip_layer = self.make_clip(buffer_layer, voronoi_layer)
+        print (f'self.make_clip - ok')
         if self.break_on:
             return 0
         self.parent.progressBar.setValue(4)
@@ -404,8 +429,10 @@ class cls_clean_visualization(QgsTask):
         self.parent.setMessage('Saving ...')
         file_dir = self.folder_name
         self.output_file_name = f"{self.name}_voronoi{self.ext}"
+        #print (f'self.output_file_name {self.output_file_name}')
         output_path = os.path.join(file_dir, self.output_file_name)
         self.unique_output_path = self.get_unique_path(output_path)
+        #print (f'self.unique_output_path {self.unique_output_path}')
         self.voronoi_layer_name = os.path.splitext(
             os.path.basename(self.unique_output_path))[0]
         QgsVectorFileWriter.writeAsVectorFormat(
@@ -415,6 +442,9 @@ class cls_clean_visualization(QgsTask):
             clip_layer.crs(),
             "ESRI Shapefile"
         )
+
+        #print (f'self.voronoi_layer_name {self.voronoi_layer_name}')
+
         saved_layer = QgsVectorLayer(
             self.unique_output_path, self.voronoi_layer_name, "ogr")
         if saved_layer.isValid():
@@ -426,9 +456,9 @@ class cls_clean_visualization(QgsTask):
         self.parent.progressBar.setValue(5)
         
       except Exception as e:
-            print (f"error: {e}")
+            print (f"error voronoi: {e}")
 
-        ###################################
+    ###################################
     
     def make_clip(self, buffer_layer, voronoi_layer):
 
@@ -466,7 +496,7 @@ class cls_clean_visualization(QgsTask):
                 result_provider.addFeatures(clipped_layer.getFeatures())
 
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Error clipped : {e}")
 
             finally:
                 del single_buffer_layer
@@ -474,6 +504,9 @@ class cls_clean_visualization(QgsTask):
 
         result_layer.updateExtents()
         return result_layer
+        
+    
+
 
     def style_polygon_layer(self, layer):
         

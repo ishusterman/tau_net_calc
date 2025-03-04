@@ -30,7 +30,7 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
 from query_file import runRaptorWithProtocol, myload_all_dict
-from common import (getDateTime, 
+from tau_net_calc.cls.common import (getDateTime, 
                     get_qgis_info, 
                     is_valid_folder_name, 
                     get_prefix_alias, 
@@ -57,7 +57,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
-        fix_size = 12 * self.txtMinTransfers.fontMetrics().width('x')
+        fix_size = 13 * self.txtMinTransfers.fontMetrics().width('x')
 
         self.txtMinTransfers.setFixedWidth(fix_size)
         self.txtMaxTransfers.setFixedWidth(fix_size)
@@ -75,8 +75,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWaitTimeTransfer.setFixedWidth(fix_size)
         self.txtMaxTimeTravel.setFixedWidth(fix_size)
         self.txtTimeInterval.setFixedWidth(fix_size)
-        self.txtTimeGap.setFixedWidth(fix_size)
-
+        
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
 
@@ -222,8 +221,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxTimeTravel.setValidator(int_validator3)
         self.txtMaxExtraTime.setValidator(int_validator3)
         self.txtDepartureInterval.setValidator(int_validator3)
-        self.txtTimeGap.setValidator(int_validator3)
-
+        
         self.default_aliase = f'{getDateTime()}'
 
         self.ParametrsShow()
@@ -372,8 +370,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.textLog.append(f"<a> Maximum waiting time at the transfer stop: {self.config['Settings']['maxwaittimetransfer']} min</a>")
 
-        self.textLog.append(f"<a> Boarding time gap: {self.config['Settings']['timegap']} s</a>")
-
         if not self.timetable_mode:
             if self.mode == 1:
                 self.textLog.append(f"<a> Start at (hh:mm:ss): {self.config['Settings']['time']}</a>")
@@ -384,7 +380,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.textLog.append("<a style='font-weight:bold;'>[Aggregation]</a>")
             self.textLog.append(f"<a> Number of bins: {self.config['Settings']['timeinterval']}</a>")
 
-            if self.mode == 1:
+            if self.mode == 2:
                 count_features = self.count_layer_destinations
             else:
                 count_features = self.count_layer_origins
@@ -470,10 +466,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if 'RunOnAir' not in self.config['Settings']:
             self.config['Settings']['RunOnAir'] = 'False'
-
-        if 'TimeGap' not in self.config['Settings']:
-            self.config['Settings']['TimeGap'] = '0'
-
+        
         if 'Admin_time_delta' not in self.config['Settings']:
             self.config['Settings']['Admin_time_delta'] = '1200'    
 
@@ -521,8 +514,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.config['Settings']['MaxWaitTimeTransfer'] = self.txtMaxWaitTimeTransfer.text()
         self.config['Settings']['MaxTimeTravel'] = self.txtMaxTimeTravel.text()
         self.config['Settings']['RunOnAir'] = str(self.cbRunOnAir.isChecked())
-        self.config['Settings']['TimeGap'] = self.txtTimeGap.text()
-
+        
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
@@ -537,6 +529,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest'])[0]
         self.count_layer_origins = layer.featureCount()
+
+        if self.cbSelectedOnly1.isChecked():
+            self.count_layer_origins = layer.selectedFeatureCount()
+            
       
         
         layer = QgsProject.instance().mapLayersByName(
@@ -546,13 +542,17 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if self.mode == 2:
             layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer'])[0]
+        self.count_layer_destinations = layer.featureCount()
+
+        if self.cbSelectedOnly2.isChecked():
+            self.count_layer_destinations = layer.selectedFeatureCount()    
 
         
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerViz'])[0]
         self.layer_visualization_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
-        self.count_layer_destinations = layer.featureCount()
+        
 
     def ParametrsShow(self):
 
@@ -601,8 +601,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWaitTimeTransfer.setText(
             self.config['Settings']['MaxWaitTimeTransfer'])
         self.txtMaxTimeTravel.setText(self.config['Settings']['MaxTimeTravel'])
-        self.txtTimeGap.setText(self.config['Settings']['TimeGap'])
-
+        
         max_extra_time = self.config['Settings'].get('maxextratime', '30')
         self.txtMaxExtraTime.setText(max_extra_time)
 
@@ -741,8 +740,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
             msgBox.setWindowTitle("Confirm")
+            take_min = round((len(sources)*2)/60)
             msgBox.setText(
-                f"Layer contains {len(sources)+1} feature. Maximum 10 feature are recommended. Are you sure?")
+                f"Layer contains {len(sources)} feature and it will take at least {take_min} minutes to finish the computations. Maximum 10 feature are recommended. Are you sure?")
             msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
 
             result = msgBox.exec_()

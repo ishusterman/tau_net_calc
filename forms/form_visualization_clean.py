@@ -4,7 +4,6 @@ import configparser
 from time import sleep
 from datetime import datetime
 
-
 from qgis.PyQt import QtCore
 
 from qgis.core import (QgsApplication,
@@ -15,6 +14,7 @@ from qgis.core import (QgsApplication,
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
+                          QRegExp,
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -23,9 +23,10 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                              QApplication,
                              )
 
-from PyQt5.QtGui import QDesktopServices
-from PyQt5 import uic
+from PyQt5.QtGui import (QRegExpValidator,
+                        QDesktopServices)
 
+from PyQt5 import uic
 
 from common import get_qgis_info, check_file_parameters_accessibility
 from visualization_clean import cls_clean_visualization
@@ -49,6 +50,14 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
+        
+        fix_size = 13 * self.txtAddHex.fontMetrics().width('x')
+        self.txtAddHex.setFixedWidth(fix_size)
+
+        #  create a regular expression instance for integers
+        regex1 = QRegExp(r"0|[1-9]\d{0,3}|10000")
+        int_validator1 = QRegExpValidator(regex1)
+        self.txtAddHex.setValidator(int_validator1)
 
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
@@ -208,9 +217,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         #self.layer_buildings = QgsProject.instance().mapLayersByName(
         #    self.config['Settings']['layer_clean-visualization'])[0]
         
-       
+        self.add_hex = self.config['Settings']['AddHex_clean-visualization']
         self.textLog.append(f"<a>Layer of buildings: {self.layer_buildings_path}</a>")
-                
+        self.textLog.append(f"<a>Add a hexagons layer with a side length: {self.add_hex}m</a>")        
         self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization']
         self.textLog.append(f"<a>Folder to store layers for visualization: {self.folder_name}</a>")
 
@@ -251,6 +260,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         if 'PathToProtocols_clean-visualization' not in self.config['Settings']:
             self.config['Settings']['PathToProtocols_clean-visualization'] = 'C:/'
 
+        if 'AddHex_clean-visualization' not in self.config['Settings']:
+            self.config['Settings']['AddHex_clean-visualization'] = ''    
+
     # update config file
 
     def saveParameters(self):
@@ -259,6 +271,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         f = os.path.join(project_directory, 'parameters_accessibility.txt')
         self.config['Settings']['Layer_clean-visualization'] = self.cmbLayers.currentText()
         self.config['Settings']['PathToProtocols_clean-visualization'] = self.txtPathToProtocols.text()
+        self.config['Settings']['AddHex_clean-visualization'] = self.txtAddHex.text()
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
@@ -270,6 +283,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.cmbLayers.setCurrentText(self.config['Settings']['Layer_clean-visualization'])
         
         self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_clean-visualization'])
+        self.txtAddHex.setText(self.config['Settings']['AddHex_clean-visualization'])
 
     def setMessage(self, message):
         self.lblMessages.setText(message)

@@ -47,6 +47,9 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
 
+        self.lblAddHex.setVisible(False)
+        self.txtAddHex.setVisible(False)
+
         self.setWindowTitle(title)
         self.toolButtonBuildings.setVisible(False)
         self.splitter.setSizes(
@@ -167,6 +170,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[
             0]
         self.textLog.append(f"<a>Initial layer of buildings: {self.layer_road_path}</a>")
+        
         self.folder_name = self.config['Settings']['PathToProtocols_clean-buildings']
         self.textLog.append(f"<a>Folder to store clean layer of buildings: {self.folder_name}</a>")
 

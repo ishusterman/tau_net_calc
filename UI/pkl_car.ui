@@ -83,8 +83,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>592</width>
-             <height>221</height>
+             <width>670</width>
+             <height>383</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -238,31 +238,14 @@
                 </item>
                </layout>
               </item>
-              <item row="7" column="0">
-               <widget class="QLabel" name="label_4">
-                <property name="text">
-                 <string>Default speed (km/h)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="1">
-               <widget class="QLineEdit" name="txtSpeed">
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight</set>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
+              <item row="12" column="0">
                <widget class="QLabel" name="label_13">
                 <property name="text">
                  <string>Folder to store car database </string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0" colspan="2">
+              <item row="13" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols">
@@ -288,6 +271,29 @@
                  </widget>
                 </item>
                </layout>
+              </item>
+              <item row="9" column="0">
+               <widget class="QTableWidget" name="table1"/>
+              </item>
+              <item row="9" column="1">
+               <widget class="QTableWidget" name="table2"/>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Default speed (km/h)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QLineEdit" name="txtSpeed">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight</set>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>

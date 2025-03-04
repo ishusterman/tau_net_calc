@@ -297,12 +297,8 @@ def runRaptorWithProtocol(self,
         # to sec
         self.config['Settings']['MaxWaitTimeTransfer'].replace(',', '.'))*60
 
-    TimeGap = int(self.config['Settings']['TimeGap'])
-
-    if TimeGap > 0:
-        CHANGE_TIME_SEC = TimeGap
-    else:
-        CHANGE_TIME_SEC = 1
+    
+    CHANGE_TIME_SEC = 1
     # time_step = int (self.config['Settings']['TimeInterval'])
 
     number_bins = int(self.config['Settings']['TimeInterval'])
@@ -553,7 +549,7 @@ def runRaptorWithProtocol(self,
                                             raptor_mode,
                                             timetable_mode,
                                             field_name="bldg",
-                                            layer=Layer)
+                                            )
             f[field] = f'{self.folder_name}//{self.aliase}_{prefix_alias}.csv'
             fields_ok.extend([field])
             # aggregate_this_fields[field] = False
@@ -625,8 +621,8 @@ def runRaptorWithProtocol(self,
                                                 protocol_type,
                                                 raptor_mode,
                                                 timetable_mode,
-                                                field_name=field,
-                                                layer=Layer)
+                                                field_name=field
+                                                )
                 f[field] = f'{self.folder_name}//{self.aliase}_{prefix_alias}.csv'
                 with open(f[field], 'w') as filetowrite:
                     filetowrite.write(protocol_header)

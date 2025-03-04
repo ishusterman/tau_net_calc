@@ -92,7 +92,7 @@ class cls_clean_roads(QgsTask):
 
             QApplication.setOverrideCursor(Qt.WaitCursor)
             
-            result0 = processing.run("grass7:v.clean", {'input': self.layer_path,
+            result0 = processing.run("grass:v.clean", {'input': self.layer_path,
                                                         'type':[0,1,2,3,4,5,6],
                                                         'tool':[1],
                                                         'threshold':'1',
@@ -126,7 +126,7 @@ class cls_clean_roads(QgsTask):
             #snapped_layer_path = self.layer_path
 
             self.parent.setMessage('Cleaning layer of roads, step 2 of 3, breaking overlapping links...')
-            result1 = processing.run("grass7:v.clean", {
+            result1 = processing.run("grass:v.clean", {
                 'input': snapped_layer_path,
                 'type': [0, 1, 2, 3, 4, 5, 6],
                 'tool': [0],
@@ -148,7 +148,7 @@ class cls_clean_roads(QgsTask):
             
             # second clean
             self.parent.setMessage('Cleaning layer of roads, step 3 of 3, deleting duplicated links...')
-            result2 = processing.run("grass7:v.clean", {
+            result2 = processing.run("grass:v.clean", {
                 'input': cleaned_layer_path1,
                 'type': [0, 1, 2, 3, 4, 5, 6],
                 'tool': [6],

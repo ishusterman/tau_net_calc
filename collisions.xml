@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-02-25 15:28:01 by Eclipse SUMO GUI Version 1.22.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="c:\doc\Игорь\GIS\Sumo\data\v4\net_test.net.xml"/>
+        <route-files value="c:\doc\Игорь\GIS\Sumo\data\v4\pedestrian.trip.xml,c:\doc\Игорь\GIS\Sumo\data\v4\ bicycle.trip.xml,c:\doc\Игорь\GIS\Sumo\data\v4\ escooter_rental.trip.xml,c:\doc\Игорь\GIS\Sumo\data\v4\ escooter_private.trip.xml,c:\doc\Игорь\GIS\Sumo\data\v4\ ebike.trip.xml,c:\doc\Игорь\GIS\Sumo\data\v4\ car.trip.xml"/>
+        <additional-files value="c:\doc\Игорь\GIS\Sumo\data\v4\add.xml"/>
+    </input>
+
+    <output>
+        <collision-output value="collisions.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="2800"/>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <collision.check-junctions value="true"/>
+        <default.action-step-length value="0.1"/>
+    </processing>
+
+    <traci_server>
+        <remote-port value="59790"/>
+    </traci_server>
+
+</sumoConfiguration>
+-->
+
+<collisions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/collision_file.xsd">
+    <collision time="154.40" type="junctionPedestrian" lane=":J3_33_0" pos="1.49" collider="ebike32" victim="pedestrian11" colliderType="ebike" victimType="DEFAULT_PEDTYPE" colliderSpeed="1.77" victimSpeed="1.39"/>
+</collisions>

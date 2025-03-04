@@ -51,7 +51,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
-        fix_size = 12 * self.txtTimeInterval.fontMetrics().width('x')
+        fix_size = 13 * self.txtTimeInterval.fontMetrics().width('x')
 
         self.txtMaxTimeTravel.setFixedWidth(fix_size)
         self.txtTimeInterval.setFixedWidth(fix_size)
@@ -60,8 +60,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.txtWalkToDestination.setFixedWidth(fix_size)
         self.txtWalkingSpeed.setFixedWidth(fix_size)
         self.dtStartTime.setFixedWidth(fix_size)
-        self.txtTimeGap.setFixedWidth(fix_size)
-
+        
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
 
@@ -116,7 +115,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         int_validator4 = QRegExpValidator(regex4)
 
         self.txtMaxTimeTravel.setValidator(int_validator3)
-        self.txtTimeGap.setValidator(int_validator3)
         self.txtTimeInterval.setValidator(int_validator4)
 
         self.txtWalkToCAR.setValidator(int_validator3)
@@ -331,6 +329,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.textLog.append(f"<a> Selected {name2}: {self.config['Settings']['selectedonly2_car']}</a>")
 
         self.textLog.append("<a style='font-weight:bold;'>[Parameters of a trip]</a>")
+        self.textLog.append(f"<a> Aerial distance: {self.config['Settings']['RunOnAir_car']}</a>")
 
         self.textLog.append(f"<a> Maximum total travel time: {self.config['Settings']['maxtimetravel_car']} min</a>")
 
@@ -341,13 +340,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.textLog.append(f"<a> Start at (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
         else:
             self.textLog.append(f"<a> Arrive at (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
-
-        self.textLog.append(f"<a> Driving start/finish gap: {self.config['Settings']['timegap_car']} s</a>")
+        
         if self.protocol_type == 1:  # MAP mode
             self.textLog.append("<a style='font-weight:bold;'>[Aggregation]</a>")
             self.textLog.append(f"<a> Number of bins: {self.config['Settings']['timeinterval_car']}</a>")
 
-            if self.mode == 1:
+            if self.mode == 2:
                 count_features = self.count_layer_destinations
             else:
                 count_features = self.count_layer_origins
@@ -454,8 +452,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         if 'Start_time_car' not in self.config['Settings']:
             self.config['Settings']['Start_time_car'] = '08:00:00'
 
-        if 'TimeGap_car' not in self.config['Settings']:
-            self.config['Settings']['TimeGap_car'] = '0'
+        if 'RunOnAir_car' not in self.config['Settings']:
+            self.config['Settings']['RunOnAir_car'] = 'False'
 
     # update config file
     def saveParameters(self):
@@ -502,10 +500,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['Walking_speed_car'] = self.txtWalkingSpeed.text()
         self.config['Settings']['Start_time_car'] = self.dtStartTime.dateTime().toString("HH:mm:ss")
 
-        self.config['Settings']['TimeGap_car'] = self.txtTimeGap.text()
+        self.config['Settings']['RunOnAir_car'] = str(self.cbRunOnAir.isChecked())
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
+
+
 
         self.alias = self.txtAlias.text() if self.txtAlias.text() != "" else self.default_alias
 
@@ -518,8 +518,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.config['Settings']['LayerDest_car'])[0]
              
         self.count_layer_origins = layer.featureCount()
+        if self.cbSelectedOnly1.isChecked():
+            self.count_layer_origins = layer.selectedFeatureCount()
         
-
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest_car'])[0]
         self.layer_destinations_path = layer.dataProvider().dataSourceUri().split("|")[
@@ -527,14 +528,16 @@ class CarAccessibility(QDialog, FORM_CLASS):
         if self.mode == 2:
             layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer_car'])[0]
-
-        
         self.count_layer_destinations = layer.featureCount()
+        if self.cbSelectedOnly2.isChecked():
+            self.count_layer_destinations = layer.selectedFeatureCount()
 
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerVis_car'])[0]
         self.layer_visualization_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
+        
+        
 
     def ParametrsShow(self):
 
@@ -577,8 +580,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.config['Settings']['LayerDest_field_car'])
         self.cmbVisLayers_fields.setCurrentText(
             self.config['Settings']['VisLayer_field_car'])
-        self.txtTimeGap.setText(self.config['Settings']['TimeGap_car'])
-
+        
         self.txtAlias.setText(self.default_alias)
 
         if 'Field_ch_car' not in self.config['Settings']:
@@ -602,6 +604,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
         datetime = QDateTime.fromString(
             self.config['Settings']['Start_time_car'], "HH:mm:ss")
         self.dtStartTime.setDateTime(datetime)
+
+        RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
+        self.cbRunOnAir.setChecked(RunOnAir)
 
     def check_folder_and_file(self):
 
@@ -716,10 +721,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.selected_only1 = self.config['Settings']['SelectedOnly2_car'] == "True"
             self.selected_only2 = self.config['Settings']['SelectedOnly1_car'] == "True"
 
-        self.layer_origins = layer_origins
+        self.layer_origin = layer_origins
         self.layer_dest = layer_dest
-
-        self.time_gap = int(self.config['Settings']['TimeGap_car'])
 
         max_time_minutes = int(self.config['Settings']['MaxTimeTravel_car'])
         time_step_minutes = int(self.config['Settings']['TimeInterval_car'])
@@ -727,8 +730,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
         layer_vis = self.config['Settings']['layervis_car']
 
         layerdest_field = self.config['Settings']['LayerDest_field_car']
+        layerorig_field = self.config['Settings']['Layer_field_car']
         if self.mode == 2:
             layerdest_field = self.config['Settings']['Layer_field_car']
+            layerorig_field = self.config['Settings']['LayerDest_field_car']
+
+        self.layerorig_field = layerorig_field    
 
         layer_vis_field = self.config['Settings']['VisLayer_field_car']
 
@@ -753,6 +760,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         begin_computation_str = begin_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
+
+        self.RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
 
         car = car_accessibility(self,
                                 layer_dest,
@@ -785,8 +794,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
             msgBox.setWindowTitle("Confirm")
+            take_min = round((len(self.points)*2)/60)
             msgBox.setText(
-                f"Layer contains {len(self.points)+1} feature. Maximum 10 feature are recommended. Are you sure?")
+                f"Layer contains {len(self.points)} feature and it will take at least {take_min} minutes to finish the computations. Maximum 10 feature are recommended. Are you sure?")
             msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
 
             result = msgBox.exec_()

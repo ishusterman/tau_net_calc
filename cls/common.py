@@ -16,13 +16,13 @@ import shutil
 
 def getDateTime():
     current_datetime = datetime.now()
-    # convert the month to lowercase
-    month = current_datetime.strftime("%b").lower()
+    year = str(current_datetime.year)[-2:]
+    month = str(current_datetime.month).zfill(2)
     day = str(current_datetime.day).zfill(2)
     hour = str(current_datetime.hour).zfill(2)
     minute = str(current_datetime.minute).zfill(2)
     second = str(current_datetime.second).zfill(2)
-    return f'{day}{month}_{hour}h{minute}m{second}s'
+    return f"{year}{month}{day}_{hour}{minute}{second}"
 
 
 def get_version_from_metadata():
@@ -64,18 +64,21 @@ def is_valid_folder_name(folder_name):
     return True
 
 
-def get_prefix_alias(PT, protocol, mode, timetable=None, field_name="", layer="", full_prefix=True):
+def get_prefix_alias(PT, protocol, mode, timetable=None, field_name="", full_prefix=True):
     """
     Point/Region - P/R  (protocol 2,1)
     Forward/Backward - F/B (mode 1,2)
     Fixed/Scheduled - X/S  (false,true)
     """
-    prefix = "PT" if PT else "CAR"
-    protocol_char = "R" if protocol == 1 else "P"
-    mode_char = "F" if mode == 1 else "B"
+    """
+    P/C (Public/Car), F/T (From/To), X/S (Fixed/Scheduled time), A/R (Service Area/Region).
+    """
+    prefix = "P" if PT else "C"
+    protocol_char = "R" if protocol == 1 else "A"
+    mode_char = "F" if mode == 1 else "T"
     timetable_char = "" if timetable is None else ("S" if timetable else "X")
 
-    result = f"{prefix}_{protocol_char}{mode_char}{timetable_char}"
+    result = f"{prefix}{mode_char}{timetable_char}{protocol_char}"
     if full_prefix:
         if field_name:
             result = f"{result}_{field_name}"

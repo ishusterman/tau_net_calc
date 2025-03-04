@@ -25,6 +25,7 @@ from PyQt5.QtCore import (Qt,
 
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
+from PyQt5.QtWidgets import QTableWidgetItem, QPushButton
 
 from pkl_car import pkl_car
 from common import get_qgis_info, check_file_parameters_accessibility
@@ -131,6 +132,16 @@ class form_pkl_car(QDialog, FORM_CLASS):
             self.read_road_speed_default()
             self.read_factor_speed_by_hour()
             self.show_info()
+
+        self.table1.setEditTriggers(self.table1.NoEditTriggers)
+        self.table1.setColumnCount(2) 
+        self.table1.setHorizontalHeaderLabels(['Link Type', 'Speed km/h'])
+        self.fill_table(self.table1,self.type_road_speed_default)    
+
+        self.table2.setEditTriggers(self.table2.NoEditTriggers)
+        self.table2.setColumnCount(2) 
+        self.table2.setHorizontalHeaderLabels(['Hour', 'CDI'])
+        self.fill_table(self.table2, self.factor_speed_by_hour)    
 
     def get_layer_road(self):
         selected_item = self.cbRoads.currentText()
@@ -266,7 +277,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.read_road_speed_default()
         self.read_factor_speed_by_hour()
         self.show_info()
-
+    
     def show_info(self):
 
         project_directory = os.path.dirname(QgsProject.instance().fileName())
@@ -320,9 +331,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.textInfo.anchorClicked.connect(self.open_project_folder)
 
     def open_project_folder(self):
-        project_directory = os.path.dirname(QgsProject.instance().fileName())
         current_dir = os.path.dirname((os.path.abspath(__file__)))
-        config_path = os.path.join(current_dir, 'config')
+        config_path = os.path.join(os.path.dirname(current_dir), 'config')
         if os.name == 'nt':  # for Windows
             os.startfile(config_path)
         elif os.name == 'posix':  # for Linux and macOS
@@ -687,3 +697,12 @@ class form_pkl_car(QDialog, FORM_CLASS):
                 event.ignore()
                 return True
         return super().eventFilter(obj, event)
+
+
+####
+    def fill_table(self, table, data):
+        for i, (field1, field2) in enumerate(data.items()):
+            table.insertRow(i)
+            table.setItem(i, 0, QTableWidgetItem(field1)) 
+            table.setItem(i, 1, QTableWidgetItem(str(field2)))
+

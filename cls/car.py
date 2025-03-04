@@ -5,10 +5,17 @@ import zipfile
 import tempfile
 import pandas as pd
 import glob
+import configparser
 
 from qgis.analysis import QgsGraphAnalyzer
+
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from qgis.core import QgsVectorFileWriter
+
+from qgis.core import (QgsProject,
+                       QgsVectorFileWriter, 
+                       QgsDistanceArea, 
+                       QgsWkbTypes
+                       )
 
 from pkl_car import pkl_car
 from visualization import visualization
@@ -36,7 +43,11 @@ class car_accessibility:
         self.time_step_last = round((self.max_time_minutes) % self.number_bins)
 
         self.layer_dest = layer_dest
+        self.layer_orig = parent.layer_origin
+        self.layerorig_field = parent.layerorig_field
         self.crs = self.layer_dest.crs()
+        units = self.crs.mapUnits()
+        self.crs_grad = (units == 6)
         self.selected_only2 = selected_only2
 
         self.parent = parent
@@ -75,7 +86,7 @@ class car_accessibility:
         self.f_list = []
         pkl_car_reader = pkl_car()
         count = len(self.parent.points)
-        self.parent.progressBar.setMaximum(count + 1)
+        self.parent.progressBar.setMaximum(count)
         self.parent.setMessage("Loading pkl...")
         QApplication.processEvents()
 
@@ -92,30 +103,7 @@ class car_accessibility:
         self.parent.progressBar.setValue(1)
         i = 0
 
-        self.create_head_files()
-
-        if self.parent.mode == 1:
-            table_header = "Origin_ID,Destination_ID,Duration\n"
-        else:
-            table_header = "Destination_ID,Origin_ID,Duration\n"
-
-        prefix_alias = get_prefix_alias(False,
-                                        self.parent.protocol_type,
-                                        self.parent.mode
-                                        )
-        if self.parent.protocol_type == 2:
-            self.f = f'{self.parent.folder_name}//{self.parent.file_name}_{prefix_alias}.csv'
-            # self.f_list.append(self.f)
-            with open(self.f, 'w') as self.filetowrite:
-                self.filetowrite.write(table_header)
-
         for source in self.parent.points:
-
-            # if self.parent.protocol_type == 2:
-            #    self.f = f'{self.parent.folder_name}//{self.parent.file_name}_{prefix_alias}_id{source}.csv'
-            # self.f_list.append(self.f)
-            #    with open(self.f, 'w') as self.filetowrite:
-            #        self.filetowrite.write(table_header)
 
             QApplication.processEvents()
             if self.verify_break():
@@ -136,6 +124,7 @@ class car_accessibility:
             (self.tree, self.costs) = QgsGraphAnalyzer.dijkstra(
                 self.graph,  idStart, 0)
 
+            self.calc_min_cost()
             if self.parent.protocol_type == 2:
                 self.makeProtocolArea()
             else:
@@ -152,7 +141,33 @@ class car_accessibility:
 
         if self.parent.protocol_type == 2 and count > 1:
             self.f = self.make_service_area_report(
-                self.parent.folder_name, self.parent.file_name, prefix_alias)
+                self.parent.folder_name, self.parent.file_name, self.prefix_alias)
+
+    def find_car_accessibility_onAIR(self):
+
+        self.f_list = []
+        count = len(self.parent.points)
+        self.parent.progressBar.setMaximum(count) 
+        self.parent.progressBar.setValue(1)
+        
+        self.calc_min_cost_onAir()
+        
+        if self.parent.protocol_type == 2:
+            self.makeProtocolArea()
+            
+        else:
+            if len(self.fields_ok) > 0:
+                for field in self.fields_ok:
+                    self.makeProtocolMap(
+                            self.f[field],
+                            self.aggregate_dict_all[field],
+                            field
+                            )
+           
+
+        if self.parent.protocol_type == 2 and count > 1:
+            self.f = self.make_service_area_report(
+                self.parent.folder_name, self.parent.file_name, self.prefix_alias)        
 
     def make_service_area_report(self, folder_name, aliase, prefix_alias):
 
@@ -225,8 +240,6 @@ class car_accessibility:
                     cost_res = round(
                         (sum_walk)/self.parent.walk_speed_m_s + Time_to_drive)
 
-                cost_res = cost_res + 2 * self.parent.time_gap
-
                 if int(self.source) == int(building):
                     cost_res = 0
 
@@ -240,8 +253,7 @@ class car_accessibility:
                     self.min_costs[pair] = cost_res
 
     def makeProtocolArea(self):
-
-        self.calc_min_cost()
+        
         with open(self.f, 'a') as filetowrite:
             for (source, building), min_cost in self.min_costs.items():
                 if self.parent.mode == 1:
@@ -249,44 +261,102 @@ class car_accessibility:
                 else:
                     filetowrite.write(f'{building},{source},{min_cost}\n')
 
+    def calc_min_cost_onAir(self):
+        
+        self.min_costs = {}
+        project_directory = os.path.dirname(QgsProject.instance().fileName())
+        file_path = os.path.join(
+            project_directory, 'parameters_accessibility.txt')
+        self.config = configparser.ConfigParser()
+        self.config.read(file_path)
+        speed_str = self.config['Settings'].get('Speed_car_pkl', '').strip()
+        V = int(speed_str) / 3.6 if speed_str.isdigit() else 10 
+        
+        t = self.max_time_sec
+        
+        distance_calculator = QgsDistanceArea()
+        if self.crs_grad:
+            distance_calculator.setEllipsoid('WGS84')
+
+        count = self.layer_orig.featureCount()
+        for i, orig_feature in enumerate(self.layer_orig.getFeatures()):
+
+            self.parent.setMessage(f'Building thematic map for the feature №{i+1} of {count}')
+            self.parent.progressBar.setValue(i+1)
+            QApplication.processEvents()
+
+            orig_geom = orig_feature.geometry()
+                
+            if orig_geom.type() == QgsWkbTypes.PointGeometry:
+                orig_feature_pt = orig_geom.asPoint()
+            elif orig_geom.type() == QgsWkbTypes.PolygonGeometry:
+                orig_feature_pt = orig_geom.centroid().asPoint()
+            else:
+                multi_polygon = orig_geom.asMultiPolygon()
+                orig_feature_pt = multi_polygon[0]
+
+            source = orig_feature[self.layerorig_field]
+
+            for dest_feature in self.layer_dest.getFeatures():
+                dest_geom = dest_feature.geometry()
+
+                if dest_geom.type() == QgsWkbTypes.PointGeometry:
+                    dest_feature_pt = dest_geom.asPoint()
+                elif dest_geom.type() == QgsWkbTypes.PolygonGeometry:
+                    dest_feature_pt = dest_geom.centroid().asPoint()
+                else:
+                    multi_polygon = dest_geom.asMultiPolygon()
+                    dest_feature_pt = multi_polygon[0]
+
+                building = dest_feature[self.layerdest_field] 
+                   
+                distance = distance_calculator.measureLine(orig_feature_pt, dest_feature_pt)
+                travel_time = (distance / V) / self.factor_speed 
+                if travel_time < t:
+                    pair = (source, building)
+                    cost_res = round(travel_time)
+                    
+                    self.min_costs[pair] = cost_res
+                    
+
     def makeProtocolMap(self,
                         f,
                         aggregate_dict,
                         field):
-
-        self.calc_min_cost()
 
         # counters for gradations
         counts = {x: 0 for x in range(0, len(self.grades))}
         # Счётчики для агрегатов
         aggregates = {x: 0 for x in range(0, len(self.grades))}
 
-        # iterate through the minimum cost values for each pair (source, building)
-        for (source, building), cost in self.min_costs.items():
-            if cost <= self.max_time_sec:
-                # find the corresponding gradation
+        for source in set(src for src, _ in self.min_costs.keys()):
+
+            # iterate through the minimum cost values for each pair (source, building)
+            for (src, building), cost in self.min_costs.items():
+                if src == source and cost <= self.max_time_sec:
+                    # find the corresponding gradation
+                    for i in range(0, len(self.grades)):
+                        grad = self.grades[i]
+                        if cost <= grad[1]:
+                            counts[i] += 1
+
+                            if field != "bldg":
+                                aggregates[i] = aggregates[i] + \
+                                    aggregate_dict.get(int(building), 0)
+
+            row = source
+
+            if field == "bldg":
+                Total = counts[len(self.grades) - 1]
+            if field != "bldg":
+                Total = aggregates[len(self.grades) - 1]
+
+            with open(f, 'a') as filetowrite:
                 for i in range(0, len(self.grades)):
-                    grad = self.grades[i]
-                    if cost <= grad[1]:
-                        counts[i] += 1
-
-                        if field != "bldg":
-                            aggregates[i] = aggregates[i] + \
-                                aggregate_dict.get(int(building), 0)
-
-        row = f'{self.source}'
-
-        if field == "bldg":
-            Total = counts[len(self.grades) - 1]
-        if field != "bldg":
-            Total = aggregates[len(self.grades) - 1]
-
-        with open(f, 'a') as filetowrite:
-            for i in range(0, len(self.grades)):
-                row = f'{row},{counts[i]}'
-                if field != "bldg":
-                    row = f'{row},{aggregates[i]}'
-            filetowrite.write(f'{row},{Total}\n')
+                    row = f'{row},{counts[i]}'
+                    if field != "bldg":
+                        row = f'{row},{aggregates[i]}'
+                filetowrite.write(f'{row},{Total}\n')
 
     def create_head_files(self):
 
@@ -323,7 +393,6 @@ class car_accessibility:
                                             self.parent.protocol_type,
                                             self.parent.mode,
                                             field_name="bldg",
-                                            layer=self.parent.layer_origins_name
                                             )
             self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_{prefix_alias}.csv'
             self.fields_ok.extend([field])
@@ -384,7 +453,6 @@ class car_accessibility:
                                                     self.parent.protocol_type,
                                                     self.parent.mode,
                                                     field_name=field,
-                                                    layer=self.parent.layer_origins_name
                                                     )
                     self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_{prefix_alias}.csv'
 
@@ -393,7 +461,27 @@ class car_accessibility:
 
     def run(self, begin_computation_time):
 
-        self.find_car_accessibility()
+        self.create_head_files()
+
+        if self.parent.mode == 1:
+            table_header = "Origin_ID,Destination_ID,Duration\n"
+        else:
+            table_header = "Destination_ID,Origin_ID,Duration\n"
+
+        self.prefix_alias = get_prefix_alias(False,
+                                        self.parent.protocol_type,
+                                        self.parent.mode
+                                        )
+        
+        if self.parent.protocol_type == 2:
+            self.f = f'{self.parent.folder_name}//{self.parent.file_name}_{self.prefix_alias}.csv'
+            with open(self.f, 'w') as self.filetowrite:
+                self.filetowrite.write(table_header) 
+
+        if self.parent.RunOnAir:
+            self.find_car_accessibility_onAIR()
+        else:    
+            self.find_car_accessibility()
 
         QApplication.processEvents()
         after_computation_time = datetime.now()
