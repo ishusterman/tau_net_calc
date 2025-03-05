@@ -572,8 +572,8 @@ def runRaptorWithProtocol(self,
                 # aggregate_this_fields[field] = True
 
                 features_dest = layer_dest.getFeatures()
-                if selected_only2:
-                    features_dest = layer_dest.selectedFeatures()
+                #if selected_only2:
+                #    features_dest = layer_dest.selectedFeatures()
 
                 for feature in features_dest:
                     if isinstance(feature[field], Real) or str(feature[field]).isdigit():

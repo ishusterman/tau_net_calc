@@ -48,9 +48,9 @@ class DayStat_DestinationID:
         # Define the regex pattern
         time_pattern = re.compile(
             r"Start at \(hh:mm:ss\):\s+(\d{2}:\d{2}:\d{2})|"
-            r"The earliest start time:\s+(\d{2}:\d{2}:\d{2})|"
+            r"Earliest start time:\s+(\d{2}:\d{2}:\d{2})|"
             r"Arrive before \(hh:mm:ss\):\s+(\d{2}:\d{2}:\d{2})|"
-            r"The earliest arrival time:\s+(\d{2}:\d{2}:\d{2})"
+            r"Earliest arrival time:\s+(\d{2}:\d{2}:\d{2})"
         )
 
         # Read the .txt file

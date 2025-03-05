@@ -57,7 +57,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
-        fix_size = 13 * self.txtMinTransfers.fontMetrics().width('x')
+        fix_size = 15* self.txtMinTransfers.fontMetrics().width('x')
 
         self.txtMinTransfers.setFixedWidth(fix_size)
         self.txtMaxTransfers.setFixedWidth(fix_size)
@@ -139,14 +139,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         parent_layout.removeItem(self.horizontalLayout_10)
 
         if timetable_mode and self.mode == 1:
-            self.label_21.setText("The earliest start time")
-            self.lblMaxExtraTime.setText("Maximum delay at the start, min")
+            self.label_21.setText("Earliest start time")
+            self.lblMaxExtraTime.setText("Latest start time is T minutes later, T =")
             
         if timetable_mode and self.mode == 2:
 
-            self.label_21.setText("The earliest arrival time")
+            self.label_21.setText("Earliest arrival time")
             self.lblMaxExtraTime.setText(
-                "Maximum lateness at the arrival, min")
+                "Latest arrival time is T minutes later, T = ")
             
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
@@ -396,12 +396,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.textLog.append("<a style='font-weight:bold;'>[Time schedule]</a>")
 
             if self.mode == 1:
-                self.textLog.append(f"<a> The earliest start time: {self.config['Settings']['time']}</a>")
-                self.textLog.append(f"<a> Maximum delay at the start: {self.config['Settings']['maxextratime']} min</a>")
+                self.textLog.append(f"<a> Earliest start time: {self.config['Settings']['time']}</a>")
+                self.textLog.append(f"<a> Latest start time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
                 
             if self.mode == 2:
-                self.textLog.append(f"<a> The earliest arrival time: {self.config['Settings']['time']}</a>")
-                self.textLog.append(f"<a> Maximum lateness at the arrival, min: {self.config['Settings']['maxextratime']} min</a>")
+                self.textLog.append(f"<a> Earliest arrival time: {self.config['Settings']['time']}</a>")
+                self.textLog.append(f"<a> Latest arrival time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
                 
         self.textLog.append("<a style='font-weight:bold;'>[Visualization]</a>")
         self.textLog.append(f'<a> Visualization layer: {self.layer_visualization_path}</a>')
@@ -558,32 +558,21 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.readParameters()
         self.txtPathToPKL.setText(self.config['Settings']['PathToPKL'])
-        self.txtPathToProtocols.setText(
-            self.config['Settings']['PathToProtocols'])
+        self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols'])
 
-        if isinstance(self.config['Settings']['Layer'], str) and self.config['Settings']['Layer'].strip():
-            self.cmbLayers.setCurrentText(self.config['Settings']['Layer'])
+        
+        self.cmbLayers.setCurrentText(self.config['Settings']['Layer'])
 
-        try:
-            SelectedOnly1 = self.config['Settings']['SelectedOnly1'].lower(
-            ) == "true"
-        except:
-            SelectedOnly1 = False
+        SelectedOnly1 = self.config['Settings']['SelectedOnly1'].lower() == "true"
         self.cbSelectedOnly1.setChecked(SelectedOnly1)
 
-        if isinstance(self.config['Settings']['LayerDest'], str) and self.config['Settings']['LayerDest'].strip():
-            self.cmbLayersDest.setCurrentText(
-                self.config['Settings']['LayerDest'])
+        self.cmbLayersDest.setCurrentText(self.config['Settings']['LayerDest'])
 
         layer = self.config.get('Settings', 'LayerViz', fallback=None)
         if isinstance(layer, str) and layer.strip():
             self.cmbVizLayers.setCurrentText(layer)
 
-        try:
-            SelectedOnly2 = self.config['Settings']['SelectedOnly2'].lower(
-            ) == "true"
-        except:
-            SelectedOnly2 = False
+        SelectedOnly2 = self.config['Settings']['SelectedOnly2'].lower() == "true"
         self.cbSelectedOnly2.setChecked(SelectedOnly2)
 
         self.txtMinTransfers.setText(self.config['Settings']['Min_transfer'])
@@ -598,23 +587,18 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.txtSpeed.setText(self.config['Settings']['Speed'])
         self.txtMaxWaitTime.setText(self.config['Settings']['MaxWaitTime'])
-        self.txtMaxWaitTimeTransfer.setText(
-            self.config['Settings']['MaxWaitTimeTransfer'])
+        self.txtMaxWaitTimeTransfer.setText(self.config['Settings']['MaxWaitTimeTransfer'])
         self.txtMaxTimeTravel.setText(self.config['Settings']['MaxTimeTravel'])
         
         max_extra_time = self.config['Settings'].get('maxextratime', '30')
         self.txtMaxExtraTime.setText(max_extra_time)
 
-        DepartureInterval = self.config['Settings'].get(
-            'departureinterval', '5')
+        DepartureInterval = self.config['Settings'].get('departureinterval', '5')
         self.txtDepartureInterval.setText(DepartureInterval)
 
-        self.cmbLayers_fields.setCurrentText(
-            self.config['Settings']['Layer_field'])
-        self.cmbLayersDest_fields.setCurrentText(
-            self.config['Settings']['LayerDest_field'])
-        self.cmbVizLayers_fields.setCurrentText(
-            self.config['Settings']['LayerViz_field'])
+        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field'])
+        self.cmbLayersDest_fields.setCurrentText(self.config['Settings']['LayerDest_field'])
+        self.cmbVizLayers_fields.setCurrentText(self.config['Settings']['LayerViz_field'])
 
         RunOnAir = self.config['Settings']['RunOnAir'].lower() == "true"
         self.cbRunOnAir.setChecked(RunOnAir)
@@ -806,9 +790,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                             self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
                     if self.timetable_mode:
                        if self.mode == 1:
-                           self.textLog.append(f"<a style='font-weight:bold;'> The earliest start time: {D_TIME_str}</a>")
+                           self.textLog.append(f"<a style='font-weight:bold;'> Earliest start time: {D_TIME_str}</a>")
                        else:
-                           self.textLog.append( f"<a style='font-weight:bold;'> The earliest arrival time: {D_TIME_str}</a>")
+                           self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
                 
                  
                     postfix = i + 1 

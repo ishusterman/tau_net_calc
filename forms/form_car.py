@@ -51,7 +51,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
-        fix_size = 13 * self.txtTimeInterval.fontMetrics().width('x')
+        fix_size = 15 * self.txtTimeInterval.fontMetrics().width('x')
 
         self.txtMaxTimeTravel.setFixedWidth(fix_size)
         self.txtTimeInterval.setFixedWidth(fix_size)
@@ -481,13 +481,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['LayerDest_car'] = self.cmbLayersDest.currentText()
         self.config['Settings']['LayerDest_field_car'] = self.cmbLayersDest_fields.currentText()
 
-        if hasattr(self, 'cbSelectedOnly1'):
-            self.config['Settings']['SelectedOnly1_car'] = str(
-                self.cbSelectedOnly1.isChecked())
+        self.config['Settings']['SelectedOnly1_car'] = str(self.cbSelectedOnly1.isChecked())
         self.config['Settings']['LayerDest_car'] = self.cmbLayersDest.currentText()
-        if hasattr(self, 'cbSelectedOnly2'):
-            self.config['Settings']['SelectedOnly2_car'] = str(
-                self.cbSelectedOnly2.isChecked())
+        self.config['Settings']['SelectedOnly2_car'] = str(self.cbSelectedOnly2.isChecked())
 
         self.config['Settings']['MaxTimeTravel_car'] = self.txtMaxTimeTravel.text()
         self.config['Settings']['TimeInterval_car'] = self.txtTimeInterval.text()
@@ -548,22 +544,14 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.config['Settings']['PathToProtocols_car'])
         self.cmbLayers.setCurrentText(self.config['Settings']['Layer_car'])
 
-        try:
-            SelectedOnly1 = self.config['Settings']['SelectedOnly1_car'].lower(
-            ) == "true"
-        except:
-            SelectedOnly1 = False
-        self.cbSelectedOnly1.setChecked(SelectedOnly1)
+        selected_only1 = self.config['Settings']['SelectedOnly1_car'].lower() == "true"
+        self.cbSelectedOnly1.setChecked(selected_only1)
 
         self.cmbLayersDest.setCurrentText(
             self.config['Settings']['LayerDest_car'])
-
-        try:
-            self.SelectedOnly2 = self.config['Settings']['SelectedOnly2_car'].lower(
-            ) == "true"
-        except:
-            self.SelectedOnly2 = False
-        self.cbSelectedOnly2.setChecked(self.SelectedOnly2)
+       
+        selected_only2 = self.config['Settings']['SelectedOnly2_car'].lower() == "true"
+        self.cbSelectedOnly2.setChecked(selected_only2)
 
         self.txtMaxTimeTravel.setText(
             self.config['Settings']['MaxTimeTravel_car'])
@@ -765,7 +753,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         car = car_accessibility(self,
                                 layer_dest,
-                                self.SelectedOnly2,
+                                self.selected_only2,
                                 layerdest_field,
                                 max_time_minutes,
                                 time_step_minutes,

@@ -303,7 +303,13 @@ class car_accessibility:
 
             source = orig_feature[self.layerorig_field]
 
-            for dest_feature in self.layer_dest.getFeatures():
+            for num, dest_feature in enumerate(self.layer_dest.getFeatures()):
+
+                if num%100 == 0:
+                    QApplication.processEvents()
+                    if self.parent.break_on:    
+                        return 0
+                    
                 dest_geom = dest_feature.geometry()
 
                 if dest_geom.type() == QgsWkbTypes.PointGeometry:
@@ -422,8 +428,9 @@ class car_accessibility:
                     self.aggregate_this_fields[field] = True
 
                     features_dest = self.layer_dest.getFeatures()
-                    if self.selected_only2:
-                        features_dest = self.layer_dest.selectedFeatures()
+                    
+                    #if self.selected_only2:
+                    #    features_dest = self.layer_dest.selectedFeatures()
 
                     for feature in features_dest:
                         attribute_dict[int(feature[field_name_id])] = int(

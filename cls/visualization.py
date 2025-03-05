@@ -189,9 +189,7 @@ class visualization:
         uri = f"file:///{self.path_protokol}?type=csv&maxFields=10000&detectTypes=yes&geomType=none&subsetIndex=no&watchFile=no"
 
         self.protocol_layer = QgsVectorLayer(uri, aliase, "delimitedtext")
-        print (f'uri {uri}')
-        print (f'aliase {aliase}')
-
+        
         fields = self.protocol_layer.fields()
         self.targetField_base = fields[-1].name()
 
@@ -211,6 +209,12 @@ class visualization:
         if self.protocol_layer.featureCount() > 0:
             QgsProject.instance().addMapLayer(self.protocol_layer, False)
 
+            
+            # filter on self.targetField_base  > 0 
+            if self.mode == 1: # Region
+                expression = f'"{self.targetField_base}" > 0'
+                self.protocol_layer.setSubsetString(expression)
+            
             tree_view = iface.layerTreeView()
             current_node = tree_view.currentNode() if tree_view else None
             if current_node:
