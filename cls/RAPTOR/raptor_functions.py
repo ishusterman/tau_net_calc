@@ -155,6 +155,8 @@ def post_processing(DESTINATION,
         if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
             if append:
                 pareto_set.append((transfer_needed, duration, journey))
+                #if DESTINATION == '333115387':
+                #    print (f'DESTINATION == 333115387 journey {journey}')
 
     if len(pareto_set) == 0:
         return None

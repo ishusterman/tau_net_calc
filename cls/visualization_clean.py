@@ -419,7 +419,7 @@ class cls_clean_visualization(QgsTask):
         self.parent.setMessage('Clipping ...')
 
         clip_layer = self.make_clip(buffer_layer, voronoi_layer)
-        print (f'self.make_clip - ok')
+        
         if self.break_on:
             return 0
         self.parent.progressBar.setValue(4)
@@ -460,6 +460,57 @@ class cls_clean_visualization(QgsTask):
 
     ###################################
     
+    def make_clip(self, buffer_layer, voronoi_layer):
+        result_layer = QgsVectorLayer(
+        "Polygon?crs=" + voronoi_layer.crs().authid(), "Clipped Voronoi", "memory")
+        result_provider = result_layer.dataProvider()
+        result_provider.addAttributes(voronoi_layer.fields())
+        result_layer.updateFields()
+
+        count_buffers = buffer_layer.featureCount()
+        batch_size = 20  
+        buffer_features = []
+    
+        for i, buffer_feature in enumerate(buffer_layer.getFeatures()):
+            if i % 10 == 0:
+                if self.break_on:
+                    return 0
+                self.parent.setMessage(
+                    f'Clipping buffers {i + 1} to from {count_buffers} ...')
+
+            buffer_features.append(buffer_feature)
+
+            
+            if len(buffer_features) == batch_size or i == count_buffers - 1:
+                single_buffer_layer = QgsVectorLayer(
+                "Polygon?crs=" + buffer_layer.crs().authid(), "Batch Buffers", "memory")
+                buffer_provider = single_buffer_layer.dataProvider()
+                buffer_provider.addAttributes(buffer_layer.fields())
+                single_buffer_layer.updateFields()
+                buffer_provider.addFeatures(buffer_features)
+
+                try:
+                    clip_result = processing.run("native:clip",
+                                             {
+                                                 'INPUT': voronoi_layer.id(),
+                                                 'OVERLAY': single_buffer_layer,
+                                                 'OUTPUT': 'TEMPORARY_OUTPUT'
+                                             })
+                    clipped_layer = clip_result['OUTPUT']
+                    result_provider.addFeatures(clipped_layer.getFeatures())
+
+                except Exception as e:
+                    print(f"Error clipped : {e}")
+
+                finally:
+                    del single_buffer_layer
+                    del clipped_layer
+                    buffer_features = []  # Очищаем список перед следующей партией
+
+        result_layer.updateExtents()
+        return result_layer
+
+    """
     def make_clip(self, buffer_layer, voronoi_layer):
 
         result_layer = QgsVectorLayer(
@@ -504,7 +555,7 @@ class cls_clean_visualization(QgsTask):
 
         result_layer.updateExtents()
         return result_layer
-        
+    """ 
     
 
 

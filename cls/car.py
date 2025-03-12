@@ -140,8 +140,7 @@ class car_accessibility:
             self.parent.progressBar.setValue(i + 1)
 
         if self.parent.protocol_type == 2 and count > 1:
-            self.f = self.make_service_area_report(
-                self.parent.folder_name, self.parent.file_name, self.prefix_alias)
+            self.f = self.make_service_area_report(self.parent.folder_name, self.parent.file_name,)
 
     def find_car_accessibility_onAIR(self):
 
@@ -166,13 +165,12 @@ class car_accessibility:
            
 
         if self.parent.protocol_type == 2 and count > 1:
-            self.f = self.make_service_area_report(
-                self.parent.folder_name, self.parent.file_name, self.prefix_alias)        
+            self.f = self.make_service_area_report(self.parent.folder_name, self.parent.file_name)        
 
         if self.verify_break():
             return 0    
 
-    def make_service_area_report(self, folder_name, aliase, prefix_alias):
+    def make_service_area_report(self, folder_name, alias):
 
         all_data = pd.DataFrame()
 
@@ -184,7 +182,7 @@ class car_accessibility:
 
         result = all_data.loc[all_data.groupby('Destination_ID')[
             'Duration'].idxmin()]
-        filename = f'{folder_name}//{aliase}_{prefix_alias}_service_area.csv'
+        filename = f'{folder_name}//{alias}_service_area.csv'
         result.to_csv(filename, index=False)
         return filename
 
@@ -400,13 +398,8 @@ class car_accessibility:
 
             protocol_header += ',bldg_total\n'
             field = "bldg"
-
-            prefix_alias = get_prefix_alias(False,
-                                            self.parent.protocol_type,
-                                            self.parent.mode,
-                                            field_name="bldg",
-                                            )
-            self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_{prefix_alias}.csv'
+           
+            self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_bldg.csv'
             self.fields_ok.extend([field])
             self.aggregate_this_fields[field] = False
             self.aggregate_dict_all[field] = {}
@@ -461,13 +454,8 @@ class car_accessibility:
                         protocol_header += f',sum({field}[{top_bound_add}m])'
 
                     protocol_header += f',{field}_total\n'
-
-                    prefix_alias = get_prefix_alias(False,
-                                                    self.parent.protocol_type,
-                                                    self.parent.mode,
-                                                    field_name=field,
-                                                    )
-                    self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_{prefix_alias}.csv'
+                    
+                    self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_{field}.csv'
 
                     with open(self.f[field], 'w') as filetowrite:
                         filetowrite.write(protocol_header)
@@ -480,14 +468,9 @@ class car_accessibility:
             table_header = "Origin_ID,Destination_ID,Duration\n"
         else:
             table_header = "Destination_ID,Origin_ID,Duration\n"
-
-        self.prefix_alias = get_prefix_alias(False,
-                                        self.parent.protocol_type,
-                                        self.parent.mode
-                                        )
         
         if self.parent.protocol_type == 2:
-            self.f = f'{self.parent.folder_name}//{self.parent.file_name}_{self.prefix_alias}.csv'
+            self.f = f'{self.parent.folder_name}//{self.parent.file_name}.csv'
             with open(self.f, 'w') as self.filetowrite:
                 self.filetowrite.write(table_header) 
 

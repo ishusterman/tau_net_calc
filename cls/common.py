@@ -73,12 +73,13 @@ def get_prefix_alias(PT, protocol, mode, timetable=None, field_name="", full_pre
     """
     P/C (Public/Car), F/T (From/To), X/S (Fixed/Scheduled time), A/R (Service Area/Region).
     """
+    date_time = getDateTime()
     prefix = "P" if PT else "C"
     protocol_char = "R" if protocol == 1 else "A"
     mode_char = "F" if mode == 1 else "T"
     timetable_char = "" if timetable is None else ("S" if timetable else "X")
 
-    result = f"{prefix}{mode_char}{timetable_char}{protocol_char}"
+    result = f"{date_time}_{prefix}{mode_char}{timetable_char}{protocol_char}"
     if full_prefix:
         if field_name:
             result = f"{result}_{field_name}"

@@ -83,6 +83,8 @@ def raptor(SOURCE,
                                        to_pdash_time,
                                        new_p_dash_time
                                        )
+                #if p_dash == '13471':
+                #    print (f'walking p_dash == 13471 p {SOURCE} to_pdash_time {to_pdash_time} new_p_dash_time {new_p_dash_time}')
 
                 list_stops.add(p_dash)
 
@@ -157,6 +159,15 @@ def raptor(SOURCE,
 
                     # and boarding_time <= arr_by_t_at_pi:
                     if to_process and boarding_point != p_i:
+
+                        #if boarding_point == '13471':
+                        #    print (f'boarding_point=13471 p_i={p_i} boarding_time {boarding_time} arr_by_t_at_pi= {arr_by_t_at_pi} tid= {tid} k={k}')
+
+                        #if boarding_point == '43277' and p_i== '43756':
+                        #    print (f'boarding_point == 43277 p_i== "43756"  arr_by_t_at_pi= {arr_by_t_at_pi} tid= {tid} k={k}')
+
+                        #if boarding_point == '24156':
+                        #    print (f'boarding_point == 24156 p_i== {p_i}  arr_by_t_at_pi= {arr_by_t_at_pi} tid= {tid} k={k}')
 
                         label[k][p_i] = arr_by_t_at_pi
                         pi_label[k][p_i] = (boarding_time,
@@ -322,6 +333,10 @@ def process_walking_stage(max_time,
                 continue
 
             label[k][p_dash] = new_p_dash_time
+
+            #if p_dash == '13471':
+            #    print (f'walking p_dash == 13471 p {p} to_pdash_time {to_pdash_time} new_p_dash_time {new_p_dash_time}')
+
             pi_label[k][p_dash] = ('walking', p, p_dash,
                                    to_pdash_time, new_p_dash_time)
             list_stops.add(p_dash)

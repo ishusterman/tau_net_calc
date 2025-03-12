@@ -23,7 +23,7 @@ from footpath_on_road import footpath_on_road
 from footpath_on_air_b_to_b import cls_footpath_on_air_b_b
 from PKL import PKL
 from visualization import visualization
-from common import get_prefix_alias, time_to_seconds, seconds_to_time
+from common import seconds_to_time
 
 # # Get the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -264,6 +264,7 @@ def runRaptorWithProtocol(self,
                           dictionary2,
                           shift_mode = False) -> tuple:
 
+    
     count = len(sources)
     self.progressBar.setMaximum(count + 5)
     self.progressBar.setValue(0)
@@ -289,13 +290,10 @@ def runRaptorWithProtocol(self,
     # dist to time
     MaxWalkDist3 = int(self.config['Settings']['MaxWalkDist3'])/Speed
 
-    MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(
-        ',', '.'))*60           # to sec
-    MaxWaitTime = float(self.config['Settings']['MaxWaitTime'].replace(
-        ',', '.'))*60               # to sec
-    MaxWaitTimeTransfer = float(
-        # to sec
-        self.config['Settings']['MaxWaitTimeTransfer'].replace(',', '.'))*60
+    MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60           # to sec
+    
+    MaxWaitTime = float(self.config['Settings']['MaxWaitTime'].replace(',', '.'))*60               # to sec
+    MaxWaitTimeTransfer = float(self.config['Settings']['MaxWaitTimeTransfer'].replace(',', '.'))*60
 
     
     CHANGE_TIME_SEC = 1
@@ -506,8 +504,11 @@ def runRaptorWithProtocol(self,
             ss = ss.replace("Origin_ID", "TEMP_ORIGIN_ID")
             ss = ss.replace("Destination_ID", "Origin_ID")
             ss = ss.replace("TEMP_ORIGIN_ID", "Destination_ID")
-            ss += ",Latest_time_at_destination"
-        ss += ",Duration"
+            if timetable_mode:
+                ss += ",Earlest_arrival_time"
+            if not(timetable_mode):
+                ss += ",Arrive_before"
+        ss += ",Transfers,Duration"
         protocol_header = ss + "\n"
 
     if protocol_type == 1:
@@ -544,13 +545,8 @@ def runRaptorWithProtocol(self,
 
             protocol_header += ',bldg_total\n'
             field = "bldg"
-            prefix_alias = get_prefix_alias(True,
-                                            protocol_type,
-                                            raptor_mode,
-                                            timetable_mode,
-                                            field_name="bldg",
-                                            )
-            f[field] = f'{self.folder_name}//{self.aliase}_{prefix_alias}.csv'
+            
+            f[field] = f'{self.folder_name}//{self.aliase}_bldg.csv'
             fields_ok.extend([field])
             # aggregate_this_fields[field] = False
             aggregate_dict_all[field] = {}
@@ -617,13 +613,8 @@ def runRaptorWithProtocol(self,
                     protocol_header += f',sum({field}[{top_bound_add}m])'
 
                 protocol_header += f',{field}_total\n'
-                prefix_alias = get_prefix_alias(True,
-                                                protocol_type,
-                                                raptor_mode,
-                                                timetable_mode,
-                                                field_name=field
-                                                )
-                f[field] = f'{self.folder_name}//{self.aliase}_{prefix_alias}.csv'
+                
+                f[field] = f'{self.folder_name}//{self.aliase}_{field}.csv'
                 with open(f[field], 'w') as filetowrite:
                     filetowrite.write(protocol_header)
 
@@ -634,12 +625,8 @@ def runRaptorWithProtocol(self,
         vis.set_count_diapazone(count_diapazone)
 
     if protocol_type == 2:
-        prefix_alias = get_prefix_alias(True,
-                                        protocol_type,
-                                        raptor_mode,
-                                        timetable_mode
-                                        )
-        f_curr = f'{self.folder_name}//{self.aliase}_{prefix_alias}.csv'
+        
+        f_curr = f'{self.folder_name}//{self.aliase}.csv'
         f = f_curr
         with open(f_curr, 'w') as filetowrite:
             filetowrite.write(protocol_header)
@@ -653,18 +640,6 @@ def runRaptorWithProtocol(self,
         self.setMessage(f'Calculating №{i+1} of {count}')
         QApplication.processEvents()
         SOURCE = sources[i]
-
-        # if protocol_type == 2 :
-        # prefix_alias = get_prefix_alias(True,
-        #                                protocol_type,
-        #                                raptor_mode,
-        #                                timetable_mode
-        #                                )
-        # f_curr = f'{self.folder_name}//{self.aliase}_{prefix_alias}_id{SOURCE}.csv'
-        # f_list.append(f_curr)
-        # f = f_curr
-        # with open(f_curr, 'w') as filetowrite:
-        #  filetowrite.write(protocol_header)
 
         if verify_break(self,
                         Layer,
@@ -692,7 +667,7 @@ def runRaptorWithProtocol(self,
         SOURCE = str(SOURCE)
 
         if raptor_mode == 1:
-
+            
             output = raptor(SOURCE,
                             D_TIME,
                             MAX_TRANSFER,
@@ -716,7 +691,7 @@ def runRaptorWithProtocol(self,
                             )
 
         else:
-
+            
             output = rev_raptor(SOURCE,
                                 D_TIME,
                                 MAX_TRANSFER,
@@ -778,7 +753,7 @@ def runRaptorWithProtocol(self,
 
     if protocol_type == 2 and len(sources) > 1:
         f = make_service_area_report(
-            self.folder_name, self.aliase, prefix_alias)
+            self.folder_name, self.aliase)
 
     QApplication.processEvents()
     after_computation_time = datetime.now()
@@ -806,7 +781,7 @@ def runRaptorWithProtocol(self,
     return 1, self.folder_name
 
 
-def make_service_area_report(folder_name, aliase, prefix_alias):
+def make_service_area_report(folder_name, alias):
 
     all_data = pd.DataFrame()
 
@@ -817,7 +792,7 @@ def make_service_area_report(folder_name, aliase, prefix_alias):
 
     result = all_data.loc[all_data.groupby('Destination_ID')[
         'Duration'].idxmin()]
-    filename = f'{folder_name}//{aliase}_{prefix_alias}_service_area.csv'
+    filename = f'{folder_name}//{alias}_service_area.csv'
     result.to_csv(filename, index=False)
     return filename
 
@@ -989,23 +964,28 @@ def make_protocol_detailed(raptor_mode,
 
             if not write_first_line:
 
+                start_time = seconds_to_time(D_TIME)
+                
+
                 if raptor_mode == 1:
-                    row = f'{SOURCE}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{sep}0'
+                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}X{sep}0'
                 else:
-                    row = f'{SOURCE}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{sep}{sep}0'
+                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}0'
 
                 filetowrite.write(row + "\n")
 
                 for build, dist in nearby_buildings_from_start:
 
                     if raptor_mode == 1:
-                        row = f'{SOURCE}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{build}{sep}{sep}{dist}'
+                        finish_time = seconds_to_time(D_TIME+dist)
+                        row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{build}{sep}{finish_time}{sep}X{sep}{dist}'
                     else:
-                        row = f'{build}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{sep}{sep}{dist}'
+                        finish_time = seconds_to_time(D_TIME-dist)
+                        row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}{dist}'
 
                     if build != SOURCE:
                         filetowrite.write(row + "\n")
@@ -1374,8 +1354,6 @@ def make_protocol_detailed(raptor_mode,
                 # else:
                 #   duration =  time_to_seconds(sarrival_time) - start_time
 
-                # print(f'orig_dest {orig_dest}')
-
                 if raptor_mode == 1:
                     # if orig_dest in list_stops or orig_dest in list_buildings_from_start:
                     #    continue
@@ -1388,7 +1366,7 @@ def make_protocol_detailed(raptor_mode,
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
 {sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
 {sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
-{sep}{dest_walk_time}{sep}{orig_dest}{sep}{sarrival_time}{sep}{duration}'
+{sep}{dest_walk_time}{sep}{orig_dest}{sep}{sarrival_time}{sep}{transfers}{sep}{duration}'
 
                 else:
                     # if SOURCE_REV in list_stops or  SOURCE_REV in list_buildings_from_start:
@@ -1401,7 +1379,7 @@ def make_protocol_detailed(raptor_mode,
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
 {sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
 {sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
-{sep}{dest_walk_time}{sep}{SOURCE}{sep}{sarrival_time}{sep}{seconds_to_time(D_TIME)}{sep}{duration}'
+{sep}{dest_walk_time}{sep}{SOURCE}{sep}{sarrival_time}{sep}{seconds_to_time(D_TIME)}{sep}{transfers}{sep}{duration}'
 
                 filetowrite.write(row + "\n")
 

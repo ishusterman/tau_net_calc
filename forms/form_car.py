@@ -160,8 +160,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
             parent_layout = self.horizontalLayout_6.parent()
             parent_layout.removeItem(self.horizontalLayout_7)
-
-        self.default_alias = f'{getDateTime()}'
+        
+        self.default_alias = get_prefix_alias(False, 
+                                self.protocol_type, 
+                                self.mode, 
+                                full_prefix=False)
 
         self.ParametrsShow()
 
@@ -278,10 +281,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             self.setMessage("Select the layer")
             return 0
-
-        prefix = get_prefix_alias(
-            False, self.protocol_type, self.mode, full_prefix=False)
-        self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAlias.text()}_{prefix}'
+        
+        self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAlias.text()}'
 
         self.file_name = self.txtAlias.text()
 
