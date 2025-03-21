@@ -56,7 +56,9 @@ def post_processing(DESTINATION,
                     Maximal_travel_time,
                     D_Time,
                     mode_raptor,
-                    departure_interval) -> tuple:
+                    departure_interval,
+                    MaxExtraTime
+                    ) -> tuple:
 
 
     # rounds in which the destination is achieved
@@ -120,43 +122,49 @@ def post_processing(DESTINATION,
             if k < 0 or (not pi_label[k].get(stop)):
                 break
 
-        journey.reverse()
-        duration, start_time, end_time = get_duration(journey, mode_raptor)
-        append = True
+        if journey != []:
+            journey.reverse()
+            duration, start_time, end_time = get_duration(journey, mode_raptor)
+            
+            append = True
 
-        if timetable_mode:  # or mode_raptor == 2:
+            if timetable_mode:  # or mode_raptor == 2:
 
-            if len(journey) > 1 and journey[0][0] == "walking" and journey[1][0] != "walking":
-               
-                if mode_raptor == 1:
-                    new_value = journey[1][0] - departure_interval
-                else:
-                    new_value = journey[1][0] + departure_interval
+                if len(journey) > 1 and journey[0][0] == "walking" and journey[1][0] != "walking":
+                    
+                    
+                    if mode_raptor == 1:
+                        new_value = journey[1][0] - departure_interval
+                    else:
+                        new_value = journey[1][0] + departure_interval
 
-                journey[0] = (journey[0][0],
+                    
+                    journey[0] = (journey[0][0],
                               journey[0][1],
                               journey[0][2],
                               journey[0][3],
                               new_value)
+                    
+                
+                    duration, start_time, end_time = get_duration(
+                        journey, mode_raptor)
 
-                duration, start_time, end_time = get_duration(
-                    journey, mode_raptor)
-
-            if mode_raptor == 1:
-                if (duration > Maximal_travel_time) or start_time < D_Time:
-
-                    append = False
-
-            if mode_raptor == 2:
-                if (duration > Maximal_travel_time) or end_time > D_Time - departure_interval:
-                    append = False
-
-        #if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed + 1 >= MIN_TRANSFER):
-        if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
-            if append:
-                pareto_set.append((transfer_needed, duration, journey))
-                #if DESTINATION == '333115387':
-                #    print (f'DESTINATION == 333115387 journey {journey}')
+                if mode_raptor == 1:
+                    if (duration > Maximal_travel_time) or start_time > D_Time + MaxExtraTime:
+                    #if (duration > Maximal_travel_time):    
+                        append = False
+                    
+                if mode_raptor == 2:
+                    #if (duration > Maximal_travel_time) or end_time > D_Time - departure_interval:
+                    if (duration > Maximal_travel_time) or end_time > D_Time: # or end_time > D_TIME_const + 1800:
+                    #if (duration > Maximal_travel_time):    
+                        append = False
+            
+            if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
+                if append:
+                    pareto_set.append((transfer_needed, duration, end_time, journey))
+                    #if DESTINATION == '333115387':
+                    #    print (f'DESTINATION == 333115387 journey {journey}')
 
     if len(pareto_set) == 0:
         return None
@@ -187,6 +195,10 @@ def get_duration(journey, mode_raptor):
                 end_time = journey[-1][4]
             else:
                 end_time = journey[-1][3]
+
+            duration = end_time - start_time
+
+            return duration, start_time, end_time
 
     if mode_raptor == 2:
 
@@ -223,7 +235,9 @@ def post_processingAll(
         timetable_mode,
         Maximal_travel_time,
         departure_interval,
-        mode) -> tuple:
+        MaxExtraTime,
+        mode
+        ) -> tuple:
     newDict = dict()
 
     for p_i in list_stops:
@@ -238,7 +252,9 @@ def post_processingAll(
                                      Maximal_travel_time,
                                      D_TIME,
                                      mode,
-                                     departure_interval)
+                                     departure_interval,
+                                     MaxExtraTime,                                     
+                                     )
 
 
         if pareto_set == None:
@@ -260,7 +276,23 @@ def get_optimal_journey(pareto_set):
     # iteration over all elements in the array
     min_duration = float('inf')
     min_count_leg = float('inf')
+    min_end_time = float('inf')
 
+    for (count_leg, duration, end_time, journey) in pareto_set:
+        if end_time < min_end_time:
+            min_end_time = end_time
+            min_duration = duration
+            min_count_leg = count_leg
+            journey_opt = journey
+
+        # if duration is equal to the minimum, check count_leg
+        elif end_time == min_end_time:
+            if count_leg < min_count_leg:
+                min_count_leg = count_leg
+                min_duration = duration
+                journey_opt = journey
+
+    """
     for (count_leg, duration, journey) in pareto_set:
         if duration < min_duration:
             min_duration = duration
@@ -272,7 +304,7 @@ def get_optimal_journey(pareto_set):
             if count_leg < min_count_leg:
                 min_count_leg = count_leg
                 journey_opt = journey
-
+    """
     return min_duration, min_count_leg, journey_opt
 
 

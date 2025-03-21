@@ -319,12 +319,11 @@ def runRaptorWithProtocol(self,
         list_fields_aggregate = ""
 
     RunOnAir = self.config['Settings']['RunOnAir'] == 'True'
-
-    begin_computation_time = datetime.now()
-    begin_computation_str = begin_computation_time.strftime(
-        '%Y-%m-%d %H:%M:%S')
-
-    self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
+    
+    if not (shift_mode):
+        begin_computation_time = datetime.now()
+        begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
+        self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
 
     if verify_break(self):
         return 0, 0
@@ -665,10 +664,11 @@ def runRaptorWithProtocol(self,
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
 
         SOURCE = str(SOURCE)
+        if not (timetable_mode):
 
-        if raptor_mode == 1:
+            if raptor_mode == 1:
             
-            output = raptor(SOURCE,
+                output = raptor(SOURCE,
                             D_TIME,
                             MAX_TRANSFER,
                             MIN_TRANSFER,
@@ -690,9 +690,9 @@ def runRaptorWithProtocol(self,
                             DepartureInterval
                             )
 
-        else:
-            
-            output = rev_raptor(SOURCE,
+            else:
+                
+                output = rev_raptor(SOURCE,
                                 D_TIME,
                                 MAX_TRANSFER,
                                 MIN_TRANSFER,
@@ -711,20 +711,85 @@ def runRaptorWithProtocol(self,
                                 MaxWaitTimeTransfer,
                                 timetable_mode,
                                 MaxExtraTime,
-                                DepartureInterval
+                                DepartureInterval                                
                                 )
+            
+            keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
+            for key in keys_to_remove:
+                del output[key]
 
-        # !testing -deleting item with None value on end
+        
+        if  timetable_mode:
+            MaxExtraTime_copy = MaxExtraTime
+            final_output = {}  
+            cycle = 1
+            while cycle <=2:
+                if cycle == 1:
+                    MaxExtraTime = MaxWaitTime 
+                else: 
+                    MaxExtraTime = MaxExtraTime_copy
+                
+                if raptor_mode == 1:
+                    output = raptor(SOURCE,
+                            D_TIME,
+                            MAX_TRANSFER,
+                            MIN_TRANSFER,
+                            CHANGE_TIME_SEC,
+                            routes_by_stop_dict,
+                            stops_dict,
+                            stoptimes_dict,
+                            footpath_dict,
 
-        keys_to_remove = [key for key, value in output.items(
-        ) if value[-1] == (None, None, None, None)]
+                            idx_by_route_stop_dict,
+                            MaxTimeTravel,
+                            MaxWalkDist1,
+                            MaxWalkDist2,
+                            MaxWalkDist3,
+                            MaxWaitTime,
+                            MaxWaitTimeTransfer,
+                            timetable_mode,
+                            MaxExtraTime,
+                            DepartureInterval                            
+                            )
+                else:
+                    output = rev_raptor(SOURCE,
+                            D_TIME,
+                            MAX_TRANSFER,
+                            MIN_TRANSFER,
+                            CHANGE_TIME_SEC,
+                            routes_by_stop_dict,
+                            stops_dict,
+                            stoptimes_dict,
+                            footpath_dict,
 
-        for key in keys_to_remove:
-            del output[key]
+                            idx_by_route_stop_dict,
+                            MaxTimeTravel,
+                            MaxWalkDist1,
+                            MaxWalkDist2,
+                            MaxWalkDist3,
+                            MaxWaitTime,
+                            MaxWaitTimeTransfer,
+                            timetable_mode,
+                            MaxExtraTime,
+                            DepartureInterval,
+                            )
 
+                    keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
+
+                    for key in keys_to_remove:
+                        del output[key]
+
+                    for p_i, data in output.items():
+                        total_time = data[2]  # total_time_to_dest
+                    
+                        # Если p_i нет в final_output или найден меньший total_time_to_dest, обновляем
+                        if p_i not in final_output or total_time < final_output[p_i][2]:
+                            final_output[p_i] = data
+
+                    output = final_output
+                cycle += 1
+            
         reachedLabels = output
-
-        # Now write current row
 
         if protocol_type == 1:
             if len(fields_ok) > 0:
@@ -756,13 +821,15 @@ def runRaptorWithProtocol(self,
             self.folder_name, self.aliase)
 
     QApplication.processEvents()
-    after_computation_time = datetime.now()
-    after_computation_str = after_computation_time.strftime(
+    if not (shift_mode):
+        after_computation_time = datetime.now()
+        after_computation_str = after_computation_time.strftime(
         '%Y-%m-%d %H:%M:%S')
-    self.textLog.append(f'<a>Finished {after_computation_str}</a>')
-    duration_computation = after_computation_time - begin_computation_time
-    duration_without_microseconds = str(duration_computation).split('.')[0]
-    self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.textLog.append(f'<a>Finished {after_computation_str}</a>')
+        duration_computation = after_computation_time - begin_computation_time
+        duration_without_microseconds = str(duration_computation).split('.')[0]
+    
+        self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
     write_info(self,
                Layer,
@@ -780,6 +847,31 @@ def runRaptorWithProtocol(self,
     self.progressBar.setValue(self.progressBar.maximum())
     return 1, self.folder_name
 
+def get_available_boardings(start_time_seconds, max_delta_seconds, trans_info, stop_times, mode):
+    available_departures = []
+
+    #available_departures.append(("0", 0, 0))
+    
+    #available_departures.add(start_time_seconds)
+    for stop_id, walk_time in trans_info:
+        if mode == 1:
+            arrival_time_seconds = start_time_seconds + walk_time
+            max_time_seconds = start_time_seconds + max_delta_seconds + walk_time
+        else:
+            arrival_time_seconds = start_time_seconds - walk_time
+            max_time_seconds = start_time_seconds + max_delta_seconds - walk_time
+        
+        if arrival_time_seconds > max_time_seconds:
+            continue
+        
+        for route_id, trips in stop_times.items():
+            for trip_id, stops in trips.items():
+                for stop_seq, stop_seconds in stops:
+                    if str(stop_seq) == stop_id:
+                        if arrival_time_seconds <= stop_seconds <= max_time_seconds:
+                            available_departures.append((stop_id, stop_seconds, walk_time))
+        
+    return sorted(available_departures, key=lambda x: (x[0], x[1]))
 
 def make_service_area_report(folder_name, alias):
 
@@ -808,7 +900,15 @@ def write_info(self,
                protocol_type,
                shift_mode = False
                ):
+    
+    text = self.textLog.toPlainText()
+    filelog_name = f'{self.folder_name}//log_{self.aliase}.txt'
+    with open(filelog_name, "w") as file:
+        file.write(text)
 
+    if shift_mode:
+        return 0
+    
     self.textLog.append(f'<a>Output:</a>')
 
     if protocol_type == 1:
@@ -825,12 +925,9 @@ def write_info(self,
         if not (shift_mode):
             vis.add_thematic_map(f, alias, set_min_value=0)
 
-    text = self.textLog.toPlainText()
-    filelog_name = f'{self.folder_name}//log_{self.aliase}.txt'
-    with open(filelog_name, "w") as file:
-        file.write(text)
+    
 
-    if selected_only1 or selected_only2:
+    if (selected_only1 or selected_only2) and not shift_mode:
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
         msgBox.setWindowTitle("Confirm")

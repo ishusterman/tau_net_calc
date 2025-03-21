@@ -6,7 +6,7 @@
 name=Accessibility calculator
 qgisMinimumVersion=3.1.1
 description=Accessibility Calculations
-version=5.34
+version=5.34.3
 author=Igor Shusterman, Aleksey Ogulenko, Itzhak Benenson
 email=ishusterman2011@gmail.com
 license=MIT
@@ -24,7 +24,7 @@ hasProcessingProvider=no
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=Accessibility calculator,public transportation,car,raptor,dijkstra,voronoi,hexagone
+tags=accessibility,mobility,urban planning,isochrone,public transportation,transit,road transportation,GTFS,OpenStreetMap,shortest path,Dijkstra,RAPTOR,H3,hexagon,accessibility map,transit accessibility,car accessibility,urban accessibility,accessibility analysis,transportation planning
 
 homepage=https://github.com/ishusterman/tau_net_calc
 category=Plugins

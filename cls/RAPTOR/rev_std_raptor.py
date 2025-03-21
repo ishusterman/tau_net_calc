@@ -25,7 +25,7 @@ def rev_raptor(SOURCE,
                MaxWaitTimeTransfer,
                timetable_mode,
                MaxExtraTime,
-               departure_interval
+               departure_interval               
                ) -> list:
 
     list_stops = set()
@@ -40,6 +40,7 @@ def rev_raptor(SOURCE,
     change_time_save = change_time
 
     # change for new version timetable mode backward
+    
     if timetable_mode:
         D_TIME = D_TIME + MaxExtraTime
     # 
@@ -56,15 +57,17 @@ def rev_raptor(SOURCE,
     min_time = np.int64(D_TIME - Maximal_travel_time)
     TIME_START = D_TIME
 
+    
     if timetable_mode:
         MaxWaitTime = MaxExtraTime
         min_time = np.int64(D_TIME - Maximal_travel_time - MaxExtraTime)
         TIME_START = D_TIME - departure_interval
-
+    
     if True:
         try:
+            
             if trans_info == -1:
-                trans_info = footpath_dict.get(SOURCE, [])
+                    trans_info = footpath_dict.get(SOURCE, [])
 
             for i in trans_info:
                 (p_dash, to_pdash_time) = i
@@ -85,6 +88,7 @@ def rev_raptor(SOURCE,
                 if marked_stop_dict[p_dash] == 0:
                     marked_stop.append(p_dash)
                     marked_stop_dict[p_dash] = 1
+            
         except KeyError as e:
             pass
 
@@ -96,8 +100,10 @@ def rev_raptor(SOURCE,
 
         if k == 1:
             MaxWaitCurr = MaxWaitTime
+            """
             if timetable_mode:
-                MaxWaitCurr -= departure_interval
+                MaxWaitCurr -= departure_interval"
+            """
         else:
             MaxWaitCurr = MaxWaitTimeTransfer
             
@@ -180,9 +186,10 @@ def rev_raptor(SOURCE,
                     # assuming arrival_time = departure_time
 
                     arrival_time_at_pi = label[k - 1][p_i]
-                    
+                    """
                     if timetable_mode and k == 1:
-                        arrival_time_at_pi = arrival_time_at_pi - departure_interval
+                        arrival_time_at_pi = arrival_time_at_pi - departure_interval"
+                    """
                     
                     tid, current_trip_t = get_earliest_trip_new(
                         stoptimes_dict, route, arrival_time_at_pi, current_stopindex_by_route, change_time, MaxWaitCurr)
@@ -224,7 +231,7 @@ def rev_raptor(SOURCE,
                               label,
                               pi_label,
                               save_marked_stop,
-                              list_stops
+                              list_stops,
                               )
 
         # Main code End
@@ -242,35 +249,11 @@ def rev_raptor(SOURCE,
         timetable_mode,
         Maximal_travel_time,
         departure_interval,
-        mode=2)
+        MaxExtraTime,
+        mode=2
+        )
 
     return reachedLabels
-
-# returns (maximum boarding time for the first bus - time to reach this stop)
-# use for timetable mode
-def get_t_min(pi_label, keys, departure_interval):
-
-    time_min = 100000
-
-    for point in keys:
-
-        if pi_label[1][point] != -1:
-
-            boarding_point = pi_label[1][point][1]
-            boarding_time = pi_label[1][point][0]
-
-            time_foot_to_stop_point = get_time_foot_to_stop(
-                pi_label, boarding_point)
-            time = boarding_time + time_foot_to_stop_point + departure_interval
-            if time_min > time:
-                time_min = time
-    return time_min
-
-def get_time_foot_to_stop(pi_label, boarding_point):
-    if pi_label[0][boarding_point] != 1:
-        return pi_label[0][boarding_point][3]
-    else:
-        return 0
 
 def process_walking_stage(min_time,
                           WALKING_LIMIT,

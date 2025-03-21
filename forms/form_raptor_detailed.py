@@ -789,7 +789,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
             
             if not os.path.exists(self.folder_name):
-                os.makedirs(self.folder_name)
+                if not (self.shift_ctrl_mode):
+                    os.makedirs(self.folder_name)
             else:
                 self.setMessage(f"Folder '{self.folder_name}' already exists")
                 self.run_button.setEnabled(True)
@@ -816,6 +817,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         )
             
             if self.shift_mode:
+                sources = [sources[0]]
                 START_TIME = time_to_seconds(self.config['Settings']['TIME'])
                 time_delta = int(self.config['Settings']['Admin_time_delta'])
                 if 'admin_t_f' in self.config['Settings']:
@@ -823,8 +825,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 else:
                     Tf = time_to_seconds("20:00:00")
                 
-                self.folder_name_copy = os.path.join(self.folder_name)
-                print (self.folder_name_copy)
+                self.folder_name_copy = self.folder_name
+                
                 os.makedirs(self.folder_name_copy, exist_ok=True)
                 
                 i = 0
@@ -870,13 +872,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         self.setMessage("Statistic computations are interrupted by user")
                         self.textLog.append(f'<a><b><font color="red">Statistic computations are interrupted by user</font> </b></a>')
                         self.progressBar.setValue(0)
-                        return 0
+                        break
+                        #return 0
                     
                 base_path = self.folder_name_copy
                 output_path = os.path.join(base_path, f"stat_{self.aliase}.csv")
                 processor = DayStat_DestinationID(base_path, output_path)
                 processor.process_files()
-                self.textLog.append(f'<a href="file:///{self.txtPathToProtocols.text()}" target="_blank" >Statistics in folder</a>')
+                self.textLog.append(f'<a href="file:///{base_path}" target="_blank" >Statistics in folder</a>')
 
             if self.shift_ctrl_mode:
                 if  os.path.exists(f'{self.folder_name}_from'):  
@@ -888,6 +891,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     self.progressBar.setValue(0)
                     self.shift_ctrl_mode = False
                     return 0
+                
+                
+                sources = [sources[0]]
                 
                 self.textLog.append(f"<a style='font-weight:bold;'> Calculating from-to accessibility</a>")
                 ###########################

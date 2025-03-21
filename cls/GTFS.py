@@ -43,6 +43,7 @@ class GTFS ():
         self.filelog_name = f'{self.__path_to_file}//log_processing_GTFS_{postfix}.txt'
         self.log_processing = []
         self.line_break = '-----------------------------'
+     
 
     def create_cut_from_GTFS(self, path_routes_cut):
 
@@ -353,7 +354,7 @@ class GTFS ():
             return 0
         self.stop_times_df = pd.read_csv(
             f'{self.__path_to_GTFS}//stop_times.txt', sep=',', dtype={'stop_id': str})
-
+        
         QApplication.processEvents()
         if self.verify_break():
             return 0
@@ -451,8 +452,9 @@ class GTFS ():
         self.parent.progressBar.setValue(0)
 
         self.parent.break_on = False
-
+        """
         self.load_GTFS()
+
         self.parent.progressBar.setValue(1)
         if self.verify_break():
             return 0
@@ -592,6 +594,7 @@ class GTFS ():
         self.parent.progressBar.setValue(9)
         if self.verify_break():
             return 0
+        """
         ##########################################
         # Calc footpath on graph with projections
         ##########################################

@@ -389,6 +389,7 @@ class cls_footpath_on_projection:
 
                 dist_list = self.get_nearby_buildings(
                     building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s", mode_source="b", dist=400)
+                
 
                 # write building_id, building, and dist to the file
                 for to_stop_id, dist in dist_list:
@@ -422,7 +423,7 @@ class cls_footpath_on_projection:
         dist_dict = {}
         vertex_id, dist_1 = dict_osm_vertex.get(building_id)
         cutoff = dist - dist_1
-        
+
         lengths, _ = nx.single_source_dijkstra(graph,
                                                vertex_id,
                                                cutoff=cutoff,
@@ -433,7 +434,7 @@ class cls_footpath_on_projection:
         for node in end_nodes_nearest:  # cicle of all founded node of graph
 
             list_osm = dict_vertex_osm.get(node)
-
+                
             if list_osm is None:
                 continue
 

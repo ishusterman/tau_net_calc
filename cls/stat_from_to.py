@@ -64,25 +64,29 @@ class StatFromTo:
         time_column = "Destination_time"
 
         for file in files:
+            
             df = pd.read_csv(file, usecols=["Destination_ID", "Start_time", time_column, "Duration", "Transfers"], dtype={"Destination_ID": str})
-            df = df[df["Destination_ID"].isin(common_ids)]  # Фильтрация по общим Destination_ID
+            df = df[df["Destination_ID"].isin(common_ids)] 
 
             for row in df.itertuples(index=False):
-                start_time = row.Start_time if pd.notna(row.Start_time) else "00:00:00"
-                dest_time = getattr(row, time_column) if pd.notna(getattr(row, time_column)) else "00:00:00"
-                transfers = row.Transfers if row.Transfers != 'X' else "9"
+                start_time = row.Start_time #if pd.notna(row.Start_time) else "00:00:00"
+                dest_time = getattr(row, time_column) #if pd.notna(getattr(row, time_column)) else "00:00:00"
+                transfers = (int(row.Transfers) + 1) if row.Transfers != 'X' else "0"
                 data_dict[row.Destination_ID].append((start_time, dest_time, row.Duration, transfers))
 
-        # Сортировка сначала по Start_time, затем по Duration, потом по Destination_ID
+        
         for key in data_dict:
-            data_dict[key].sort(key=lambda x: (x[0], x[2], key))  # Сортировка сначала по Start_time, затем по Duration, потом по Destination_ID
+            data_dict[key].sort(key=lambda x: (x[0], x[2], key))  
 
         return data_dict
     
     def save_dict_to_csv(self, data_dict, file_path, order_from=None):
         
         with open(file_path, 'w', newline='') as f:
-            f.write("Destination_ID,Start_time,Destination_time,Duration,Transfers\n")
+            if order_from is None :
+                f.write("Destination_ID,Start_time,Destination_time,Duration,Transfers\n")
+            else:
+                f.write("Origin_ID,Start_time,Destination_time,Duration,Transfers\n")
 
             if order_from is None:
                 grouped_entries = {key: sorted(values, key=lambda x: (x[0], x[2])) for key, values in data_dict.items()}
@@ -94,9 +98,9 @@ class StatFromTo:
                     durations_at_min_time = [entry[2] for entry in values if entry[0] == min_entry_time]
                     group_A[key] = min(durations_at_min_time)
                     
-                # Сортируем группы
+                
                 sorted_destination_ids = sorted(group_A.keys(), key=lambda key: group_A[key]) 
-                seen = set()  # Уникальные строки
+                seen = set()  
 
                 for key in sorted_destination_ids:
                     for start_time, dest_time, duration,tranfers in grouped_entries[key]:
@@ -107,7 +111,7 @@ class StatFromTo:
                 order_from = sorted_destination_ids.copy()
                             
             else:
-                seen = set()  # Уникальные строки
+                seen = set() 
                 for key in order_from:
                     if key in data_dict:
                         for start_time, dest_time, duration, tranfers in sorted(data_dict[key], key=lambda x: (x[0])):

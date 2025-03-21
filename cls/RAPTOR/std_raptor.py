@@ -26,7 +26,8 @@ def raptor(SOURCE,
            MaxWaitTimeTransfer,
            timetable_mode,
            MaxExtraTime,
-           departure_interval
+           departure_interval,
+           
            ) -> list:
 
     list_stops = set()
@@ -54,13 +55,16 @@ def raptor(SOURCE,
     max_time = np.int64(D_TIME + Maximal_travel_time)
     TIME_START = D_TIME
 
+    
     if timetable_mode:
         MaxWaitTime = MaxExtraTime
         max_time = np.int64(D_TIME + Maximal_travel_time + MaxExtraTime)
         TIME_START = D_TIME + departure_interval
+    
 
     if True:
         try:
+            
             if trans_info == -1:
 
                 trans_info = footpath_dict.get(SOURCE, [])
@@ -81,16 +85,18 @@ def raptor(SOURCE,
                                        SOURCE,
                                        p_dash,
                                        to_pdash_time,
-                                       new_p_dash_time
+                                       new_p_dash_time 
                                        )
-                #if p_dash == '13471':
-                #    print (f'walking p_dash == 13471 p {SOURCE} to_pdash_time {to_pdash_time} new_p_dash_time {new_p_dash_time}')
+                    #if p_dash == '13471':
+                    #    print (f'walking p_dash == 13471 p {SOURCE} to_pdash_time {to_pdash_time} new_p_dash_time {new_p_dash_time}')
 
                 list_stops.add(p_dash)
 
                 if marked_stop_dict[p_dash] == 0:
                     marked_stop.append(p_dash)
                     marked_stop_dict[p_dash] = 1
+
+                
         except KeyError as e:
             pass
 
@@ -99,9 +105,11 @@ def raptor(SOURCE,
 
         if k == 1:
             MaxWaitCurr = MaxWaitTime
-            
+            """
             if timetable_mode:
-                MaxWaitCurr += departure_interval
+                MaxWaitCurr += departure_interval"
+            """
+            
         else:
             MaxWaitCurr = MaxWaitTimeTransfer
             
@@ -186,8 +194,10 @@ def raptor(SOURCE,
                     # to next arriving so on need to get more later trip
                     arrival_time_at_pi = label[k - 1][p_i]
 
+                    """
                     if timetable_mode and k == 1:
-                        arrival_time_at_pi = arrival_time_at_pi + departure_interval
+                        arrival_time_at_pi = arrival_time_at_pi + departure_interval"
+                    """
 
                     tid, current_trip_t = get_latest_trip_new(
                         stoptimes_dict, route, arrival_time_at_pi, current_stopindex_by_route, change_time, MaxWaitCurr)
@@ -248,40 +258,11 @@ def raptor(SOURCE,
         timetable_mode,
         Maximal_travel_time,
         departure_interval,
-        mode=1
+        MaxExtraTime,
+        mode=1       
     )
 
     return reachedLabels
-
-# returns (maximum boarding time for the first bus - time to reach this stop)
-# use for timetable mode
-
-def get_t_max(pi_label, keys,
-              departure_interval
-              ):
-
-    time_max = 0
-
-    for point in keys:
-
-        if pi_label[1][point] != -1:
-
-            boarding_point = pi_label[1][point][1]
-            boarding_time = pi_label[1][point][0]
-
-            time_foot_to_stop_point = get_time_foot_to_stop(pi_label,
-                                                            boarding_point
-                                                            )
-            time = boarding_time - time_foot_to_stop_point - departure_interval
-            if time_max < time:
-                time_max = time
-    return time_max
-
-def get_time_foot_to_stop(pi_label, boarding_point):
-    if pi_label[0][boarding_point] != 1:
-        return pi_label[0][boarding_point][3]
-    else:
-        return 0
 
 def process_walking_stage(max_time,
                           WALKING_LIMIT,
@@ -344,3 +325,66 @@ def process_walking_stage(max_time,
             if save_marked_stop:
                 marked_stop.append(p_dash)
                 marked_stop_dict[p_dash] = 1
+
+# оптимизируем - заменяем остановки на которые найдены проезды на более быстрые пещеходные проходы
+"""
+def process_walking_stage_2_5 (max_time,
+                          WALKING_LIMIT,
+                          k,
+                          footpath_dict,
+                          marked_stop_dict,
+                          marked_stop,
+                          label,
+                          pi_label,
+                          ):
+   
+
+    for p in marked_stop:
+
+        if pi_label[k][p][0] == 'walking':
+            continue
+
+        trans_info = footpath_dict.get(p, 0)
+
+        if not trans_info:
+            continue
+
+        label_k_p = np.int64(label[k][p])
+
+        for p_dash, to_pdash_time in trans_info:
+
+            if to_pdash_time > WALKING_LIMIT:
+                continue
+
+            try:
+                pi_label_k_p_dash = pi_label[k][p_dash]
+            except:
+                pi_label_k_p_dash = -1
+
+            # this line is "don't rewrite empty record"
+            if pi_label_k_p_dash == - 1 :
+                continue
+
+            new_p_dash_time = label_k_p + to_pdash_time
+
+            if max_time < new_p_dash_time:
+                continue
+
+            # veryfy cause if exist solve for this p_dash (not was better?)
+            if new_p_dash_time > pi_label_k_p_dash[4]:
+                continue
+
+            label[k][p_dash] = new_p_dash_time
+
+            pi_label[k][p_dash] = ('walking', p, p_dash,
+                                   to_pdash_time, new_p_dash_time)
+            
+
+            marked_stop.remove(p_dash)
+            marked_stop_dict[p_dash] = 0
+
+            stop_to_foot = marked_stop
+            stop_to_foot_dict = marked_stop_dict
+    
+    return stop_to_foot, stop_to_foot_dict
+"""
