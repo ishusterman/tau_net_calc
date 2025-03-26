@@ -1,0 +1,10 @@
+Construct databases, Car routing database
+
+The car routing database is constructed in two steps: 
+
+1.	Traffic speed along the link is retrieved, depending on the link type from the table of average free speed on the link and assigned to the link
+2.	Congestion delay coefficients are included into the network to be used for computations depending on the time of a trip start.
+3.	The data on the road network and buildings are translated into a pkl (Pickled Python Objects) binary format that allows fast data retrieval for accessibility computations. 
+
+
+  

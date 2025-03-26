@@ -57,7 +57,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.txtSpeed.setFixedWidth(fix_size)
 
-        self.splitter.setSizes([80, 100])
+        self.splitter.setSizes([int(self.width() * 0.70), int(self.width() * 0.30)])
+        #self.splitter.setSizes([80, 100])
 
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
@@ -142,7 +143,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.table2.setColumnCount(2) 
         self.table2.setHorizontalHeaderLabels(['Hour', 'CDI'])
         self.fill_table(self.table2, self.factor_speed_by_hour)    
-
+        
     def get_layer_road(self):
         selected_item = self.cbRoads.currentText()
         if os.path.isfile(selected_item):
@@ -285,47 +286,21 @@ class form_pkl_car(QDialog, FORM_CLASS):
         link = f'<a href="#" onclick="open_folder()"> plugin folder</a>'
 
         html = f"""
+        <b>Car routing database:</b><br />
       The table of speed by the OSM type of the link, and the table of the Congestion Delay Index are in {link} and can be edited by user:
       <br>
       <a href="file:///{self.file_path_road_speed_default}" target="_blank">{self.file_path_road_speed_default}</a>
       <br>
-      <a href="file:///{self.file_path_factor_speed_by_hour}" target="_blank">{self.file_path_factor_speed_by_hour}</a>
+      <a href="file:///{self.file_path_factor_speed_by_hour}" target="_blank">{self.file_path_factor_speed_by_hour}</a> <br /><br />
       """
-        # create the first table
-        table1 = "<table border='1' cellspacing='0' cellpadding='5'>"
-        table1 += "<tr><th>link_type</th><th>speed km/h</th></tr>"
-        i = 0
-        for type_road, speed_default in self.type_road_speed_default.items():
-            i += 1
-            if i <= 10:
-                table1 += f"<tr><td>{type_road}</td><td>{speed_default}</td></tr>"
-            else:
-                break
-        table1 += f"<tr><td>...</td><td>...</td></tr>"
-        table1 += "</table>"
-
-        # create the second table
-        table2 = "<table border='1' cellspacing='0' cellpadding='5'>"
-        table2 += "<tr><th>hour</th><th>CDI</th></tr>"
-        i = 0
-        for hour, factor in self.factor_speed_by_hour.items():
-            i += 1
-            if i <= 10:
-                table2 += f"<tr><td>{hour}</td><td>{factor}</td></tr>"
-            else:
-                break
-        table2 += f"<tr><td>...</td><td>...</td></tr>"
-        table2 += "</table>"
-
-        # place the tables in one row using an HTML table
-        html += f"""
-      <table border='0' cellspacing='10' cellpadding='10'>
-          <tr>
-              <td valign='top'>{table1}</td>
-              <td valign='top'>{table2}</td>
-          </tr>
-      </table>
-      """
+        
+        html += """
+        The car routing database is constructed in three steps: <br />
+        1. Traffic speed along the link is retrieved, depending on the link type from the table of average free speed on the link and assigned to the link. <br />
+        2. Congestion delay coefficients are included into the network to be used for computations depending on the time of a trip start. <br />
+        3. The data on the road network and buildings are translated into a pkl (Pickled Python Objects) binary format that allows fast data retrieval for accessibility computations. <br />
+        """
+        
        
         self.textInfo.setHtml(html)
         self.textInfo.anchorClicked.connect(self.open_project_folder)
@@ -420,7 +395,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         #anchor = urllib.parse.quote('building-database-for-car-routing')
         #full_url = f'file:///{file_path}#{anchor}'
         #webbrowser.open(full_url)
-        url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+        url = "https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-car-routing"
         webbrowser.open(url)
 
     def showAllLayersInCombo_Point_and_Polygon(self, cmb):
@@ -705,4 +680,28 @@ class form_pkl_car(QDialog, FORM_CLASS):
             table.insertRow(i)
             table.setItem(i, 0, QTableWidgetItem(field1)) 
             table.setItem(i, 1, QTableWidgetItem(str(field2)))
+    
+    def load_text_with_bold_first_line(self, file_path):
+        if not os.path.exists(file_path):
+            return
+        with open(file_path, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            if not lines:
+                return  
+            first_line = f"<b>{lines[0].strip()}</b>"  
+            other_lines = "".join(lines[1:]) 
+
+        other_lines_with_br = other_lines.replace("\n", "<br>")
+        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
+        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
+        self.textInfo.setHtml(full_text)
+    
+    def show_info(self):
+        
+        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+        help_filename = "car_db.txt"
+            
+        hlp_file = os.path.join(hlp_directory, help_filename)
+        hlp_file = os.path.normpath(hlp_file)
+        self.load_text_with_bold_first_line (hlp_file)
 

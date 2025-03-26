@@ -1,0 +1,11 @@
+Transit accessibility, Service area maps: To service locations, scheduled-based departure
+
+The TO service area for the scheduled-based arrival contains all buildings from which a traveler, who knows the timetable of all transit modes, can reach with the public transport from one or more of the source buildings. 
+
+The traveler who knows the timetable plans the trip in a way that the waiting at the first transit stop is zero and does not start the trip earlier than necessary.
+
+The trip duration cannot be longer than the given maximum travel time.
+
+If a building can be reached from several source buildings, [the fasters route]/[the route with the earliest arrival time] is stored.
+
+Two figures can be used: one illustrating the difference between the fixed and schedule-based start time, and one illustrating that the route with the earliest arrival is stored.

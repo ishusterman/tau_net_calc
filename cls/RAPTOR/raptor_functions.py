@@ -151,20 +151,16 @@ def post_processing(DESTINATION,
 
                 if mode_raptor == 1:
                     if (duration > Maximal_travel_time) or start_time > D_Time + MaxExtraTime:
-                    #if (duration > Maximal_travel_time):    
                         append = False
                     
                 if mode_raptor == 2:
-                    #if (duration > Maximal_travel_time) or end_time > D_Time - departure_interval:
-                    if (duration > Maximal_travel_time) or end_time > D_Time: # or end_time > D_TIME_const + 1800:
-                    #if (duration > Maximal_travel_time):    
+                    if (duration > Maximal_travel_time) or end_time > D_Time: 
                         append = False
             
             if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
                 if append:
                     pareto_set.append((transfer_needed, duration, end_time, journey))
-                    #if DESTINATION == '333115387':
-                    #    print (f'DESTINATION == 333115387 journey {journey}')
+                    
 
     if len(pareto_set) == 0:
         return None
@@ -256,17 +252,16 @@ def post_processingAll(
                                      MaxExtraTime,                                     
                                      )
 
-
         if pareto_set == None:
             continue
 
         total_time_to_dest = -1
 
         if pareto_set != None and len(pareto_set) > 0:
-            # Just one journey with minimal time will be in pareto set
-            total_time_to_dest, transfers, pareto_set = get_optimal_journey(pareto_set)
+            # Just one journey with minimal end time will be in pareto set
+            total_time_to_dest, transfers, pareto_set, min_end_time = get_optimal_journey(pareto_set)
 
-        newDict[p_i] = [SOURCE, D_TIME, total_time_to_dest, pareto_set, transfers]
+        newDict[p_i] = [SOURCE, D_TIME, total_time_to_dest, pareto_set, transfers, min_end_time]
 
     return newDict
 
@@ -291,21 +286,8 @@ def get_optimal_journey(pareto_set):
                 min_count_leg = count_leg
                 min_duration = duration
                 journey_opt = journey
-
-    """
-    for (count_leg, duration, journey) in pareto_set:
-        if duration < min_duration:
-            min_duration = duration
-            min_count_leg = count_leg
-            journey_opt = journey
-
-        # if duration is equal to the minimum, check count_leg
-        elif duration == min_duration:
-            if count_leg < min_count_leg:
-                min_count_leg = count_leg
-                journey_opt = journey
-    """
-    return min_duration, min_count_leg, journey_opt
+   
+    return min_duration, min_count_leg, journey_opt, min_end_time
 
 
 def initialize_rev_raptor(routes_by_stop_dict,

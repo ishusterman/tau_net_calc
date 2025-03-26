@@ -98,6 +98,7 @@ class form_relative(QDialog, FORM_CLASS):
                                                self.txtPathToCar.text()))
 
         self.ParametrsShow()
+        self.show_info()
 
     def fill_combobox_with_csv_files(self, obj, path):
 
@@ -857,3 +858,33 @@ class form_relative(QDialog, FORM_CLASS):
                 return True
 
         return super().eventFilter(obj, event)
+    
+    def load_text_with_bold_first_line(self, file_path):
+        if not os.path.exists(file_path):
+            return
+        with open(file_path, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            if not lines:
+                return  
+            first_line = f"<b>{lines[0].strip()}</b>"  
+            other_lines = "".join(lines[1:]) 
+
+        other_lines_with_br = other_lines.replace("\n", "<br>")
+        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
+        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
+        self.textInfo.setHtml(full_text)
+    
+    def show_info(self):
+        
+        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+
+        
+        if self.mode == 1: 
+                help_filename = "compare_sa.txt"
+        if self.mode == 2:
+                help_filename = "compare_reg.txt"
+                    
+            
+        hlp_file = os.path.join(hlp_directory, help_filename)
+        hlp_file = os.path.normpath(hlp_file)
+        self.load_text_with_bold_first_line (hlp_file)

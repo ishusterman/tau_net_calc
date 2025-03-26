@@ -1,0 +1,7 @@
+Car accessibility, Service area maps: To service locations, fixed-time arrival
+
+The TO service area for the fixed arrival time contains all buildings from which a traveler can reach with a car at least one of the destination buildings during a certain interval of time. 
+
+The total duration of a trip cannot be longer than the given maximum travel time, and a traveler will choose the fastest route. 
+
+If several destination buildings can be reached, [the fasters route]/[the route with the earliest arrival time] is stored.  

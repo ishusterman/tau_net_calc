@@ -442,7 +442,7 @@ def runRaptorWithProtocol(self,
 
                 layer_buildings = layer_dest
                 calc_PKL = PKL(self,
-                               dist=400,
+                               dist=600,
                                path_to_pkl=add_routes_pkl_path,
                                path_to_GTFS=add_routes_path,
                                layer_buildings=layer_buildings,
@@ -659,7 +659,7 @@ def runRaptorWithProtocol(self,
 
         else:
             nearby_buildings_from_start = footpath_on_projection.get_nearby_buildings(str(
-                SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b",  mode_source="b", dist=400)
+                SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b",  mode_source="b", dist=600)
             list_buildings_from_start = [
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
 
@@ -714,9 +714,10 @@ def runRaptorWithProtocol(self,
                                 DepartureInterval                                
                                 )
             
-            keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
-            for key in keys_to_remove:
-                del output[key]
+            #print (output)
+            #keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
+            #for key in keys_to_remove:
+            #    del output[key]
 
         
         if  timetable_mode:
@@ -774,19 +775,19 @@ def runRaptorWithProtocol(self,
                             DepartureInterval,
                             )
 
-                    keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
+                #keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
 
-                    for key in keys_to_remove:
-                        del output[key]
+                #for key in keys_to_remove:
+                #    del output[key]
 
-                    for p_i, data in output.items():
-                        total_time = data[2]  # total_time_to_dest
+                for p_i, data in output.items():
+                    end_time = data[5]  # end_time
                     
-                        # Если p_i нет в final_output или найден меньший total_time_to_dest, обновляем
-                        if p_i not in final_output or total_time < final_output[p_i][2]:
-                            final_output[p_i] = data
+                    # Если p_i нет в final_output или найден меньший end_time, обновляем
+                    if p_i not in final_output or end_time < final_output[p_i][5]:
+                        final_output[p_i] = data
 
-                    output = final_output
+                output = final_output
                 cycle += 1
             
         reachedLabels = output
@@ -847,12 +848,10 @@ def runRaptorWithProtocol(self,
     self.progressBar.setValue(self.progressBar.maximum())
     return 1, self.folder_name
 
+"""
 def get_available_boardings(start_time_seconds, max_delta_seconds, trans_info, stop_times, mode):
     available_departures = []
-
-    #available_departures.append(("0", 0, 0))
     
-    #available_departures.add(start_time_seconds)
     for stop_id, walk_time in trans_info:
         if mode == 1:
             arrival_time_seconds = start_time_seconds + walk_time
@@ -872,7 +871,7 @@ def get_available_boardings(start_time_seconds, max_delta_seconds, trans_info, s
                             available_departures.append((stop_id, stop_seconds, walk_time))
         
     return sorted(available_departures, key=lambda x: (x[0], x[1]))
-
+"""
 def make_service_area_report(folder_name, alias):
 
     all_data = pd.DataFrame()
@@ -1094,10 +1093,11 @@ def make_protocol_detailed(raptor_mode,
     [(0, [('walking', 2003, 24206.0, Timedelta('0 days 00:02:47'),Timestamp('2023-06-30 08:37:13')), 
     (Timestamp('2023-06-30 08:36:59'), 24206, 14603, Timestamp('2023-06-30 08:33:36'), '3150_67'), 
     ('walking', 14603, 1976.0, Timedelta('0 days 00:02:03.300000'), Timestamp('2023-06-30 08:31:32.700000'))])]    
-    '''
-            pareto_set = info[3]
+    '''     
             duration = info[2]
+            pareto_set = info[3]
             transfers = info[4]
+            #sarrival_time = seconds_to_time(info[5])
 
             if pareto_set is None or dest is None:
 
@@ -1434,6 +1434,7 @@ def make_protocol_detailed(raptor_mode,
                     D_TIME = journey[0][4]
 
                 # if timetable_mode and raptor_mode == 2:
+                
                 if raptor_mode == 2:
                     if len(journey) > 1:
                         sarrival_time = seconds_to_time(
@@ -1445,12 +1446,7 @@ def make_protocol_detailed(raptor_mode,
                                 journey[0][3] + journey[0][4])
                         else:
                             sarrival_time = seconds_to_time(journey[0][3])
-
-                # if raptor_mode == 1:
-                #   duration =  time_to_seconds(sarrival_time) - D_TIME
-                # else:
-                #   duration =  time_to_seconds(sarrival_time) - start_time
-
+                
                 if raptor_mode == 1:
                     # if orig_dest in list_stops or orig_dest in list_buildings_from_start:
                     #    continue

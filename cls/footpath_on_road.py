@@ -80,9 +80,9 @@ class footpath_on_road:
                     return 0
 
             distances, indices = self.kd_tree_stops.query(
-                node, k=20, distance_upper_bound=400)
+                node, k=20, distance_upper_bound=600)
             filtered_indices_distances = [(int(index), distance) for index, distance in zip(
-                indices, distances) if distance <= 400]
+                indices, distances) if distance <= 600]
             
             nearest_features = [(features[index][0], distance)
                                 for index, distance in filtered_indices_distances]
@@ -156,7 +156,7 @@ class footpath_on_road:
             idStart, dist_start = self.dict_building_to_node.get(
                 self.source)[0]  
             
-            cutoff_value = 400
+            cutoff_value = 600
 
             lengths, _ = nx.single_source_dijkstra(self.graph,
                                                    idStart,
@@ -174,7 +174,7 @@ class footpath_on_road:
                     if b == self.source:
                         continue
                     distance_all = dist_start + distance + dist_finish
-                    if (distance_all <= 400):
+                    if (distance_all <= 600):
                         key = (self.source, b)
                         existing_distance = self.node_pairs_dict_b_b.get(key)
                         if existing_distance is None or existing_distance > distance_all:
@@ -233,7 +233,7 @@ class footpath_on_road:
                         continue
                     distance_all = dist_start + distance + dist_finish
 
-                    if (distance_all <= 400):
+                    if (distance_all <= 600):
                         key = (self.source, b)
                         existing_distance = self.node_pairs_dict.get(key)
                         if existing_distance is None or existing_distance > distance_all:
@@ -398,9 +398,9 @@ class footpath_on_road:
                 QApplication.processEvents()
 
             distances, indices = self.kd_tree_buildings.query(
-                node, k=1000, distance_upper_bound=400)
+                node, k=1000, distance_upper_bound=600)
             filtered_indices_distances = [(int(index), distance) for index, distance in zip(
-                indices, distances) if distance <= 400]
+                indices, distances) if distance <= 600]
             nearest_features = [(features[index][self.layer_origins_field], distance)
                                 for index, distance in filtered_indices_distances]
             nearby_features[node] = nearest_features

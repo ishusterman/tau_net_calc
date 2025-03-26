@@ -3,6 +3,8 @@ import webbrowser
 import configparser
 from time import sleep
 from datetime import datetime
+import glob
+from PyQt5.QtGui import QImage
 
 from qgis.core import QgsProcessingFeedback
 
@@ -22,11 +24,11 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
                              QFileDialog,
                              QApplication,
+                             QMessageBox
                              )
 
 from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
-
 
 from common import get_qgis_info, check_file_parameters_accessibility
 from layer_clean import cls_clean_roads
@@ -50,7 +52,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.setWindowTitle(title)
 
         self.splitter.setSizes(
-            [int(self.width() * 0.75), int(self.width() * 0.25)])
+            [int(self.width() * 0.30), int(self.width() * 0.70)])
 
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
@@ -89,6 +91,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
 
         self.show()
         self.ParametrsShow()
+        self.show_info()
 
         self.feedback = QgsProcessingFeedback()
 
@@ -193,7 +196,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'building_pkl.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+        url = "https://ishusterman.github.io/tutorial/building_pkl.html#topological-cleaning-of-the-road-and-building-layers"
         webbrowser.open(url)
 
     def readParameters(self):
@@ -281,6 +284,20 @@ class form_roads_clean(QDialog, FORM_CLASS):
         except Exception as e:
             self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
+        
+        
+        shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*cleaned*.shp"))
+        if shp_files:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setWindowTitle("Confirm")
+            msgBox.setText(
+                f"The folder '{self.txtPathToProtocols.text()}' already contains layers. Continue?")
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
+            result = msgBox.exec_()
+            if result == QMessageBox.No:
+                return False
 
         return True
 
@@ -291,3 +308,31 @@ class form_roads_clean(QDialog, FORM_CLASS):
                 event.ignore()
                 return True
         return super().eventFilter(obj, event)
+    
+    def show_info(self):
+        
+        img_directory = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img')
+        img_file1 = os.path.join(img_directory, 'img1.png')
+        img_file2 = os.path.join(img_directory, 'img2.png')
+        img_file3 = os.path.join(img_directory, 'img3.png')
+                
+        image_path1 = rf"file:///{img_file1}"
+        image_path2 = rf"file:///{img_file2}"
+        image_path3 = rf"file:///{img_file3}"
+
+        image = QImage(img_file2)
+        width = image.width()
+        height = image.height()
+
+        html = '<b>Clean road network</b> <br /> <br />'
+        html += '<span style="color: grey;">The layer of roads is topologically cleaned by repeatedly applying the <b>v.clean</b> GRASS procedure, see <a href="https://grass.osgeo.org/grass-stable/manuals/v.clean.html" target="_blank">v.clean documentation</a>. The cleaning is done in three steps:<br />'
+        html += '1. The <b>v.clean</b> is applied with the <b>snap</b> option to the initial layer of roads. This stage of cleaning employed the snap threshold of 1 meter.<br />'
+        html += f'<img src="{image_path1}"> <br />'
+        html += '2. The <b>v.clean</b> is applied with the <b>break</b> option to the result of step 1, to break intersecting links at the points of intersection. New junctions are created at these points.<br />'
+        html += f'<img src="{image_path2}" width="{width}" height="{height}"> <br />'
+        html += '3. The <b>v.clean</b> is applied with the <b>rmdupl</b> option to the results of step 2, to reveal the overlapping links. Only one of them is preserved.<br />'
+        html += f'<img src="{image_path3}"> <br />'
+        html += '</span>'
+        self.textInfo.setHtml(html)
+        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
+        

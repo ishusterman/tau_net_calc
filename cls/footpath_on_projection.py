@@ -367,7 +367,7 @@ class cls_footpath_on_projection:
 
                 from_osm_id = feature.stop_id
                 dist_list = self.get_nearby_buildings(
-                    from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s", mode_source="s", dist=400)
+                    from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s", mode_source="s", dist=600)
 
                 # write building_id, building, and dist to the file
                 for to_stop_id, dist in dist_list:
@@ -388,7 +388,7 @@ class cls_footpath_on_projection:
                 building_id = str(feature[layer_buildings_field])
 
                 dist_list = self.get_nearby_buildings(
-                    building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s", mode_source="b", dist=400)
+                    building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s", mode_source="b", dist=600)
                 
 
                 # write building_id, building, and dist to the file

@@ -104,6 +104,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.help_button.clicked.connect(self.on_help_button_clicked)
 
         self.ParametrsShow()
+        self.show_info()
 
     def get_layer_road(self):
         selected_item = self.cbRoads.currentText()
@@ -299,7 +300,7 @@ class form_pkl(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'building_pkl.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+        url = "https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-transit-accessibility"
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):
@@ -513,7 +514,7 @@ class form_pkl(QDialog, FORM_CLASS):
                 if res == 1:
 
                     calc_PKL = PKL(self,
-                                   dist=400,
+                                   dist=600,
                                    path_to_pkl = pkl_path,
                                    path_to_GTFS = gtfs_path,
                                    layer_buildings = self.layer_building,
@@ -558,3 +559,27 @@ class form_pkl(QDialog, FORM_CLASS):
                 event.ignore()
                 return True
         return super().eventFilter(obj, event)
+    
+    def load_text_with_bold_first_line(self, file_path):
+        if not os.path.exists(file_path):
+            return
+        with open(file_path, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            if not lines:
+                return  
+            first_line = f"<b>{lines[0].strip()}</b>"  
+            other_lines = "".join(lines[1:]) 
+
+        other_lines_with_br = other_lines.replace("\n", "<br>")
+        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
+        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
+        self.textInfo.setHtml(full_text)
+    
+    def show_info(self):
+        
+        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+        help_filename = "transit_db.txt"
+            
+        hlp_file = os.path.join(hlp_directory, help_filename)
+        hlp_file = os.path.normpath(hlp_file)
+        self.load_text_with_bold_first_line (hlp_file)

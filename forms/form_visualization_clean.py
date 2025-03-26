@@ -3,6 +3,7 @@ import webbrowser
 import configparser
 from time import sleep
 from datetime import datetime
+import glob
 
 from qgis.PyQt import QtCore
 
@@ -14,13 +15,14 @@ from qgis.core import (QgsApplication,
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
-                          QRegExp,
+                          QRegExp
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
                              QFileDialog,
                              QApplication,
+                             QMessageBox
                              )
 
 from PyQt5.QtGui import (QRegExpValidator,
@@ -98,6 +100,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.show()
         self.ParametrsShow()
+        self.show_info()
 
     def get_layer_buildings(self):
         selected_item = self.cmbLayers.currentText()
@@ -244,7 +247,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'building_pkl.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+        #url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+        url= "https://ishusterman.github.io/tutorial/building_pkl.html#building-layers-for-visualization"
         webbrowser.open(url)
 
     def readParameters(self):
@@ -333,6 +337,20 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         except Exception as e:
             self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
+        
+
+        shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*voronoi*.shp"))
+        if shp_files:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setWindowTitle("Confirm")
+            msgBox.setText(
+                f"The folder '{self.txtPathToProtocols.text()}' already contains layers. Continue?")
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
+            result = msgBox.exec_()
+            if result == QMessageBox.No:
+                return False
 
         return True
 
@@ -343,3 +361,23 @@ class form_visualization_clean(QDialog, FORM_CLASS):
                 event.ignore()
                 return True
         return super().eventFilter(obj, event)
+    
+
+    def show_info(self):
+        
+        html = """
+        <b>Build visualization layers</b><br /><br />
+        <span style="color: grey;">Four default layers of hexagons are constructed for visualization, each in 4 steps: <br />
+        1. Four layers of hexagons with the side of 100, 200, 400, and 800 m sides are constructed. Each layer covers the entire extent of the layer of buildings. The hexagon layers are constructed applying 
+        <a href="https://docs.qgis.org/3.34/en/docs/user_manual/processing_algs/qgis/vectorcreation.html#qgiscreategrid" target="_blank">QGIS Create Grid documentation</a>. <br />
+        2. The hexagons that do not overlap any building are deleted from each layer. <br />
+        3. The identifier of each hexagon is set equal to the identifier of the building that is closest to its centroid. If several buildings are at the same distance from the centroid, the minimal identifier is chosen. <br />
+        4. The hexagons with the same identifier are dissolved into one. <br />
+        You can construct additional layers of hexagons with the arbitrarily length of the side. If you need more additional layers of hexagons, employ this command several times. <br />
+        <br />
+        Two figures – assigning the building ID and dissolving hexagons with the same ID. <br />
+        </span>
+        """
+        
+        self.textInfo.setHtml(html)
+        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))

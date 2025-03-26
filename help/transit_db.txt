@@ -1,0 +1,10 @@
+Construct databases, Transit routing database
+
+The transit routing database is constructed in two steps:
+ 
+1.	To be able to estimate the length of the walk from the building to the bus stop, the buildings that are not connected to the road network are connected to the nearest road link, by constructing a connecting walk path between a building and the closest point on this link.
+2.	The data on the road network, buildings, and public transport are translated into a pkl (Pickled Python Objects) binary format that allows fast data retrieval for accessibility computations. 
+
+One figure – constructing a connecting link.
+
+  

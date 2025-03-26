@@ -83,7 +83,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>401</width>
+             <width>382</width>
              <height>191</height>
             </rect>
            </property>
@@ -184,11 +184,7 @@
        </layout>
       </widget>
      </widget>
-     <widget class="QPlainTextEdit" name="textInfo">
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
+     <widget class="QTextBrowser" name="textInfo"/>
     </widget>
    </item>
    <item>

@@ -149,28 +149,27 @@ class AccessibilityTools(QWidget):
 
         if item == self.item2:
             roads_clean = form_roads_clean(
-                title="Constructing databases. Road database")
+                title="Data preprocessing. Clean road network")
             roads_clean.exec_()
 
         if item == self.item20:
             buildings_clean = form_buildings_clean(
-                title="Constructing databases. Clean layer of buildings")
+                title="Data preprocessing. Clean layer of buildings")
             buildings_clean.exec_()
 
         if item == self.item19:
             visualization_clean = form_visualization_clean(
-                title="Constructing databases. Build visualization layers")
+                title="Data preprocessing. Build visualization layers")
             visualization_clean.exec_()    
 
         if item == self.item3:
             pkl = form_pkl(
-                title="Constructing databases. Transit routing database")
-            pkl.textInfo.setPlainText("")
+                title="Construct databases. Transit routing database")
             pkl.show()
 
         if item == self.item17:
             pkl_car = form_pkl_car(
-                title="Constructing databases. Car routing database")
+                title="Construct databases. Car routing database")
             # pkl_car.textInfo.setPlainText("Description process of building CAR dictionary (pkl)")
             pkl_car.show()
 
@@ -179,7 +178,7 @@ class AccessibilityTools(QWidget):
                                              protocol_type=2,
                                              title="Transit accessibility. Service area maps. From service locations – Fixed-time departure",
                                              timetable_mode=False)
-            raptor_detailed.textInfo.setPlainText("")
+            #raptor_detailed.textInfo.setPlainText("")
             raptor_detailed.show()
 
         if item == self.item5:
@@ -187,7 +186,7 @@ class AccessibilityTools(QWidget):
                                              protocol_type=2,
                                              title="Transit accessibility. Service area maps. From service locations – Schedule-based departure",
                                              timetable_mode=True)
-            raptor_detailed.textInfo.setPlainText("")
+            #raptor_detailed.textInfo.setPlainText("")
             raptor_detailed.show()
 
         if item == self.item6:
@@ -195,7 +194,7 @@ class AccessibilityTools(QWidget):
                                              protocol_type=2,
                                              title="Transit accessibility. Service area maps. To service locations – Fixed-time arrival",
                                              timetable_mode=False)
-            raptor_detailed.textInfo.setPlainText("")
+            #raptor_detailed.textInfo.setPlainText("")
             raptor_detailed.show()
 
         if item == self.item7:
@@ -203,7 +202,7 @@ class AccessibilityTools(QWidget):
                                              protocol_type=2,
                                              title="Transit accessibility. Service area maps. To service locations – Schedule-based arrival",
                                              timetable_mode=True)
-            raptor_detailed.textInfo.setPlainText("")
+            #raptor_detailed.textInfo.setPlainText("")
             raptor_detailed.show()
 
         if item == self.item8:
@@ -212,7 +211,7 @@ class AccessibilityTools(QWidget):
                                            title="Transit accessibility. Region maps. From every location – Fixed-time departure",
                                            timetable_mode=False
                                            )
-            raptor_summary.textInfo.setPlainText("")
+            #raptor_summary.textInfo.setPlainText("")
             raptor_summary.show()
 
         if item == self.item9:
@@ -220,7 +219,7 @@ class AccessibilityTools(QWidget):
                                            protocol_type=1,
                                            title="Transit accessibility. Region maps. From every location – Schedule-based departure",
                                            timetable_mode=True)
-            raptor_summary.textInfo.setPlainText("")
+            #raptor_summary.textInfo.setPlainText("")
             raptor_summary.show()
 
         if item == self.item10:
@@ -228,7 +227,7 @@ class AccessibilityTools(QWidget):
                                            protocol_type=1,
                                            title="Transit accessibility. Region maps. To every location – Fixed-time arrival",
                                            timetable_mode=False)
-            raptor_summary.textInfo.setPlainText("")
+            #raptor_summary.textInfo.setPlainText("")
             raptor_summary.show()
 
         if item == self.item11:
@@ -236,7 +235,7 @@ class AccessibilityTools(QWidget):
                                            protocol_type=1,
                                            title="Transit accessibility. Region maps. To every location – Schedule-based arrival",
                                            timetable_mode=True)
-            raptor_summary.textInfo.setPlainText("")
+            #raptor_summary.textInfo.setPlainText("")
             raptor_summary.show()
 
         if item == self.item12:
@@ -270,11 +269,11 @@ class AccessibilityTools(QWidget):
         if item == self.item16:
             relative = form_relative(
                 title="Compare accessibility. Service areas", mode=1)
-            relative.textInfo.setPlainText("")
+            #relative.textInfo.setPlainText("")
             relative.show()
 
         if item == self.item18:
             relative = form_relative(
                 title="Compare accessibility. Regions", mode=2)
-            relative.textInfo.setPlainText("")
+            #relative.textInfo.setPlainText("")
             relative.show()       

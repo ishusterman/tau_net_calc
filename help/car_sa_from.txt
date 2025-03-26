@@ -1,0 +1,10 @@
+Car accessibility, Service area maps: From service locations, fixed-time departure
+
+The FROM service area for the fixed time departure contains all buildings that a traveler can reach with a car from one or more of the source buildings. 
+
+The total trip duration cannot be longer than the given maximum travel time. 
+
+If a building can be reached from several source buildings, the route with the earliest arrival time is stored.   
+
+Two figures can be used: one conceptual and one illustrating that the route with the earliest arrival is stored.
+

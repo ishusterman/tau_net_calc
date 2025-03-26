@@ -452,7 +452,7 @@ class GTFS ():
         self.parent.progressBar.setValue(0)
 
         self.parent.break_on = False
-        """
+        
         self.load_GTFS()
 
         self.parent.progressBar.setValue(1)
@@ -594,7 +594,7 @@ class GTFS ():
         self.parent.progressBar.setValue(9)
         if self.verify_break():
             return 0
-        """
+        
         ##########################################
         # Calc footpath on graph with projections
         ##########################################
@@ -917,8 +917,8 @@ class GTFS ():
         stops = self.create_stops_gpd()
         buildings = self.layer_origins
 
-        dist = 400
-        dist_m = 400
+        dist = 600
+        dist_m = 600
         self.crs = buildings.crs()
         units = self.crs.mapUnits()
         self.crs_grad = (units == 6)
