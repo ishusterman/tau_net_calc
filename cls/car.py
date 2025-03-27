@@ -517,11 +517,7 @@ class car_accessibility:
                             mode=self.parent.protocol_type,
                             fieldname_layer=self.layer_vis_field,
                             )
-        if self.parent.protocol_type == 1:
-            
-            count_diapazone = self.number_bins
-            vis.set_count_diapazone(count_diapazone)
-
+        
         self.parent.textLog.append(f'<a>Output:</a>')
         if self.parent.protocol_type == 1:
             if len(self.fields_ok) > 0:

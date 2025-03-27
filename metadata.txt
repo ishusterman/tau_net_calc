@@ -6,12 +6,12 @@
 name=Accessibility calculator
 qgisMinimumVersion=3.1.1
 description=Accessibility Calculations
-version=5.34.5
+version=5.34.6
 author=Igor Shusterman, Aleksey Ogulenko, Itzhak Benenson
 email=ishusterman2011@gmail.com
 license=MIT
 
-about=Accessibility calculations in public transportation network and car roads
+about=Calculation of potential transit and car accessibility at a resolution of a single building.
 
 tracker=https://github.com/ishusterman/tau_net_calc
 repository=https://github.com/ishusterman/tau_net_calc

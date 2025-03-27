@@ -619,10 +619,7 @@ def runRaptorWithProtocol(self,
 
     vis = visualization(self, LayerViz, mode=protocol_type,
                         fieldname_layer=layer_vis_field)
-    if protocol_type == 1:
-        count_diapazone = number_bins  # round(MaxTimeTravel/(time_step*60))
-        vis.set_count_diapazone(count_diapazone)
-
+    
     if protocol_type == 2:
         
         f_curr = f'{self.folder_name}//{self.aliase}.csv'

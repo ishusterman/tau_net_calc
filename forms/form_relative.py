@@ -349,7 +349,10 @@ class form_relative(QDialog, FORM_CLASS):
             self.mode_calc = "ratio"
             self.prepare()
             aliase_res = f'ratio_{self.aliase}'
-            vis.add_thematic_map(self.path_output, aliase_res)
+            type_compare = "RatioRelative"
+            vis.add_thematic_map(self.path_output, 
+                                 aliase_res, 
+                                 type_compare = type_compare)
             list_file_name.append(self.path_output)
 
         self.progressBar.setValue(2)
@@ -358,7 +361,13 @@ class form_relative(QDialog, FORM_CLASS):
             self.mode_calc = "difference"
             self.prepare()
             aliase_res = f'diff_{self.aliase}'
-            vis.add_thematic_map(self.path_output, aliase_res)
+            if self.MAP_first:
+                type_compare = "DifferenceRegion"
+            else:
+                type_compare = "DifferenceServiceAreas"
+            vis.add_thematic_map(self.path_output, 
+                                 aliase_res,
+                                 type_compare = type_compare)
             list_file_name.append(self.path_output)
 
         self.progressBar.setValue(3)
@@ -367,7 +376,12 @@ class form_relative(QDialog, FORM_CLASS):
             self.mode_calc = "relative_difference"
             self.prepare()
             aliase_res = f'rel_diff_{self.aliase}'
-            vis.add_thematic_map(self.path_output, aliase_res, procent=True)
+
+            type_compare = "RatioRelative"
+            
+            vis.add_thematic_map(self.path_output, 
+                                 aliase_res, 
+                                 type_compare = type_compare)
             list_file_name.append(self.path_output)
 
         self.progressBar.setValue(4)
@@ -401,7 +415,7 @@ class form_relative(QDialog, FORM_CLASS):
         aliase_res = f'{self.aliase}_{self.file_name1}_only'
         vis2.add_thematic_map(self.path_output,
                               aliase_res,
-                              percentiles=True
+                              type_compare = "CompareFirstOnly"
                               )
         list_file_name.append(self.path_output)
 
@@ -426,7 +440,7 @@ class form_relative(QDialog, FORM_CLASS):
         aliase_res = f'{self.aliase}_{self.file_name2}_only'
         vis2.add_thematic_map(self.path_output,
                               aliase_res,
-                              percentiles=True
+                              type_compare = "CompareSecondOnly"
                               )
         list_file_name.append(self.path_output)
 
