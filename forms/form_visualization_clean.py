@@ -366,16 +366,14 @@ class form_visualization_clean(QDialog, FORM_CLASS):
     def show_info(self):
         
         html = """
-        <b>Build visualization layers</b><br /><br />
-        <span style="color: grey;">Four default layers of hexagons are constructed for visualization, each in 4 steps: <br />
-        1. Four layers of hexagons with the side of 100, 200, 400, and 800 m sides are constructed. Each layer covers the entire extent of the layer of buildings. The hexagon layers are constructed applying 
+        <b>Data preprocessing, Build visualization layers</b><br /><br />
+        <span style="color: grey;">Five default layers of hexagons are constructed for visualization, in 4 steps: <br />
+        1. Four layers of hexagons with the side of 50, 100, 200, 400, and 800 m sides are constructed. Each layer covers the entire extent of the layer of buildings. The hexagon layers are constructed applying 
         <a href="https://docs.qgis.org/3.34/en/docs/user_manual/processing_algs/qgis/vectorcreation.html#qgiscreategrid" target="_blank">QGIS Create Grid documentation</a>. <br />
         2. The hexagons that do not overlap any building are deleted from each layer. <br />
         3. The identifier of each hexagon is set equal to the identifier of the building that is closest to its centroid. If several buildings are at the same distance from the centroid, the minimal identifier is chosen. <br />
         4. The hexagons with the same identifier are dissolved into one. <br />
-        You can construct additional layers of hexagons with the arbitrarily length of the side. If you need more additional layers of hexagons, employ this command several times. <br />
-        <br />
-        Two figures – assigning the building ID and dissolving hexagons with the same ID. <br />
+        You can construct additional layers of hexagons with the arbitrarily length of the side. These layers are constructed in the same way as the default ones. If you need several additional layers of hexagons, employ this command several times. <br />
         </span>
         """
         

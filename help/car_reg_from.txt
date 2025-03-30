@@ -1,8 +1,9 @@
-Car accessibility, Region maps: From service locations, fixed-time departure
+Car accessibility, Region maps: From service locations, fixed-time departure:
 
-The default FROM region map for the fixed time departure presents the total number of buildings that a traveler can reach by car from each of the region’s buildings starting the trip at a given hour. 
+The FROM region maps for the fixed-time departure present the aggregate characteristics of buildings that can be reached with a car from each of the region’s buildings starting the trip at a given hour. 
 
-Additional maps present sum of buildings’ attribute values, for each of the selected attributes, like the total number of accessible jobs. 
+The default is a map of the total number of buildings that can be reached. Additional maps can present sum of buildings’ attribute values, for each of the selected attributes, like the total number of accessible jobs. 
 
 The total trip duration cannot be longer than the given maximum travel time.   
+ 
   

@@ -308,16 +308,15 @@ class form_buildings_clean(QDialog, FORM_CLASS):
     def show_info(self):
         
         html = """
-        <b>Clean layer of buildings:</b>  <br />
-        <span style="color: grey;">The layer of buildings is cleaned in four steps: <br /><br />
+        <b>The layer of buildings is topologically cleaned in four steps: :</b>  <br />
+        <span style="color: grey;">
         1. The <b>delete holes</b> algorithm is employed to delete holes in the buildings, see 
         <a href="https://docs.qgis.org/3.34/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#qgisdeleteholes" target="_blank">QGIS Delete Holes documentation</a>. <br />
-        2. The features with the absent (NULL) geometry are deleted from the layer of buildings. <br />
+        2. The features with the absent (NULL) geometry, if exist in the layer, are deleted.<br />
         3. Multipart features are split into single parts, see 
         <a href="https://docs.qgis.org/3.34/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#qgismultiparttosingleparts" target="_blank">QGIS Multipart to Single Parts documentation</a>. <br />
-        4. Buildings that have got identical identifiers are selected and their identifiers are made unique by adding “_1,” “_2,” etc. to their common identifier. <br />
+        4. Buildings that have got the same identifier are selected and their identifiers are made unique by adding “_1,” “_2,” etc. to their common identifier. <br />
         <br />
-        Four figures representing four steps.<br />
         </span>
         """
         self.textInfo.setHtml(html)

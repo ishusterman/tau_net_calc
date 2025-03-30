@@ -83,8 +83,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>326</width>
-             <height>235</height>
+             <width>438</width>
+             <height>321</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -101,6 +101,13 @@
              <layout class="QFormLayout" name="formLayout">
               <item row="0" column="0">
                <layout class="QVBoxLayout" name="verticalLayout_4"/>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_6">
+                <property name="text">
+                 <string>Layer of roads</string>
+                </property>
+               </widget>
               </item>
               <item row="2" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -163,14 +170,38 @@
                 </item>
                </layout>
               </item>
-              <item row="7" column="0">
+              <item row="8" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_7">
+                <item>
+                 <widget class="QLabel" name="label_3">
+                  <property name="text">
+                   <string>Maximal walking path on road, m (must not exceed 600)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtMaxPathRoad">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="12" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
                  <string>GTFS folder</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="0" colspan="2">
+              <item row="13" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
                 <item>
                  <widget class="QLineEdit" name="txtPathToGTFS">
@@ -197,14 +228,14 @@
                 </item>
                </layout>
               </item>
-              <item row="9" column="0">
+              <item row="14" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Folder to store transit database</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="0" colspan="2">
+              <item row="15" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols">
@@ -231,12 +262,29 @@
                 </item>
                </layout>
               </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_6">
-                <property name="text">
-                 <string>Layer of roads</string>
-                </property>
-               </widget>
+              <item row="11" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_8">
+                <item>
+                 <widget class="QLabel" name="label_7">
+                  <property name="text">
+                   <string>Maximal walking path on air, m (must not exceed 600)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtMaxPathAir">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </item>

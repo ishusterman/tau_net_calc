@@ -10,7 +10,7 @@ from common import time_to_seconds
 
 class PKL ():
 
-    def __init__(self, parent, dist=0,  path_to_pkl='', path_to_GTFS='', layer_buildings='', mode_append=False):
+    def __init__(self, parent, path_to_pkl='', path_to_GTFS='', layer_buildings='', mode_append=False):
         if path_to_GTFS == '':
             self.__path_gtfs = path_to_pkl
         else:
@@ -18,7 +18,7 @@ class PKL ():
 
         self.__path_pkl = path_to_pkl
 
-        self.__dist = dist
+        
         self.parent = parent
         self.layer_buildings = layer_buildings
 

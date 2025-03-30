@@ -27,10 +27,12 @@ class cls_footpath_on_projection:
     def __init__(
         self,
         parent,
+        MaxPath
     ):
         self.parent = parent
 
         self.already_display_break = False
+        self.MaxPath = MaxPath
 
     def make_new_layer_with_projections(self,
                                         layer_roads,
@@ -367,7 +369,7 @@ class cls_footpath_on_projection:
 
                 from_osm_id = feature.stop_id
                 dist_list = self.get_nearby_buildings(
-                    from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s", mode_source="s", dist=600)
+                    from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s") 
 
                 # write building_id, building, and dist to the file
                 for to_stop_id, dist in dist_list:
@@ -388,7 +390,7 @@ class cls_footpath_on_projection:
                 building_id = str(feature[layer_buildings_field])
 
                 dist_list = self.get_nearby_buildings(
-                    building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s", mode_source="b", dist=600)
+                    building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s")
                 
 
                 # write building_id, building, and dist to the file
@@ -418,7 +420,9 @@ class cls_footpath_on_projection:
             geom = stop.iloc[0].geometry
             return geom.y()
 
-    def get_nearby_buildings(self, building_id, graph, dict_osm_vertex, dict_vertex_osm, mode, mode_source, dist):
+    def get_nearby_buildings(self, building_id, graph, dict_osm_vertex, dict_vertex_osm, mode):
+
+        dist = self.MaxPath
 
         dist_dict = {}
         vertex_id, dist_1 = dict_osm_vertex.get(building_id)

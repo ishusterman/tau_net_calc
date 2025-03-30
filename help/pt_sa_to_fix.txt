@@ -1,9 +1,9 @@
-Transit accessibility, Service area maps: To service locations, fixed-time arrival
+Transit accessibility, Service area maps: To service locations, fixed-time arrival:
 
-The TO service area for the fixed time arrival contains all buildings from which a traveler, who knows the timetable of all transit modes and adjusts the activities to the transit departures and arrivals, can reach at least one of the destination buildings during a certain interval of time. 
+The TO service area for the fixed-time arrival contains all buildings from which a traveler, can reach at least one of the destination buildings with a public transport at a given hour. 
 
-The total duration of a trip cannot be longer than the given maximum travel time, and a traveler will choose the fastest trip. 
+The total duration of a trip cannot be longer than the given maximum travel time. 
 
-If several destination buildings can be reached, [the fasters route]/[the route with the earliest arrival time] is stored.
+If more than one of the destination building can be reached, the route to the building that guarantees the closest to the given arrival time, and the travel time for this route, are stored.  
+ 
 
-Two figures can be used: one conceptual and one illustrating that the route with the earliest arrival is stored.

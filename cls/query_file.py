@@ -18,10 +18,9 @@ from qgis.core import (QgsProject,
 from footpath_on_projection import cls_footpath_on_projection
 from RAPTOR.std_raptor import raptor
 from RAPTOR.rev_std_raptor import rev_raptor
-from converter_layer import MultiLineStringToLineStringConverter
-from footpath_on_road import footpath_on_road
+
+
 from footpath_on_air_b_to_b import cls_footpath_on_air_b_b
-from PKL import PKL
 from visualization import visualization
 from common import seconds_to_time
 
@@ -151,7 +150,7 @@ def myload_all_dict(self,
                                                       Speed
                                                       )
     else:
-        footpath_on_projection = cls_footpath_on_projection(self)
+        footpath_on_projection = cls_footpath_on_projection(self, MaxPath = MaxWalkDist1)
         graph_projection = footpath_on_projection.load_graph(PathToNetwork)
         dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
             PathToNetwork)
@@ -205,52 +204,6 @@ def verify_break(self,
         return True
     return False
 
-def file_exists_exclude_routes(directory):
-    base_filename = "exclude_routes.csv"
-    file_path_without_ext = os.path.join(directory, base_filename)
-    if os.path.isfile(file_path_without_ext):
-        return file_path_without_ext
-    return None
-
-def copy_files(self, source, destination):
-    for filename in os.listdir(source):
-        self.setMessage(f'Copying dictionary to "{destination}" ...')
-        file_path = os.path.join(source, filename)
-        if os.path.isfile(file_path) and filename != 'add_routes' and filename != 'exclude_routes.csv':
-            QApplication.processEvents()
-            shutil.copy(file_path, destination)
-
-
-def get_roads_from_file(path):
-
-    shp_file_path = None
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if file.lower().endswith('.shp'):
-                shp_file_path = os.path.join(root, file)
-                break
-        if shp_file_path:
-            break
-
-    if shp_file_path:
-        layer_name = 'roads_add_route'
-        existing_layers = QgsProject.instance().mapLayersByName(layer_name)
-        for existing_layer in existing_layers:
-            QgsProject.instance().removeMapLayer(existing_layer.id())
-
-        layer = QgsVectorLayer(shp_file_path, layer_name, 'ogr')
-        QgsProject.instance().addMapLayer(layer)
-        layer_roads = QgsProject.instance().mapLayersByName(layer_name)[0]
-
-        geom_type = layer_roads.geometryType()
-
-        if geom_type != QgsWkbTypes.LineGeometry and geom_type != QgsWkbTypes.MultiLineString:
-            return 0
-
-        return layer_roads
-
-    return 0
-
 def runRaptorWithProtocol(self,
                           sources,
                           raptor_mode,
@@ -295,6 +248,8 @@ def runRaptorWithProtocol(self,
     MaxWaitTime = float(self.config['Settings']['MaxWaitTime'].replace(',', '.'))*60               # to sec
     MaxWaitTimeTransfer = float(self.config['Settings']['MaxWaitTimeTransfer'].replace(',', '.'))*60
 
+    MaxPath = int(self.config['Settings']['MaxWalkDist1'])
+
     
     CHANGE_TIME_SEC = 1
     # time_step = int (self.config['Settings']['TimeInterval'])
@@ -331,132 +286,6 @@ def runRaptorWithProtocol(self,
 
     # processing "exclude_routes.csv"
     
-    numbers_routes = []
-    route_dict = {}
-    exlude_routes = False
-    recalculate = False
-
-    
-
-    if file_exists_exclude_routes(PathToNetwork):
-        msgBox = QMessageBox()
-        msgBox.setIcon(QMessageBox.Question)
-        msgBox.setWindowTitle("Confirm")
-        msgBox.setText(
-            f'A file "exclude_routes.csv" is in the {PathToNetwork} directory.\n'
-            'Exclude these routes from calculations?'
-        )
-        msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-
-        result = msgBox.exec_()
-        if result == QMessageBox.Yes:
-            exlude_routes = True
-            file_path = os.path.join(PathToNetwork, "exclude_routes.csv")
-            with open(file_path, 'r') as file:
-                lines = file.readlines()[1:]
-
-            numbers = [line.split(',')[1].strip() for line in lines]
-            # Разбиваем строку по первому знаку "-" и сохраняем только первую часть
-            numbers_routes = [line.split('-')[0].strip() for line in numbers]
-            route_dict = get_route_desc__route_id(PathToNetwork)
-
-            for nr in numbers_routes:
-                res = route_dict.get(nr, 0)
-                if res == 0:
-                    self.textLog.append(f'<a><b><font color="blue">The route {nr} was not found in routes.txt and will not be excluded from calculations</font> </b></a>')
-
-            numbers_routes = [
-                nr for nr in numbers_routes if route_dict.get(nr, 0) != 0]
-            list_exclude_routes = ', '.join(numbers_routes)
-            self.textLog.append(f'<a><b><font color="red"> These routes are excluded from calculations: {list_exclude_routes}.</font> </b></a>')
-
-        else:
-            exlude_routes = False
-
-    #
-    # processing "add_routes"
-    #
-
-    add_routes_path = os.path.join(PathToNetwork, 'add_routes')
-    if os.path.exists(add_routes_path):
-        msgBox = QMessageBox()
-        msgBox.setIcon(QMessageBox.Question)
-        msgBox.setWindowTitle("Confirm")
-        msgBox.setText(
-            f'A folder "add_routes" is found in the {PathToNetwork} directory.\n'
-            'Add these routes to calculations?'
-        )
-        msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-
-        result = msgBox.exec_()
-
-        if result == QMessageBox.Yes:
-            add_routes = True
-            add_routes_pkl_path = os.path.join(add_routes_path, 'pkl')
-            file_path = os.path.join(add_routes_pkl_path, "routes_by_stop.pkl")
-            if os.path.exists(add_routes_pkl_path) and os.path.isfile(file_path):
-                msgBox = QMessageBox()
-                msgBox.setIcon(QMessageBox.Question)
-                msgBox.setWindowTitle("Confirm")
-                msgBox.setText(
-                    f'A folder "pkl" is founded in the {add_routes_path} directory.\n'
-                    'Recalculate pkl?'
-                )
-                msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-                result = msgBox.exec_()
-                if result == QMessageBox.Yes:
-                    recalculate = True
-                else:
-                    recalculate = False
-            else:
-                recalculate = True
-
-        else:
-            add_routes = False
-
-        if recalculate:
-
-            layer_road = get_roads_from_file(add_routes_path)
-
-            if layer_road != 0:
-                self.textLog.append(f'<a><b>Run recalculate pkl<font color="blue"></font> </b></a>')
-                converter = MultiLineStringToLineStringConverter(
-                    self, layer_road)
-                layer_road = converter.execute()
-                if verify_break(self):
-                    return 0, 0
-                footpath_road = footpath_on_road(self,
-                                                 layer_road,
-                                                 layer_dest,
-                                                 add_routes_path,
-                                                 layer_dest_field
-                                                 )
-                footpath_road.run()
-
-                if verify_break(self):
-                    return 0, 0
-
-                if not os.path.exists(add_routes_pkl_path):
-                    os.makedirs(add_routes_pkl_path)
-                copy_files(self, PathToNetwork, add_routes_pkl_path)
-
-                layer_buildings = layer_dest
-                calc_PKL = PKL(self,
-                               dist=600,
-                               path_to_pkl=add_routes_pkl_path,
-                               path_to_GTFS=add_routes_path,
-                               layer_buildings=layer_buildings,
-                               mode_append=True
-                               )
-                calc_PKL.create_files()
-
-            else:
-                self.textLog.append(f'<a><b>No run recalculate pkl. Missing or damaged road layer<font color="blue"></font> </b></a>')
-                add_routes = False
-            # return 0, 0
-
-        if add_routes:
-            PathToNetwork = add_routes_pkl_path
 
     (
         stops_dict,
@@ -649,14 +478,13 @@ def runRaptorWithProtocol(self,
             return 0, 0
 
         if RunOnAir:
-            nearby_buildings_from_start = footpath_on_air_b_b.get_nearby_buildings(
-                SOURCE)
+            nearby_buildings_from_start = footpath_on_air_b_b.get_nearby_buildings(SOURCE)
             list_buildings_from_start = [
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
 
         else:
             nearby_buildings_from_start = footpath_on_projection.get_nearby_buildings(str(
-                SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b",  mode_source="b", dist=600)
+                SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b")
             list_buildings_from_start = [
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
 

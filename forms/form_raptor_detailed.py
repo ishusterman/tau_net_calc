@@ -55,6 +55,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
+
+        self.InitialNameWalk1 = "Maximum walk distance to the initial PT stop, m"
+        self.InitialNameWalk2 = "Maximum walk distance at the transfer, m"
+        self.InitialNameWalk3 = "Maximum walk distance from the  last PT stop, m"
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
@@ -158,6 +162,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             lambda: self.showFoldersDialog(self.txtPathToPKL))
         self.toolButton_protocol.clicked.connect(
             lambda: self.showFoldersDialog(self.txtPathToProtocols))
+        
+        self.cbRunOnAir.clicked.connect(lambda: self.handleRunOnAirClick())
 
         self.showAllLayersInCombo_Point_and_Polygon(self.cmbLayers)
         self.cmbLayers.installEventFilter(self)
@@ -237,22 +243,42 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.ParametrsShow()
         self.show_info()
 
-    """
-    def keyPressEvent(self, event):
+    def handleRunOnAirClick(self):
+        self.RunOnAir = False
+        if self.cbRunOnAir.isChecked():
+            self.RunOnAir = True
+        latest_log = self.find_latest_log (self.txtPathToPKL.text())
+        result = self.extract_parameters(latest_log)
+        if self.RunOnAir:
+            UpperBoundMaxWalkDist = result.get("Maximal walking path on air", 0)
+        else:
+            UpperBoundMaxWalkDist = result.get("Maximal walking path on road", 0)
         
-        if event.modifiers() & Qt.ShiftModifier:
-            self.run_button.setStyleSheet("color: green; font-weight: bold;")
-            self.run_button.repaint()
+        print (UpperBoundMaxWalkDist)
 
-        if event.modifiers() & Qt.ShiftModifier and event.modifiers() & Qt.ControlModifier:
-            self.run_button.setStyleSheet("color: red;")  
-            self.run_button.repaint()    
+        if UpperBoundMaxWalkDist > 0:
+            self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1} (max =  {UpperBoundMaxWalkDist})')
+            self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2} (max =  {UpperBoundMaxWalkDist})')
+            self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3} (max =  {UpperBoundMaxWalkDist})')
 
-    def keyReleaseEvent(self, event):
+            regex = QRegExp(fr"^(?:[1-9]|[1-9][0-9]|[1-{UpperBoundMaxWalkDist // 100 - 1}][0-9]{{2}}|{UpperBoundMaxWalkDist})$")
+            if self.txtMaxWalkDist1.text() and int(self.txtMaxWalkDist1.text()) > UpperBoundMaxWalkDist:
+                self.txtMaxWalkDist1.setText(str(UpperBoundMaxWalkDist))
+            if self.txtMaxWalkDist2.text() and int(self.txtMaxWalkDist2.text()) > UpperBoundMaxWalkDist:
+                self.txtMaxWalkDist2.setText(str(UpperBoundMaxWalkDist))
+            if self.txtMaxWalkDist3.text() and int(self.txtMaxWalkDist3.text()) > UpperBoundMaxWalkDist:
+                self.txtMaxWalkDist3.setText(str(UpperBoundMaxWalkDist))    
         
-        self.run_button.setStyleSheet("color: black;")  
-        self.run_button.repaint()
-    """
+        else:
+            self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1}')
+            self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2}')
+            self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3}')
+            regex = QRegExp(r"^(?:[1-9]|[1-9][0-9]|[1-3][0-9]{2}|400)$")
+
+        int_validator = QRegExpValidator(regex)
+        self.txtMaxWalkDist1.setValidator(int_validator)
+        self.txtMaxWalkDist2.setValidator(int_validator)
+        self.txtMaxWalkDist3.setValidator(int_validator)    
 
     def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
         obj_layer_fields.clear()
@@ -443,11 +469,19 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        #current_dir = os.path.dirname(os.path.abspath(__file__))
-        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        #file = os.path.join(module_path, 'raptor_area.html')
-        #webbrowser.open(f'file:///{file}')
         url = "https://ishusterman.github.io/tutorial/raptor_area.html"
+
+        if self.mode == 1 and not(self.timetable_mode):
+            section = "from-service-locations-fixed-time-departure"
+        
+        if self.mode == 2 and not(self.timetable_mode):
+            section = "to-service-locations-fixed-time-arrival"
+
+        if self.timetable_mode:
+            section = "service-area-for-schedule-based-departure-or-arrival"
+
+        url = f'{url}#{section}'
+        
         webbrowser.open(url)
 
     def showAllLayersInCombo_Point_and_Polygon(self, cmb):
@@ -474,8 +508,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self, "Select Folder", obj.text())
         if folder_path:
             obj.setText(folder_path)
+            self.handleRunOnAirClick()
         else:
             obj.setText(obj.text())
+        
+        
 
     def readParameters(self):
         project_directory = os.path.dirname(QgsProject.instance().fileName())
@@ -632,6 +669,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.cbRunOnAir.setChecked(RunOnAir)
 
         self.txtAliase.setText(self.default_alias)
+
+        self.handleRunOnAirClick()
+
 
     def check_folder_and_file(self):
 
@@ -1131,5 +1171,44 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         hlp_file = os.path.join(hlp_directory, help_filename)
         hlp_file = os.path.normpath(hlp_file)
         self.load_text_with_bold_first_line (hlp_file)
+    
+    def find_latest_log(self, directory):
+
+        if not os.path.exists(self.txtPathToPKL.text()):
+            return False
+        
+        pattern = re.compile(r'log_pkl_pt_(\d{6}_\d{6})\.txt$')
+        latest_file = None
+        latest_timestamp = None
+    
+        for filename in os.listdir(directory):
+            match = pattern.match(filename)
+            if match:
+                timestamp = match.group(1)
+                if latest_timestamp is None or timestamp > latest_timestamp:
+                    latest_timestamp = timestamp
+                    latest_file = filename
+    
+        return os.path.join(directory, latest_file) if latest_file else None
+
+    def extract_parameters(self, file_path):
+        params = {
+            "Maximal walking path on road": 0,
+            "Maximal walking path on air": 0
+        }
+    
+        if not file_path or not os.path.exists(file_path):
+            return params
+    
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                for key in params.keys():
+                    if line.startswith(key):
+                        try:
+                            params[key] = int(line.split(":", 1)[1].strip())
+                        except ValueError:
+                            pass
+    
+        return params
         
 

@@ -14,7 +14,9 @@ from qgis.core import (QgsProject,
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
-                          QVariant)
+                          QVariant,
+                          QRegExp
+                          )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
@@ -23,7 +25,7 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                              QMessageBox
                              )
 
-from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtGui import QDesktopServices, QRegExpValidator
 from PyQt5 import uic
 
 from GTFS import GTFS
@@ -52,6 +54,20 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
+        
+        fix_size = 15* self.txtMaxPathRoad.fontMetrics().width('x')
+        self.txtMaxPathRoad.setFixedWidth(fix_size)
+        self.txtMaxPathAir.setFixedWidth(fix_size)
+
+        # [1-600]
+        regex = QRegExp(r"^(?:[1-9]|[1-9][0-9]|[1-5][0-9]{2}|600)$")
+
+
+        int_validator = QRegExpValidator(regex)
+        self.txtMaxPathRoad.setValidator(int_validator)
+        self.txtMaxPathAir.setValidator(int_validator)
+
+        
 
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
@@ -286,6 +302,8 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.textLog.append(f"<a> Layer of roads: {self.config['Settings']['Roads_pkl']}</a>")
         self.textLog.append(f"<a> Layer of buildings: {self.layer_buildings_path}</a>")
+        self.textLog.append(f"<a> Maximal walking path on road: {self.config['Settings']['MaxPathRoad_pkl']}</a>")
+        self.textLog.append(f"<a> Maximal walking path on air: {self.config['Settings']['MaxPathAir_pkl']}</a>")
         self.textLog.append(f"<a> GTFS folder: {self.config['Settings']['PathToGTFS_pkl']}</a>")
         self.textLog.append(f"<a> Folder to store transit database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
 
@@ -330,6 +348,12 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'Layer_field_pkl' not in self.config['Settings']:
             self.config['Settings']['Layer_field_pkl'] = ''
 
+        if 'MaxPathRoad_pkl' not in self.config['Settings']:
+            self.config['Settings']['MaxPathRoad_pkl'] = '400'    
+
+        if 'MaxPathAir_pkl' not in self.config['Settings']:
+            self.config['Settings']['MaxPathAir_pkl'] = '400'        
+
     # update config file
 
     def saveParameters(self):
@@ -342,6 +366,8 @@ class form_pkl(QDialog, FORM_CLASS):
         self.config['Settings']['Roads_pkl'] = self.cbRoads.currentText()
         self.config['Settings']['Layer_pkl'] = self.cmbLayers.currentText()
         self.config['Settings']['Layer_field_pkl'] = self.cmbLayers_fields.currentText()
+        self.config['Settings']['MaxPathRoad_pkl'] = self.txtMaxPathRoad.text()
+        self.config['Settings']['MaxPathAir_pkl'] = self.txtMaxPathAir.text()
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
@@ -353,10 +379,10 @@ class form_pkl(QDialog, FORM_CLASS):
         self.txtPathToGTFS.setText(self.config['Settings']['PathToGTFS_pkl'])
 
         #self.cmbLayers.setCurrentText(self.config['Settings']['Layer_pkl'])
-        self.cmbLayers_fields.setCurrentText(
-            self.config['Settings']['Layer_field_pkl'])
-        self.txtPathToProtocols.setText(
-            self.config['Settings']['PathToProtocols_pkl'])
+        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_pkl'])
+        self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_pkl'])
+        self.txtMaxPathRoad.setText(self.config['Settings']['MaxPathRoad_pkl'])
+        self.txtMaxPathAir.setText(self.config['Settings']['MaxPathAir_pkl'])
 
         if os.path.isfile(self.config['Settings']['Roads_pkl']):
             self.cbRoads.addItem(self.config['Settings']['Roads_pkl'])
@@ -477,6 +503,8 @@ class form_pkl(QDialog, FORM_CLASS):
         self.break_on = False
         
         layer_origins_field = self.config['Settings']['Layer_field_pkl']
+        MaxPathRoad = self.config['Settings']['MaxPathRoad_pkl']
+        MaxPathAir = self.config['Settings']['MaxPathAir_pkl']
 
         QApplication.processEvents()
 
@@ -506,6 +534,8 @@ class form_pkl(QDialog, FORM_CLASS):
                                  self.layer_building,
                                  self.layer_road,
                                  layer_origins_field,
+                                 MaxPathRoad,
+                                 MaxPathAir,
                                  )
                 res = calc_GTFS.correcting_files()
 
@@ -514,7 +544,6 @@ class form_pkl(QDialog, FORM_CLASS):
                 if res == 1:
 
                     calc_PKL = PKL(self,
-                                   dist=600,
                                    path_to_pkl = pkl_path,
                                    path_to_GTFS = gtfs_path,
                                    layer_buildings = self.layer_building,

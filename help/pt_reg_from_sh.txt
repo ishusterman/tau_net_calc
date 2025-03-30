@@ -1,7 +1,8 @@
-Transit accessibility, Region maps: From service locations, scheduled-based departure
+Transit accessibility, Region maps: From service locations, scheduled-based departure:
 
-The default FROM region map for the fixed time departure presents the total number of buildings that a traveler can reach by public transport from each of the region’s buildings starting the trip in respect to the transit schedule around the building. 
+The FROM region maps for the schedule-based departure time present the aggregate characteristics of buildings that a traveler who knows transit timetable and starts to guarantee the fastest trip, can reach by public transport from each of the region’s buildings. 
 
-Additional maps present sum of buildings’ attribute values, for each of the selected attributes, like the total number of accessible jobs. 
+The default is a map of the total number of buildings that can be reached. Additional maps can present sum of buildings’ attribute values, for each of the selected attributes, like the total number of accessible jobs.  
 
 The total trip duration cannot be longer than the given maximum travel time.   
+

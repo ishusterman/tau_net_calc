@@ -277,6 +277,7 @@ def process_walking_stage(max_time,
                           ):
 
     marked_stop_copy = marked_stop.copy()
+    count_rewrite = 0 
 
     for p in marked_stop_copy:
 
@@ -301,6 +302,14 @@ def process_walking_stage(max_time,
                 pi_label_k_p_dash = -1
 
             # this line is "don't rewrite founded bus trip to footleg"
+
+            #experiment
+            #if pi_label_k_p_dash != - 1 and pi_label_k_p_dash[0] != 'walking':
+            #    new_p_dash_time = label_k_p + to_pdash_time
+            #    if max_time > new_p_dash_time:
+            #        count_rewrite += 1
+
+            #!!!!!!!!!!!!!!!!!!experiment!!!!!!!!!!!!!!
             if pi_label_k_p_dash != - 1 and pi_label_k_p_dash[0] != 'walking':
                 continue
 
@@ -308,6 +317,8 @@ def process_walking_stage(max_time,
 
             if max_time < new_p_dash_time:
                 continue
+            
+            
 
             # veryfy cause if exist solve for this p_dash (not was better?)
             if pi_label_k_p_dash != -1 and pi_label_k_p_dash[0] == "walking" and new_p_dash_time > pi_label_k_p_dash[4]:
@@ -325,6 +336,8 @@ def process_walking_stage(max_time,
             if save_marked_stop:
                 marked_stop.append(p_dash)
                 marked_stop_dict[p_dash] = 1
+    
+    print (f'count_rewrite {count_rewrite}')
 
 # оптимизируем - заменяем остановки на которые найдены проезды на более быстрые пещеходные проходы
 """

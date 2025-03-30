@@ -67,6 +67,8 @@ def post_processing(DESTINATION,
 
     pareto_set = []
 
+    count_print = 0
+
     if not rounds_inwhich_desti_reached:
         return None
 
@@ -85,6 +87,7 @@ def post_processing(DESTINATION,
             transfer_needed = 0
 
         journey = []
+        
         stop = DESTINATION
 
         walking_stops = []
@@ -105,12 +108,16 @@ def post_processing(DESTINATION,
                 if walking_stops != []:  # previous step was also walking
 
                     if stop in walking_stops:
+                        
                         walking_stops = []
                         journey = []
                         break
+                        
                     else:
+                        
                         walking_stops.append(stop)
                         stop = pi_label[k][stop][1]
+                        
                 else:
                     walking_stops.append(stop)
                     stop = pi_label[k][stop][1]
@@ -160,6 +167,10 @@ def post_processing(DESTINATION,
             if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
                 if append:
                     pareto_set.append((transfer_needed, duration, end_time, journey))
+
+                    
+                    
+                    
                     
 
     if len(pareto_set) == 0:
@@ -235,6 +246,7 @@ def post_processingAll(
         mode
         ) -> tuple:
     newDict = dict()
+    count_print = 0
 
     for p_i in list_stops:
 
@@ -262,6 +274,10 @@ def post_processingAll(
             total_time_to_dest, transfers, pareto_set, min_end_time = get_optimal_journey(pareto_set)
 
         newDict[p_i] = [SOURCE, D_TIME, total_time_to_dest, pareto_set, transfers, min_end_time]
+
+        if has_consecutive_walking (pareto_set) and count_print < 1200: 
+                        print (pareto_set)
+                        count_print +=1
 
     return newDict
 
@@ -331,3 +347,25 @@ def get_earliest_trip_new(stoptimes_dict,
             return f'{route}_{trip_idx}', stoptimes_dict[route][trip_idx]
 
     return -1, -1  # No trip is found after arrival_time_at_pi
+
+
+def has_consecutive_walking(journey):
+    for i in range(len(journey) - 1):
+        if isinstance(journey[i], tuple) and isinstance(journey[i + 1], tuple):
+            if journey[i][0] == 'walking' and journey[i+1][0] == 'walking':
+                return True
+    return False
+
+"""
+def has_consecutive_walking(journey):
+    count = 0
+    for segment in journey:
+        if segment[0] == 'walking':
+            count += 1
+            if count == 2:
+                return True
+        else:
+            count = 0
+    return False"
+"""
+

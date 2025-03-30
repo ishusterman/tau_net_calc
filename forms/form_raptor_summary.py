@@ -33,11 +33,19 @@ class RaptorSummary(RaptorDetailed):
         self.ParametrsShow()
 
     def on_help_button_clicked(self):
-        #current_dir = os.path.dirname(os.path.abspath(__file__))
-        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        #file = os.path.join(module_path, 'raptor_map.html')
-        #webbrowser.open(f'file:///{file}')
+        
         url = "https://ishusterman.github.io/tutorial/raptor_map.html"
+        
+        if self.mode == 1 and not(self.timetable_mode):
+            section = "accessibility-from-every-location-in-the-region-fixed-time-departure"
+        
+        if self.mode == 2 and not(self.timetable_mode):
+            section = "accessibility-to-every-location-in-the-region-fixed-time-arrival"
+
+        if self.timetable_mode:
+            section = "region-accessibility-for-the-schedule-based-departure-or-arrival"
+                        
+        url = f'{url}#{section}'
         webbrowser.open(url)
 
     def EnableComboBox(self, state):

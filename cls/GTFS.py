@@ -11,7 +11,6 @@ from pyproj import Geod
 
 from PyQt5.QtWidgets import QApplication
 
-from footpath_on_road import footpath_on_road
 from footpath_on_projection import cls_footpath_on_projection
 from converter_layer import MultiLineStringToLineStringConverter
 from common import convert_meters_to_degrees, getDateTime, time_to_seconds, seconds_to_time
@@ -27,12 +26,14 @@ class GTFS ():
                  layer_origins,
                  layer_road,
                  layer_origins_field="",
+                 MaxPathRoad = "400",
+                 MaxPathAir = "400"
                  ):
         self.pkl_path = pkl_path
         self.__path_to_file = path_to_file
         self.__path_to_GTFS = path_to_GTFS
-        self.__zip_name = f'{path_to_file}/gtfs_cut.zip'
-        self.__directory = path_to_file
+        self.MaxPathRoad = int(MaxPathRoad)
+        self.MaxPathAir = int(MaxPathAir)
         self.parent = parent
         self.layer_origins = layer_origins
         self.layer_road = layer_road
@@ -611,7 +612,7 @@ class GTFS ():
 
         path_to_stops = self.__path_to_file
 
-        footpath_on_projection = cls_footpath_on_projection(self.parent)
+        footpath_on_projection = cls_footpath_on_projection(self.parent, self.MaxPathRoad)
         new_layer = footpath_on_projection.make_new_layer_with_projections(self.layer_road,
                                                                            self.layer_origins,
                                                                            self.layer_origins_field,
@@ -917,8 +918,8 @@ class GTFS ():
         stops = self.create_stops_gpd()
         buildings = self.layer_origins
 
-        dist = 600
-        dist_m = 600
+        dist = self.MaxPathAir
+        dist_m = self.MaxPathAir
         self.crs = buildings.crs()
         units = self.crs.mapUnits()
         self.crs_grad = (units == 6)
