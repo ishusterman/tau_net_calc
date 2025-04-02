@@ -9,17 +9,12 @@ from qgis.core import (
     QgsProject,
     QgsVectorLayer,
     QgsVectorLayerJoinInfo,
-    QgsSymbol,
     QgsGraduatedSymbolRenderer,
     QgsRendererRange,
     QgsLayerTreeLayer,
-    QgsWkbTypes
 )
 
-from qgis.core import QgsStyle
-
 from qgis.utils import iface
-
 
 class visualization:
     def __init__(self,
@@ -27,10 +22,12 @@ class visualization:
                  layer_buildings_name = "",
                  mode = "",
                  fieldname_layer = "",
-                 mode_compare = False
+                 mode_compare = False,
+                 schedule_mode = False
                  ):
 
         self.mode = mode
+        self.schedule_mode = schedule_mode
         self.mode_compare = mode_compare
         
 
@@ -103,7 +100,7 @@ class visualization:
         return gradient
 
     def add_thematic_map(self, path_protokol, aliase, set_min_value=float('inf'), type_compare = ''):
-              
+                      
         self.type_compare = type_compare
         self.path_protokol = os.path.normpath(path_protokol)
         self.file_name = os.path.splitext(os.path.basename(path_protokol))[0]
@@ -148,15 +145,18 @@ class visualization:
                 parent_group.insertChildNode(
                     0, QgsLayerTreeLayer(self.protocol_layer))
 
-            """
-            # filter on first value Origin_ID
             
-            if self.mode == 2: # AREA
-                first_feature = next(self.protocol_layer.getFeatures())
-                origin_id_value = first_feature['Origin_ID']
-                expression = f'"Origin_ID" = {origin_id_value}'
-                self.protocol_layer.setSubsetString(expression)
-            """
+            # if variation Origin_ID > 1 thne filter on first value Origin_ID 
+            
+            if self.mode == 2 and self.schedule_mode: # AREA
+                
+                unique_count = len(self.protocol_layer.uniqueValues(self.protocol_layer.fields().indexFromName("Origin_ID")))    
+                
+                if unique_count > 1:
+                    first_feature = next(self.protocol_layer.getFeatures())
+                    origin_id_value = first_feature['Origin_ID']
+                    expression = f'"Origin_ID" = {origin_id_value}'
+                    self.protocol_layer.setSubsetString(expression)
 
             self.max_value = 0
             self.max_abs_value = 0
@@ -216,15 +216,12 @@ class visualization:
         if self.type_compare == "RatioRelative":
             style_filename = "RatioRelative.qml"
 
-        #print (self.type_compare)    
-        #print (self.style_file)    
-
         self.style_file = os.path.normpath(os.path.join(self.style_directory, style_filename))
         layer = self.layer_clone
 
         if self.type_compare == "DifferenceRegion":
             if self.max_abs_value > 0:
-                print (self.max_abs_value)
+                
                 new_renderer = self.get_render_DifferenceRegion()
                 layer.setRenderer(new_renderer)
                 layer.triggerRepaint()
@@ -241,8 +238,7 @@ class visualization:
     
         renderer = layer.renderer()
         ranges = renderer.ranges()
-
-        print (self.max_abs_value)
+        
         new_max = self.round_up_to_nearest(self.max_abs_value)  # Максимальное абсолютное значение, округлённое вверх
         new_min = -new_max  # Симметричный минимум
         num_classes = 9  # Требуется 9 диапазонов
@@ -255,8 +251,6 @@ class visualization:
         mid_color = ranges[len(ranges) // 2].symbol().color()
         end_color = ranges[-1].symbol().color()
         colors = self.generate_gradient(start_color, mid_color, end_color, num_classes)
-
-        print (colors)
 
         for i in range(num_classes):
             

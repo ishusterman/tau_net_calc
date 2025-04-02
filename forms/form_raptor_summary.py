@@ -19,7 +19,7 @@ class RaptorSummary(RaptorDetailed):
                  timetable_mode,
                  ):
         super().__init__(parent, mode, protocol_type, title, timetable_mode)
-
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.parent = parent
 
         self.fillComboBoxWithLayerFields2()

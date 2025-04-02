@@ -37,6 +37,7 @@ FORM_CLASS, _ = uic.loadUiType(
 class form_relative(QDialog, FORM_CLASS):
     def __init__(self, title, mode):
         super().__init__()
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setModal(False)
         self.setWindowFlags(Qt.Window)

@@ -25,18 +25,19 @@ from qgis import processing
 from common import getDateTime, convert_meters_to_degrees
 
 class cls_clean_visualization(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="Voronoi and Hexagons task"):
+    def __init__(self, parent, begin_computation_time, layer, folder_name, mode, task_name="Voronoi and Hexagons task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
+        self.mode = mode
         self.exception = None
         self.break_on = False
         self.parent.progressBar.setMaximum(25)
-        self.spacing = [50*math.sqrt(3), 100*math.sqrt(3), 200*math.sqrt(3), 400*math.sqrt(3)]
-        if self.parent.add_hex != "" and int (self.parent.add_hex) not in (50,100,200,400):
-            self.spacing.append(int(self.parent.add_hex) * math.sqrt(3))
+        self.spacing = [50*math.sqrt(3), 100*math.sqrt(3), 200*math.sqrt(3), 400*math.sqrt(3), 800*math.sqrt(3)]
+        if self.mode == 2:
+            self.spacing = [int (self.parent.add_hex) *math.sqrt(3)]
 
         #self.spacing = [800]
         self.layer_result_list = []
@@ -71,7 +72,8 @@ class cls_clean_visualization(QgsTask):
                 self.dist_buffer, first_point.y())
 
         #############################################
-        self.Voronoi()
+        if self.mode == 1:
+            self.Voronoi()
         #############################################
         if self.break_on:
                 return 0

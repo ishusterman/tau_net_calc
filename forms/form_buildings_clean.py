@@ -33,24 +33,19 @@ from PyQt5 import uic
 from common import get_qgis_info, check_file_parameters_accessibility
 from buildings_clean import cls_clean_buildings
 
-#FORM_CLASS, _ = uic.loadUiType(os.path.join(
-#    os.path.dirname(__file__), 'visualization_clean.ui'))
-
 FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'visualization_clean.ui')
+    os.path.join(os.path.dirname(__file__), '..', 'UI', 'buildings_clean.ui')
 )
 
 class form_buildings_clean(QDialog, FORM_CLASS):
     def __init__(self, title):
         super().__init__()
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
-
-        self.lblAddHex.setVisible(False)
-        self.txtAddHex.setVisible(False)
 
         self.setWindowTitle(title)
         self.toolButtonBuildings.setVisible(False)
@@ -308,7 +303,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
     def show_info(self):
         
         html = """
-        <b>The layer of buildings is topologically cleaned in four steps: :</b>  <br />
+        <b>The layer of buildings is topologically cleaned in four steps:</b>  <br /><br />
         <span style="color: grey;">
         1. The <b>delete holes</b> algorithm is employed to delete holes in the buildings, see 
         <a href="https://docs.qgis.org/3.34/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#qgisdeleteholes" target="_blank">QGIS Delete Holes documentation</a>. <br />

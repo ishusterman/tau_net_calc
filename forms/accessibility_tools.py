@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from PyQt5.QtWidgets import (QTreeWidget,
+from PyQt5.QtWidgets import (QApplication,
+                             QTreeWidget,
                              QTreeWidgetItem,
                              QVBoxLayout,
                              QWidget
@@ -8,6 +9,7 @@ from qgis.PyQt.QtGui import QIcon, QFont
 import os
 import webbrowser
 from qgis.core import QgsProject
+
 
 from .form_raptor_detailed import RaptorDetailed
 from .form_raptor_summary import RaptorSummary
@@ -137,6 +139,16 @@ class AccessibilityTools(QWidget):
         self.setLayout(layout)
         self.tree_widget.itemDoubleClicked.connect(self.on_tree_item_clicked)
 
+    """ Проверяет, есть ли уже открытое окно с указанным заголовком. """
+    def get_existing_window(self, title):
+        for widget in QApplication.topLevelWidgets():
+            if widget.windowTitle() == title:
+                widget.raise_()
+                widget.activateWindow()
+                widget.show()
+                return widget
+        return None
+    
     def on_tree_item_clicked(self, item, column):
 
         if item == self.item1:
@@ -148,132 +160,171 @@ class AccessibilityTools(QWidget):
             webbrowser.open(url)
 
         if item == self.item2:
-            roads_clean = form_roads_clean(
-                title="Data preprocessing. Clean road network")
-            roads_clean.exec_()
+            title="Data preprocessing. Clean road network"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                roads_clean = form_roads_clean(title = title)
+                roads_clean.exec_()
 
         if item == self.item20:
-            buildings_clean = form_buildings_clean(
-                title="Data preprocessing. Clean layer of buildings")
-            buildings_clean.exec_()
+            title="Data preprocessing. Clean layer of buildings"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                buildings_clean = form_buildings_clean( title = title)
+                buildings_clean.exec_()
 
         if item == self.item19:
-            visualization_clean = form_visualization_clean(
-                title="Data preprocessing. Build visualization layers")
-            visualization_clean.exec_()    
+            title="Data preprocessing. Build visualization layers"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                visualization_clean = form_visualization_clean(title = title)
+                visualization_clean.exec_()    
 
         if item == self.item3:
-            pkl = form_pkl(
-                title="Construct databases. Transit routing database")
-            pkl.show()
+            title="Construct databases. Transit routing database"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                pkl = form_pkl(title = title)
+                pkl.show()
 
         if item == self.item17:
-            pkl_car = form_pkl_car(
-                title="Construct databases. Car routing database")
-            # pkl_car.textInfo.setPlainText("Description process of building CAR dictionary (pkl)")
-            pkl_car.show()
+            title="Construct databases. Car routing database"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                pkl_car = form_pkl_car(title = title)
+                pkl_car.show()
 
         if item == self.item4:
-            raptor_detailed = RaptorDetailed(self, mode=1,
+            title="Transit accessibility. Service area maps. From service locations – Fixed-time departure"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_detailed = RaptorDetailed(self, mode=1,
                                              protocol_type=2,
-                                             title="Transit accessibility. Service area maps. From service locations – Fixed-time departure",
+                                             title= title,
                                              timetable_mode=False)
-            #raptor_detailed.textInfo.setPlainText("")
-            raptor_detailed.show()
+                raptor_detailed.show()
 
         if item == self.item5:
-            raptor_detailed = RaptorDetailed(self, mode=1,
+            title="Transit accessibility. Service area maps. From service locations – Schedule-based departure"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_detailed = RaptorDetailed(self, mode=1,
                                              protocol_type=2,
-                                             title="Transit accessibility. Service area maps. From service locations – Schedule-based departure",
+                                             title=title,
                                              timetable_mode=True)
-            #raptor_detailed.textInfo.setPlainText("")
-            raptor_detailed.show()
+                raptor_detailed.show()
 
         if item == self.item6:
-            raptor_detailed = RaptorDetailed(self, mode=2,
+            title="Transit accessibility. Service area maps. To service locations – Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_detailed = RaptorDetailed(self, mode=2,
                                              protocol_type=2,
-                                             title="Transit accessibility. Service area maps. To service locations – Fixed-time arrival",
+                                             title=title,
                                              timetable_mode=False)
-            #raptor_detailed.textInfo.setPlainText("")
-            raptor_detailed.show()
+                raptor_detailed.show()
 
         if item == self.item7:
-            raptor_detailed = RaptorDetailed(self, mode=2,
+            title="Transit accessibility. Service area maps. To service locations – Schedule-based arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_detailed = RaptorDetailed(self, mode=2,
                                              protocol_type=2,
-                                             title="Transit accessibility. Service area maps. To service locations – Schedule-based arrival",
+                                             title=title,
                                              timetable_mode=True)
-            #raptor_detailed.textInfo.setPlainText("")
-            raptor_detailed.show()
+                raptor_detailed.show()
 
         if item == self.item8:
-            raptor_summary = RaptorSummary(self, mode=1,
+            title="Transit accessibility. Region maps. From every location – Fixed-time departure"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_summary = RaptorSummary(self, mode=1,
                                            protocol_type=1,
-                                           title="Transit accessibility. Region maps. From every location – Fixed-time departure",
+                                           title=title,
                                            timetable_mode=False
                                            )
-            #raptor_summary.textInfo.setPlainText("")
-            raptor_summary.show()
+                raptor_summary.show()
 
         if item == self.item9:
-            raptor_summary = RaptorSummary(self, mode=1,
+            title="Transit accessibility. Region maps. From every location – Schedule-based departure"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_summary = RaptorSummary(self, mode=1,
                                            protocol_type=1,
-                                           title="Transit accessibility. Region maps. From every location – Schedule-based departure",
+                                           title=title,
                                            timetable_mode=True)
-            #raptor_summary.textInfo.setPlainText("")
-            raptor_summary.show()
+                raptor_summary.show()
 
         if item == self.item10:
-            raptor_summary = RaptorSummary(self, mode=2,
+            title="Transit accessibility. Region maps. To every location – Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_summary = RaptorSummary(self, mode=2,
                                            protocol_type=1,
-                                           title="Transit accessibility. Region maps. To every location – Fixed-time arrival",
+                                           title=title,
                                            timetable_mode=False)
-            #raptor_summary.textInfo.setPlainText("")
-            raptor_summary.show()
+                raptor_summary.show()
 
         if item == self.item11:
-            raptor_summary = RaptorSummary(self, mode=2,
+            title="Transit accessibility. Region maps. To every location – Schedule-based arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_summary = RaptorSummary(self, mode=2,
                                            protocol_type=1,
-                                           title="Transit accessibility. Region maps. To every location – Schedule-based arrival",
+                                           title=title,
                                            timetable_mode=True)
-            #raptor_summary.textInfo.setPlainText("")
-            raptor_summary.show()
+                raptor_summary.show()
 
         if item == self.item12:
-            car_accessibility = CarAccessibility(mode=1,
+            title="Car accessibility. Service area maps. From service locations – Fixed-time departure"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=1,
                                                  protocol_type=2,
-                                                 title="Car accessibility. Service area maps. From service locations – Fixed-time departure")
-            # car_accessibility.textInfo.setPlainText("Sample description car accessibility")
-            car_accessibility.show()
+                                                 title=title)
+                car_accessibility.show()
 
         if item == self.item13:
-            car_accessibility = CarAccessibility(mode=2,
+            title="Car accessibility. Service area maps. To service locations – Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=2,
                                                  protocol_type=2,
-                                                 title="Car accessibility. Service area maps. To service locations – Fixed-time arrival")
-            # car_accessibility.textInfo.setPlainText("Sample description car accessibility")
-            car_accessibility.show()
+                                                 title=title)
+                car_accessibility.show()
 
         if item == self.item14:
-            car_accessibility = CarAccessibility(mode=1,
+            title="Car accessibility. Region maps. From every location – Fixed-time departure"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=1,
                                                  protocol_type=1,
-                                                 title="Car accessibility. Region maps. From every location – Fixed-time departure")
-            # car_accessibility.textInfo.setPlainText("Sample description car accessibility")
-            car_accessibility.show()
+                                                 title=title)
+                car_accessibility.show()
 
         if item == self.item15:
-            car_accessibility = CarAccessibility(mode=2,
+            title="Car accessibility. Region maps. To every location – Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=2,
                                                  protocol_type=1,
-                                                 title="Car accessibility. Region maps. To every location – Fixed-time arrival")
-            # car_accessibility.textInfo.setPlainText("Sample description car accessibility")
-            car_accessibility.show()
+                                                 title=title)
+                car_accessibility.show()
 
         if item == self.item16:
-            relative = form_relative(
-                title="Compare accessibility. Service areas", mode=1)
-            #relative.textInfo.setPlainText("")
-            relative.show()
+            title="Compare accessibility. Service areas"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                relative = form_relative(
+                                        title=title, 
+                                        mode=1)
+                relative.show()
 
         if item == self.item18:
-            relative = form_relative(
-                title="Compare accessibility. Regions", mode=2)
-            #relative.textInfo.setPlainText("")
-            relative.show()       
+            title="Compare accessibility. Regions"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                relative = form_relative(
+                                        title=title, 
+                                        mode=2)
+                relative.show()       

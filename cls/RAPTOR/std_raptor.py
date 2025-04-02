@@ -277,7 +277,7 @@ def process_walking_stage(max_time,
                           ):
 
     marked_stop_copy = marked_stop.copy()
-    count_rewrite = 0 
+    #count_rewrite = 0 
 
     for p in marked_stop_copy:
 
@@ -337,7 +337,7 @@ def process_walking_stage(max_time,
                 marked_stop.append(p_dash)
                 marked_stop_dict[p_dash] = 1
     
-    print (f'count_rewrite {count_rewrite}')
+    #print (f'count_rewrite {count_rewrite}')
 
 # оптимизируем - заменяем остановки на которые найдены проезды на более быстрые пещеходные проходы
 """

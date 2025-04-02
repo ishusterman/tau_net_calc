@@ -22,7 +22,8 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
                              QFileDialog,
                              QApplication,
-                             QMessageBox
+                             QMessageBox,
+                             QButtonGroup
                              )
 
 from PyQt5.QtGui import (QRegExpValidator,
@@ -40,6 +41,7 @@ FORM_CLASS, _ = uic.loadUiType(
 class form_visualization_clean(QDialog, FORM_CLASS):
     def __init__(self, title):
         super().__init__()
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
@@ -53,7 +55,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
         
-        fix_size = 13 * self.txtAddHex.fontMetrics().width('x')
+        fix_size = 10 * self.txtAddHex.fontMetrics().width('x')
         self.txtAddHex.setFixedWidth(fix_size)
 
         #  create a regular expression instance for integers
@@ -98,10 +100,19 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.task = None
         self.already_show_info = False
 
+        # Создаем группу кнопок
+        self.button_group = QButtonGroup(self)
+        self.button_group.addButton(self.rbStandart, 1)
+        self.button_group.addButton(self.rbLength, 2)
+        self.button_group.buttonClicked.connect(self.on_radio_selected)
+        
         self.show()
         self.ParametrsShow()
         self.show_info()
-
+    
+    def on_radio_selected(self, button):
+        self.mode = self.button_group.id(button)
+        
     def get_layer_buildings(self):
         selected_item = self.cmbLayers.currentText()
         if os.path.isfile(selected_item):
@@ -186,6 +197,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.run_button.setEnabled(False)
         self.break_on = False
 
+        if not (self.check_add_hex()):
+            self.run_button.setEnabled(True)
+            return 0
+
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
@@ -197,6 +212,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         if not (self.check_type_layer_buildings()):
             self.run_button.setEnabled(True)
             return 0
+        
 
         self.saveParameters()
         self.readParameters()
@@ -222,7 +238,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         self.add_hex = self.config['Settings']['AddHex_clean-visualization']
         self.textLog.append(f"<a>Layer of buildings: {self.layer_buildings_path}</a>")
-        self.textLog.append(f"<a>Add a hexagons layer with a side length: {self.add_hex}m</a>")        
+        
+        if self.mode == 2:
+            self.textLog.append(f"<a>The layer of hexagons with a side of {self.add_hex}m</a>")        
         self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization']
         self.textLog.append(f"<a>Folder to store layers for visualization: {self.folder_name}</a>")
 
@@ -234,7 +252,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.break_on = False
 
         self.task = cls_clean_visualization(
-            self, begin_computation_time, self.layer_buildings, self.folder_name)
+            self, begin_computation_time, self.layer_buildings, self.folder_name, self.mode)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
         QApplication.processEvents()
@@ -243,11 +261,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        #current_dir = os.path.dirname(os.path.abspath(__file__))
-        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        #file = os.path.join(module_path, 'building_pkl.html')
-        #webbrowser.open(f'file:///{file}')
-        #url = "https://ishusterman.github.io/tutorial/building_pkl.html"
         url= "https://ishusterman.github.io/tutorial/building_pkl.html#building-layers-for-visualization"
         webbrowser.open(url)
 
@@ -265,7 +278,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.config['Settings']['PathToProtocols_clean-visualization'] = 'C:/'
 
         if 'AddHex_clean-visualization' not in self.config['Settings']:
-            self.config['Settings']['AddHex_clean-visualization'] = ''    
+            self.config['Settings']['AddHex_clean-visualization'] = '500'    
+
+        if 'Mode_clean-visualization' not in self.config['Settings']:
+            self.config['Settings']['Mode_clean-visualization'] = '1'    
 
     # update config file
 
@@ -276,6 +292,13 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.config['Settings']['Layer_clean-visualization'] = self.cmbLayers.currentText()
         self.config['Settings']['PathToProtocols_clean-visualization'] = self.txtPathToProtocols.text()
         self.config['Settings']['AddHex_clean-visualization'] = self.txtAddHex.text()
+
+        if self.rbStandart.isChecked():
+            self.config['Settings']['Mode_clean-visualization'] = '1'
+        else:
+            self.config['Settings']['Mode_clean-visualization'] = '2'
+
+
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
@@ -288,7 +311,13 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_clean-visualization'])
         self.txtAddHex.setText(self.config['Settings']['AddHex_clean-visualization'])
-
+        if self.config['Settings']['Mode_clean-visualization'] == '1':
+            self.rbStandart.setChecked(True)
+            self.mode = 1
+        else:
+            self.rbLength.setChecked(True)
+            self.mode = 2
+        
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
@@ -313,6 +342,13 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         return 1
 
+    def check_add_hex(self):
+
+        if self.mode == 2 and self.txtAddHex.text() == "":
+            self.setMessage(f"Value of side length is empty")
+            return False
+        
+        return True 
     def check_folder_and_file(self):
 
         if not os.path.exists(self.txtPathToProtocols.text()):
@@ -366,7 +402,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
     def show_info(self):
         
         html = """
-        <b>Data preprocessing, Build visualization layers</b><br /><br />
+        <b>Data preprocessing, Build visualization layers:</b><br /><br />
         <span style="color: grey;">Five default layers of hexagons are constructed for visualization, in 4 steps: <br />
         1. Four layers of hexagons with the side of 50, 100, 200, 400, and 800 m sides are constructed. Each layer covers the entire extent of the layer of buildings. The hexagon layers are constructed applying 
         <a href="https://docs.qgis.org/3.34/en/docs/user_manual/processing_algs/qgis/vectorcreation.html#qgiscreategrid" target="_blank">QGIS Create Grid documentation</a>. <br />

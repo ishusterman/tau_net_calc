@@ -275,9 +275,9 @@ def post_processingAll(
 
         newDict[p_i] = [SOURCE, D_TIME, total_time_to_dest, pareto_set, transfers, min_end_time]
 
-        if has_consecutive_walking (pareto_set) and count_print < 1200: 
-                        print (pareto_set)
-                        count_print +=1
+        #if has_consecutive_walking (pareto_set) and count_print < 1200: 
+        #                print (pareto_set)
+        #                count_print +=1
 
     return newDict
 

@@ -48,6 +48,7 @@ FORM_CLASS, _ = uic.loadUiType(
 class RaptorDetailed(QDialog, FORM_CLASS):
     def __init__(self, parent, mode, protocol_type, title, timetable_mode):
         super().__init__()
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
@@ -254,8 +255,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         else:
             UpperBoundMaxWalkDist = result.get("Maximal walking path on road", 0)
         
-        print (UpperBoundMaxWalkDist)
-
+        
         if UpperBoundMaxWalkDist > 0:
             self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1} (max =  {UpperBoundMaxWalkDist})')
             self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2} (max =  {UpperBoundMaxWalkDist})')

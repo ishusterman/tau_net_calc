@@ -447,7 +447,7 @@ def runRaptorWithProtocol(self,
                     filetowrite.write(protocol_header)
 
     vis = visualization(self, LayerViz, mode=protocol_type,
-                        fieldname_layer=layer_vis_field)
+                        fieldname_layer=layer_vis_field, schedule_mode = timetable_mode)
     
     if protocol_type == 2:
         
@@ -642,7 +642,7 @@ def runRaptorWithProtocol(self,
                                    set_stops
                                    )
 
-    if protocol_type == 2 and len(sources) > 1:
+    if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
         f = make_service_area_report(
             self.folder_name, self.aliase)
 
@@ -666,7 +666,7 @@ def runRaptorWithProtocol(self,
                fields_ok,
                f,
                protocol_type,
-               shift_mode
+               shift_mode,               
                )
 
     self.setMessage(f'Finished')
@@ -722,9 +722,9 @@ def write_info(self,
                fields_ok,
                f,
                protocol_type,
-               shift_mode = False
+               shift_mode = False,
                ):
-    
+        
     text = self.textLog.toPlainText()
     filelog_name = f'{self.folder_name}//log_{self.aliase}.txt'
     with open(filelog_name, "w") as file:

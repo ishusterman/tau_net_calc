@@ -44,6 +44,7 @@ FORM_CLASS, _ = uic.loadUiType(
 class form_pkl(QDialog, FORM_CLASS):
     def __init__(self, title):
         super().__init__()
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setModal(False)
         self.setWindowFlags(Qt.Window)

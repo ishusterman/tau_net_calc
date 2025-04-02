@@ -43,6 +43,7 @@ FORM_CLASS, _ = uic.loadUiType(
 class form_roads_clean(QDialog, FORM_CLASS):
     def __init__(self, title):
         super().__init__()
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
@@ -192,10 +193,6 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        #current_dir = os.path.dirname(os.path.abspath(__file__))
-        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        #file = os.path.join(module_path, 'building_pkl.html')
-        #webbrowser.open(f'file:///{file}')
         url = "https://ishusterman.github.io/tutorial/building_pkl.html#topological-cleaning-of-the-road-and-building-layers"
         webbrowser.open(url)
 
@@ -324,14 +321,14 @@ class form_roads_clean(QDialog, FORM_CLASS):
         width = image.width()
         height = image.height()
 
-        html = '<b>Clean road network</b> <br /> <br />'
+        html = '<b>Clean road network:</b> <br /> <br />'
         html += '<span style="color: grey;">The layer of roads is topologically cleaned by repeatedly applying the <b>v.clean</b> GRASS procedure, see <a href="https://grass.osgeo.org/grass-stable/manuals/v.clean.html" target="_blank">v.clean documentation</a>. The cleaning is done in three steps:<br />'
         html += '1. The <b>v.clean</b> is applied with the <b>snap</b> option to the initial layer of roads. This stage of cleaning employed the snap threshold of 1 meter.<br />'
-        html += f'<img src="{image_path1}"> <br />'
+        #html += f'<img src="{image_path1}"> <br />'
         html += '2. The <b>v.clean</b> is applied with the <b>break</b> option to the result of step 1, to break intersecting links at the points of intersection. New junctions are created at these points.<br />'
-        html += f'<img src="{image_path2}" width="{width}" height="{height}"> <br />'
+        #html += f'<img src="{image_path2}" width="{width}" height="{height}"> <br />'
         html += '3. The <b>v.clean</b> is applied with the <b>rmdupl</b> option to the results of step 2, to reveal the overlapping links. Only one of them is preserved.<br />'
-        html += f'<img src="{image_path3}"> <br />'
+        #html += f'<img src="{image_path3}"> <br />'
         html += '</span>'
         self.textInfo.setHtml(html)
         self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))

@@ -45,6 +45,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
                  title,
                  ):
         super().__init__()
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
         self.setModal(False)
         self.setWindowFlags(Qt.Window)
