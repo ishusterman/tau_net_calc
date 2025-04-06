@@ -139,10 +139,33 @@ class AccessibilityTools(QWidget):
         self.setLayout(layout)
         self.tree_widget.itemDoubleClicked.connect(self.on_tree_item_clicked)
 
+        self.titles = ["Data preprocessing. Clean road network", 
+                       "Data preprocessing. Clean layer of buildings", 
+                       "Data preprocessing. Build visualization layers",
+                       "Construct databases. Transit routing database", 
+                       "Construct databases. Car routing database", 
+                       "Transit accessibility. Service area maps. From service locations – Fixed-time departure",
+                       "Transit accessibility. Service area maps. From service locations – Schedule-based departure", 
+                       "Transit accessibility. Service area maps. To service locations – Fixed-time arrival", 
+                       "Transit accessibility. Service area maps. To service locations – Schedule-based arrival",
+                       "Transit accessibility. Region maps. From every location – Fixed-time departure", 
+                       "Transit accessibility. Region maps. From every location – Schedule-based departure", 
+                       "Transit accessibility. Region maps. To every location – Schedule-based arrival",
+                       "Transit accessibility. Region maps. To every location – Schedule-based arrival", 
+                       "Car accessibility. Service area maps. From service locations – Fixed-time departure", 
+                       "Car accessibility. Service area maps. To service locations – Fixed-time arrival",
+                       "Car accessibility. Region maps. From every location – Fixed-time departure", 
+                       "Car accessibility. Region maps. To every location – Fixed-time arrival", 
+                       "Compare accessibility. Service areas",
+                       "Compare accessibility. Regions",                        
+                       ]
+
     """ Проверяет, есть ли уже открытое окно с указанным заголовком. """
-    def get_existing_window(self, title):
+    def get_existing_window(self, titles):
         for widget in QApplication.topLevelWidgets():
-            if widget.windowTitle() == title:
+            if widget.windowTitle() in self.titles:
+                if widget.isMinimized():
+                    widget.showNormal()
                 widget.raise_()
                 widget.activateWindow()
                 widget.show()
@@ -152,11 +175,8 @@ class AccessibilityTools(QWidget):
     def on_tree_item_clicked(self, item, column):
 
         if item == self.item1:
-            #current_dir = os.path.dirname(os.path.abspath(__file__))
-            #module_path = os.path.join(current_dir, 'help', 'build', 'html')
-            #file = os.path.join(module_path, 'introduction.html')
-            #webbrowser.open(f'file:///{file}')
-            url = "https://ishusterman.github.io/tutorial/building_pkl.html"
+            
+            url = "https://ishusterman.github.io/tutorial/introduction.html"
             webbrowser.open(url)
 
         if item == self.item2:

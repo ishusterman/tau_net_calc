@@ -57,6 +57,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.setWindowTitle(title)
 
+        self.txtPathToPKL.setReadOnly(True)
+
         self.InitialNameWalk1 = "Maximum walk distance to the initial PT stop, m"
         self.InitialNameWalk2 = "Maximum walk distance at the transfer, m"
         self.InitialNameWalk3 = "Maximum walk distance from the  last PT stop, m"
@@ -251,34 +253,20 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         latest_log = self.find_latest_log (self.txtPathToPKL.text())
         result = self.extract_parameters(latest_log)
         if self.RunOnAir:
-            UpperBoundMaxWalkDist = result.get("Maximal walking path on air", 0)
+            self.UpperBoundMaxWalkDist = result.get("Maximal walking path on air", 0)
         else:
-            UpperBoundMaxWalkDist = result.get("Maximal walking path on road", 0)
+            self.UpperBoundMaxWalkDist = result.get("Maximal walking path on road", 0)
         
         
-        if UpperBoundMaxWalkDist > 0:
-            self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1} (max =  {UpperBoundMaxWalkDist})')
-            self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2} (max =  {UpperBoundMaxWalkDist})')
-            self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3} (max =  {UpperBoundMaxWalkDist})')
-
-            regex = QRegExp(fr"^(?:[1-9]|[1-9][0-9]|[1-{UpperBoundMaxWalkDist // 100 - 1}][0-9]{{2}}|{UpperBoundMaxWalkDist})$")
-            if self.txtMaxWalkDist1.text() and int(self.txtMaxWalkDist1.text()) > UpperBoundMaxWalkDist:
-                self.txtMaxWalkDist1.setText(str(UpperBoundMaxWalkDist))
-            if self.txtMaxWalkDist2.text() and int(self.txtMaxWalkDist2.text()) > UpperBoundMaxWalkDist:
-                self.txtMaxWalkDist2.setText(str(UpperBoundMaxWalkDist))
-            if self.txtMaxWalkDist3.text() and int(self.txtMaxWalkDist3.text()) > UpperBoundMaxWalkDist:
-                self.txtMaxWalkDist3.setText(str(UpperBoundMaxWalkDist))    
+        if self.UpperBoundMaxWalkDist > 0:
+            self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1} (max =  {self.UpperBoundMaxWalkDist})')
+            self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2} (max =  {self.UpperBoundMaxWalkDist})')
+            self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3} (max =  {self.UpperBoundMaxWalkDist})')
         
         else:
             self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1}')
             self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2}')
             self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3}')
-            regex = QRegExp(r"^(?:[1-9]|[1-9][0-9]|[1-3][0-9]{2}|400)$")
-
-        int_validator = QRegExpValidator(regex)
-        self.txtMaxWalkDist1.setValidator(int_validator)
-        self.txtMaxWalkDist2.setValidator(int_validator)
-        self.txtMaxWalkDist3.setValidator(int_validator)    
 
     def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
         obj_layer_fields.clear()
@@ -363,6 +351,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if not self.cmbLayers.currentText():
             self.run_button.setEnabled(True)
             self.setMessage("Choose layer")
+            return 0
+        
+        if not (self.check_max_foothpath()):
+            self.run_button.setEnabled(True)
             return 0
 
         self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAliase.text()}'
@@ -673,6 +665,37 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.handleRunOnAirClick()
 
 
+    def check_max_foothpath(self):
+
+        if self.UpperBoundMaxWalkDist > 0:
+
+            if self.txtMaxWalkDist1.text() and int(self.txtMaxWalkDist1.text()) > self.UpperBoundMaxWalkDist:
+                self.txtMaxWalkDist1.setText(str(self.UpperBoundMaxWalkDist))
+            if self.txtMaxWalkDist2.text() and int(self.txtMaxWalkDist2.text()) > self.UpperBoundMaxWalkDist:
+                self.txtMaxWalkDist2.setText(str(self.UpperBoundMaxWalkDist))
+            if self.txtMaxWalkDist3.text() and int(self.txtMaxWalkDist3.text()) > self.UpperBoundMaxWalkDist:
+                self.txtMaxWalkDist3.setText(str(self.UpperBoundMaxWalkDist)) 
+
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setTextFormat(Qt.RichText)
+            msgBox.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            msgBox.setWindowTitle("Warning")
+            msgBox.setText(
+                f"The value 'Maximum walk distance' exceeds {self.UpperBoundMaxWalkDist} meters –<br>"
+                f"the maximum allowed walking distance used for the database construction.<br>"
+                f"if you want to continue with the new value of the maximum distance,<br>"
+                f"the transit routing database must be rebuilt (see "
+                f"<a href='https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-transit-accessibility'>tutorial</a>).<br><br>"
+                f"Currently trimmed to {self.UpperBoundMaxWalkDist} meters."
+                )
+            msgBox.setStandardButtons(QMessageBox.Ok )
+            msgBox.exec_()
+           
+            return False
+
+        return True
+    
     def check_folder_and_file(self):
 
         if not os.path.exists(self.txtPathToPKL.text()):
@@ -785,6 +808,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         sources = self.get_feature_from_layer()
         if sources == 0:
             self.run_button.setEnabled(True)
+            self.textLog.clear()
+            self.tabWidget.setCurrentIndex(0)
             return 0
 
         run = True

@@ -378,7 +378,12 @@ def runRaptorWithProtocol(self,
             fields_ok.extend([field])
             # aggregate_this_fields[field] = False
             aggregate_dict_all[field] = {}
-            with open(f[field], 'w') as filetowrite:
+
+            f_curr = f["bldg"].replace(".csv", "_min_duration.csv")
+            with open(f_curr, 'w') as filetowrite:
+                filetowrite.write(protocol_header)
+            f_curr = f["bldg"].replace(".csv", "_min_endtime.csv")
+            with open(f_curr, 'w') as filetowrite:
                 filetowrite.write(protocol_header)
 
         if list_fields_aggregate != "":
@@ -443,23 +448,24 @@ def runRaptorWithProtocol(self,
                 protocol_header += f',{field}_total\n'
                 
                 f[field] = f'{self.folder_name}//{self.aliase}_{field}.csv'
-                with open(f[field], 'w') as filetowrite:
+
+                f_curr = f[field].replace(".csv", "_min_duration.csv")
+                with open(f_curr, 'w') as filetowrite:
+                    filetowrite.write(protocol_header)
+
+                f_curr = f[field].replace(".csv", "_min_endtime.csv")
+                with open(f_curr, 'w') as filetowrite:
                     filetowrite.write(protocol_header)
 
     vis = visualization(self, LayerViz, mode=protocol_type,
                         fieldname_layer=layer_vis_field, schedule_mode = timetable_mode)
     
-    if protocol_type == 2:
-        
-        f_curr = f'{self.folder_name}//{self.aliase}.csv'
-        f = f_curr
-        with open(f_curr, 'w') as filetowrite:
-            filetowrite.write(protocol_header)
+    
 
     for i in range(0, count):
 
-        # if i == 100:
-        #  break
+        #if i == 3:
+        #   break
 
         self.progressBar.setValue(i + 6)
         self.setMessage(f'Calculating №{i+1} of {count}')
@@ -493,7 +499,7 @@ def runRaptorWithProtocol(self,
 
             if raptor_mode == 1:
             
-                output = raptor(SOURCE,
+                output_endtime, output_duration = raptor(SOURCE,
                             D_TIME,
                             MAX_TRANSFER,
                             MIN_TRANSFER,
@@ -517,7 +523,7 @@ def runRaptorWithProtocol(self,
 
             else:
                 
-                output = rev_raptor(SOURCE,
+                output_endtime, output_duration = rev_raptor(SOURCE,
                                 D_TIME,
                                 MAX_TRANSFER,
                                 MIN_TRANSFER,
@@ -547,16 +553,20 @@ def runRaptorWithProtocol(self,
         
         if  timetable_mode:
             MaxExtraTime_copy = MaxExtraTime
-            final_output = {}  
+            final_output_endtime = {}  
+            final_output_duration = {}  
             cycle = 1
             while cycle <=2:
                 if cycle == 1:
-                    MaxExtraTime = MaxWaitTime 
+                    MaxExtraTime = MaxWaitTime
+                    timetable_mode = False 
+                    
                 else: 
                     MaxExtraTime = MaxExtraTime_copy
+                    timetable_mode = True
                 
                 if raptor_mode == 1:
-                    output = raptor(SOURCE,
+                    output_endtime, output_duration = raptor(SOURCE,
                             D_TIME,
                             MAX_TRANSFER,
                             MIN_TRANSFER,
@@ -578,7 +588,7 @@ def runRaptorWithProtocol(self,
                             DepartureInterval                            
                             )
                 else:
-                    output = rev_raptor(SOURCE,
+                    output_endtime, output_duration = rev_raptor(SOURCE,
                             D_TIME,
                             MAX_TRANSFER,
                             MIN_TRANSFER,
@@ -605,24 +615,45 @@ def runRaptorWithProtocol(self,
                 #for key in keys_to_remove:
                 #    del output[key]
 
-                for p_i, data in output.items():
-                    end_time = data[5]  # end_time
+                for p_i, data in output_endtime.items():
+
+                    #print (f'data {data}')
+                    #print (f'end_time {data[4]}')
+
+                    #print (f'final_output_endtime[p_i] {final_output_endtime[p_i]}')
+                    #print (f'final_output_endtime[p_i][4] {final_output_endtime[p_i][4]}')
+                    #return
+                                        
+                    end_time = data[4]  # end_time
                     
                     # Если p_i нет в final_output или найден меньший end_time, обновляем
-                    if p_i not in final_output or end_time < final_output[p_i][5]:
-                        final_output[p_i] = data
-
-                output = final_output
+                    if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4]:
+                        final_output_endtime[p_i] = data
+                                        
+                for p_i, data in output_duration.items():
+                    
+                    duration = data[1]  # duartion
+                                        
+                    # Если p_i нет в final_output или найден меньший end_time, обновляем
+                    if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
+                        final_output_duration[p_i] = data
+                    
+                output_endtime = final_output_endtime
+                output_duration = final_output_duration
                 cycle += 1
-            
-        reachedLabels = output
-
+        
         if protocol_type == 1:
+            f_new = []
             if len(fields_ok) > 0:
                 for field in fields_ok:
+                    
+                    path_file = f[field]
+                    f_curr = path_file.replace(".csv", "_min_duration.csv")
+                    f_new.append(f_curr) 
+                                        
                     make_protocol_summary(SOURCE,
-                                          reachedLabels,
-                                          f[field],
+                                          output_duration,
+                                          f_curr,
                                           grades,
                                           aggregate_dict_all[field],
                                           nearby_buildings_from_start,
@@ -630,12 +661,49 @@ def runRaptorWithProtocol(self,
                                           set_stops,
                                           field
                                           )
+                    
+                    
+                    f_curr = path_file.replace(".csv", "_min_endtime.csv")
+                    f_new.append(f_curr)
+                    make_protocol_summary(SOURCE,
+                                          output_endtime,
+                                          f_curr,
+                                          grades,
+                                          aggregate_dict_all[field],
+                                          nearby_buildings_from_start,
+                                          list_buildings_from_start,
+                                          set_stops,
+                                          field)
+             
+
 
         if protocol_type == 2:
+            
+            f_curr = f'{self.folder_name}//{self.aliase}.csv'
+            f_min_duration = f_curr.replace(".csv", "_min_duration.csv")
+            f_min_endtime = f_curr.replace(".csv", "_min_endtime.csv")
+            f = (f_min_endtime, f_min_duration) 
+        
+            with open(f_min_duration, 'w') as filetowrite:
+                filetowrite.write(protocol_header)
+
+            with open(f_min_endtime, 'w') as filetowrite:
+                filetowrite.write(protocol_header)
+            
             make_protocol_detailed(raptor_mode,
                                    D_TIME,
-                                   reachedLabels,
-                                   f_curr,
+                                   output_endtime,
+                                   f_min_endtime,
+                                   timetable_mode,
+                                   nearby_buildings_from_start,
+                                   list_buildings_from_start,
+                                   set_stops
+                                   )
+            
+            make_protocol_detailed(raptor_mode,
+                                   D_TIME,
+                                   output_duration,
+                                   f_min_duration,
                                    timetable_mode,
                                    nearby_buildings_from_start,
                                    list_buildings_from_start,
@@ -643,8 +711,13 @@ def runRaptorWithProtocol(self,
                                    )
 
     if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
-        f = make_service_area_report(
-            self.folder_name, self.aliase)
+        f_min_endtime = make_service_area_report(f_min_endtime, f'{self.aliase}_min_endtime')
+        f_min_duration = make_service_area_report(f_min_duration, f'{self.aliase}_min_duration')
+        
+        f = (f_min_endtime, f_min_duration) 
+    
+    if protocol_type == 1:
+        f = f_new
 
     QApplication.processEvents()
     if not (shift_mode):
@@ -657,6 +730,7 @@ def runRaptorWithProtocol(self,
     
         self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
+    
     write_info(self,
                Layer,
                LayerDest,
@@ -697,18 +771,13 @@ def get_available_boardings(start_time_seconds, max_delta_seconds, trans_info, s
         
     return sorted(available_departures, key=lambda x: (x[0], x[1]))
 """
-def make_service_area_report(folder_name, alias):
+def make_service_area_report(file_path, alias):
+    df = pd.read_csv(file_path)
 
-    all_data = pd.DataFrame()
+    result = df.loc[df.groupby('Destination_ID')['Duration'].idxmin()]
+    folder_name = os.path.dirname(file_path)
+    filename = os.path.join(folder_name, f"{alias}_service_area.csv")
 
-    file_pattern = rf"{folder_name}\*.csv"
-    for file in glob.glob(file_pattern):
-        df = pd.read_csv(file)
-        all_data = pd.concat([all_data, df], ignore_index=True)
-
-    result = all_data.loc[all_data.groupby('Destination_ID')[
-        'Duration'].idxmin()]
-    filename = f'{folder_name}//{alias}_service_area.csv'
     result.to_csv(filename, index=False)
     return filename
 
@@ -737,19 +806,21 @@ def write_info(self,
 
     if protocol_type == 1:
         if len(fields_ok) > 0:
-            for field in fields_ok:
-                alias = os.path.splitext(os.path.basename(f[field]))[0]
+            for item in f:
+                self.textLog.append(f'<a>{item}</a>')
+                
+                alias = os.path.splitext(os.path.basename(item))[0]
                 if not (shift_mode):
-                    vis.add_thematic_map(f[field], alias, set_min_value=0)
-                self.textLog.append(f'<a>{f[field]}</a>')
+                    vis.add_thematic_map(item, alias, set_min_value=0)
+                
 
     if protocol_type == 2:
-        self.textLog.append(f'<a>{f}</a>')
-        alias = os.path.splitext(os.path.basename(f))[0]
+        for item in f:
+            self.textLog.append(f'<a>{item}</a>')
         if not (shift_mode):
-            vis.add_thematic_map(f, alias, set_min_value=0)
-
-    
+            for item in f:
+                alias = os.path.splitext(os.path.basename(item))[0]
+                vis.add_thematic_map(item, alias, set_min_value=0)
 
     if (selected_only1 or selected_only2) and not shift_mode:
         msgBox = QMessageBox()
@@ -797,6 +868,7 @@ def make_protocol_summary(SOURCE,
                           field
                           ):
 
+    
     time_grad = grades
     # [[-1,0], [0,10],[10,20],[20,30],[30,40],[40,50],[50,61] ]
     counts = {x: 0 for x in range(0, len(time_grad))}  # counters for grades
@@ -815,8 +887,8 @@ def make_protocol_summary(SOURCE,
             if str(dest) in list_buildings_from_start:
                 continue
 
-            time_to_dest = int(round(info[2]))
-
+            time_to_dest = round(int(info[1]))
+            
             for i in range(0, len(time_grad)):
                 grad = time_grad[i]
 
@@ -827,6 +899,8 @@ def make_protocol_summary(SOURCE,
                     if field != "bldg":
                         agrregates[i] = agrregates[i] + \
                             attribute_dict.get(int(dest), 0)
+
+                        
 
         # counts[0] = counts[0] + 1 # for case time_item = 0 (from source to source)
 
@@ -919,10 +993,9 @@ def make_protocol_detailed(raptor_mode,
     (Timestamp('2023-06-30 08:36:59'), 24206, 14603, Timestamp('2023-06-30 08:33:36'), '3150_67'), 
     ('walking', 14603, 1976.0, Timedelta('0 days 00:02:03.300000'), Timestamp('2023-06-30 08:31:32.700000'))])]    
     '''     
-            duration = info[2]
-            pareto_set = info[3]
-            transfers = info[4]
-            #sarrival_time = seconds_to_time(info[5])
+            duration = info[1]
+            pareto_set = info[2]
+            transfers = info[3]
 
             if pareto_set is None or dest is None:
 

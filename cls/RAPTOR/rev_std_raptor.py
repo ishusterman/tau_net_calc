@@ -238,7 +238,7 @@ def rev_raptor(SOURCE,
         if marked_stop == deque([]):
             break
 
-    reachedLabels = post_processingAll(
+    journeys_endtime, journeys_duration = post_processingAll(
         SOURCE,
         D_TIME,
         label,
@@ -253,7 +253,7 @@ def rev_raptor(SOURCE,
         mode=2
         )
 
-    return reachedLabels
+    return journeys_endtime, journeys_duration
 
 def process_walking_stage(min_time,
                           WALKING_LIMIT,

@@ -245,9 +245,9 @@ def post_processingAll(
         MaxExtraTime,
         mode
         ) -> tuple:
-    newDict = dict()
-    count_print = 0
-
+    Dict_endtime = dict()
+    Dict_duration = dict()
+    
     for p_i in list_stops:
 
         if SOURCE == p_i:
@@ -271,18 +271,43 @@ def post_processingAll(
 
         if pareto_set != None and len(pareto_set) > 0:
             # Just one journey with minimal end time will be in pareto set
-            total_time_to_dest, transfers, pareto_set, min_end_time = get_optimal_journey(pareto_set)
+            total_time_to_dest, transfers, optimal_journey, end_time  = get_optimal_journey_endtime(pareto_set)
+            Dict_endtime[p_i] = [SOURCE, total_time_to_dest, optimal_journey, transfers, end_time]
 
-        newDict[p_i] = [SOURCE, D_TIME, total_time_to_dest, pareto_set, transfers, min_end_time]
+            total_time_to_dest, transfers, optimal_journey, end_time = get_optimal_journey_duration(pareto_set)
+            Dict_duration[p_i] = [SOURCE, total_time_to_dest, optimal_journey, transfers, end_time]
+
+        
 
         #if has_consecutive_walking (pareto_set) and count_print < 1200: 
         #                print (pareto_set)
         #                count_print +=1
 
-    return newDict
+    return Dict_endtime, Dict_duration
 
+def get_optimal_journey_duration(pareto_set):
 
-def get_optimal_journey(pareto_set):
+    # iteration over all elements in the array
+    min_duration = float('inf')
+    min_count_leg = float('inf')
+
+    for (count_leg, duration, end_time, journey) in pareto_set:
+        if duration < min_duration:
+            min_duration = duration
+            min_count_leg = count_leg
+            journey_opt = journey
+            min_end_time = end_time
+
+        # if duration is equal to the minimum, check count_leg
+        elif duration == min_duration:
+            if count_leg < min_count_leg:
+                min_count_leg = count_leg
+                min_end_time = end_time
+                journey_opt = journey
+
+    return min_duration, min_count_leg, journey_opt, min_end_time
+
+def get_optimal_journey_endtime(pareto_set):
 
     # iteration over all elements in the array
     min_duration = float('inf')
