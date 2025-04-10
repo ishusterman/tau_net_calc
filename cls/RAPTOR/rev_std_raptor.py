@@ -25,7 +25,8 @@ def rev_raptor(SOURCE,
                MaxWaitTimeTransfer,
                timetable_mode,
                MaxExtraTime,
-               departure_interval               
+               departure_interval,
+               timetable_mode_sim = False               
                ) -> list:
 
     list_stops = set()
@@ -43,7 +44,7 @@ def rev_raptor(SOURCE,
     
     if timetable_mode:
         D_TIME = D_TIME + MaxExtraTime
-    # 
+     
 
     label[0][SOURCE] = D_TIME
     Q = {}  # Format of Q is {route:stop index}
@@ -62,6 +63,10 @@ def rev_raptor(SOURCE,
         MaxWaitTime = MaxExtraTime
         min_time = np.int64(D_TIME - Maximal_travel_time - MaxExtraTime)
         TIME_START = D_TIME - departure_interval
+
+    if timetable_mode_sim:
+        MaxWaitTime = MaxExtraTime
+        min_time = np.int64(D_TIME - Maximal_travel_time)    
     
     if True:
         try:

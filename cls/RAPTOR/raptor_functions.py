@@ -131,7 +131,9 @@ def post_processing(DESTINATION,
 
         if journey != []:
             journey.reverse()
+            
             duration, start_time, end_time = get_duration(journey, mode_raptor)
+            
             
             append = True
 
@@ -155,7 +157,7 @@ def post_processing(DESTINATION,
                 
                     duration, start_time, end_time = get_duration(
                         journey, mode_raptor)
-
+                
                 if mode_raptor == 1:
                     if (duration > Maximal_travel_time) or start_time > D_Time + MaxExtraTime:
                         append = False
@@ -167,11 +169,6 @@ def post_processing(DESTINATION,
             if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
                 if append:
                     pareto_set.append((transfer_needed, duration, end_time, journey))
-
-                    
-                    
-                    
-                    
 
     if len(pareto_set) == 0:
         return None
@@ -263,6 +260,9 @@ def post_processingAll(
                                      departure_interval,
                                      MaxExtraTime,                                     
                                      )
+        
+        if p_i == "403682406":
+            print (f'p_i = 403682406 pareto_set {pareto_set}')
 
         if pareto_set == None:
             continue

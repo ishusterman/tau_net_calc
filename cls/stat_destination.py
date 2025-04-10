@@ -25,13 +25,21 @@ class DayStat_DestinationID:
         Gathers all CSV files from the immediate subdirectories of the base path.
         """
         # List directories in the base path (ignoring files)
-        subdirs = [f.path for f in os.scandir(self.base_path) if f.is_dir()]
+        #subdirs = [f.path for f in os.scandir(self.base_path) if f.is_dir()]
+
+        self.files = []  # Clear previous contents
+
+        subdirs = [os.path.normpath(f.path) for f in os.scandir(self.base_path) if f.is_dir()]
+
         
         # Iterate through each subdirectory and add CSV files to self.files
         for subdir in subdirs:
+            
             for file in os.listdir(subdir):
-                if file.endswith(".csv"):
+                if file.endswith("min_duration.csv"):
                     self.files.append(os.path.join(subdir, file))
+
+        
 
         if not self.files:
             raise ValueError(f"No CSV files found in the immediate subdirectories of the directory: {self.base_path}")

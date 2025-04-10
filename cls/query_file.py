@@ -557,13 +557,16 @@ def runRaptorWithProtocol(self,
             final_output_duration = {}  
             cycle = 1
             while cycle <=2:
+                QApplication.processEvents()
                 if cycle == 1:
                     MaxExtraTime = MaxWaitTime
-                    timetable_mode = False 
+                    timetable_mode = True
+                    timetable_mode_sim = True
                     
                 else: 
                     MaxExtraTime = MaxExtraTime_copy
                     timetable_mode = True
+                    timetable_mode_sim = False
                 
                 if raptor_mode == 1:
                     output_endtime, output_duration = raptor(SOURCE,
@@ -585,7 +588,8 @@ def runRaptorWithProtocol(self,
                             MaxWaitTimeTransfer,
                             timetable_mode,
                             MaxExtraTime,
-                            DepartureInterval                            
+                            DepartureInterval,
+                            timetable_mode_sim                            
                             )
                 else:
                     output_endtime, output_duration = rev_raptor(SOURCE,
@@ -608,6 +612,7 @@ def runRaptorWithProtocol(self,
                             timetable_mode,
                             MaxExtraTime,
                             DepartureInterval,
+                            timetable_mode_sim
                             )
 
                 #keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
@@ -665,6 +670,7 @@ def runRaptorWithProtocol(self,
                     
                     f_curr = path_file.replace(".csv", "_min_endtime.csv")
                     f_new.append(f_curr)
+                    QApplication.processEvents()
                     make_protocol_summary(SOURCE,
                                           output_endtime,
                                           f_curr,
@@ -683,13 +689,14 @@ def runRaptorWithProtocol(self,
             f_min_duration = f_curr.replace(".csv", "_min_duration.csv")
             f_min_endtime = f_curr.replace(".csv", "_min_endtime.csv")
             f = (f_min_endtime, f_min_duration) 
-        
-            with open(f_min_duration, 'w') as filetowrite:
-                filetowrite.write(protocol_header)
 
-            with open(f_min_endtime, 'w') as filetowrite:
-                filetowrite.write(protocol_header)
-            
+            if i == 0:
+                with open(f_min_duration, 'w') as filetowrite:
+                    filetowrite.write(protocol_header)
+
+                with open(f_min_endtime, 'w') as filetowrite:
+                    filetowrite.write(protocol_header)
+                        
             make_protocol_detailed(raptor_mode,
                                    D_TIME,
                                    output_endtime,
@@ -697,9 +704,10 @@ def runRaptorWithProtocol(self,
                                    timetable_mode,
                                    nearby_buildings_from_start,
                                    list_buildings_from_start,
-                                   set_stops
+                                   set_stops,
+                                   SOURCE
                                    )
-            
+            QApplication.processEvents()
             make_protocol_detailed(raptor_mode,
                                    D_TIME,
                                    output_duration,
@@ -707,7 +715,8 @@ def runRaptorWithProtocol(self,
                                    timetable_mode,
                                    nearby_buildings_from_start,
                                    list_buildings_from_start,
-                                   set_stops
+                                   set_stops,
+                                   SOURCE
                                    )
 
     if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
@@ -938,17 +947,45 @@ def make_protocol_detailed(raptor_mode,
                            timetable_mode,
                            nearby_buildings_from_start,
                            list_buildings_from_start,
-                           set_stops
+                           set_stops,
+                           SOURCE
                            ):
 
     sep = ","
     stop_symbol = "s:"
     f = protocol_full_path
 
-    write_first_line = False
-    write_b_b = False
-
+    
+    
+    
     with open(f, 'a') as filetowrite:
+
+
+        start_time = seconds_to_time(D_TIME)
+                
+
+        if raptor_mode == 1:
+                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}X{sep}0'
+        else:
+                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}0'
+
+        filetowrite.write(row + "\n")
+
+        for build, dist in nearby_buildings_from_start:
+
+            if raptor_mode == 1:
+                        finish_time = seconds_to_time(D_TIME+dist)
+                        row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{build}{sep}{finish_time}{sep}X{sep}{dist}'
+            else:
+                        finish_time = seconds_to_time(D_TIME-dist)
+                        row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}{dist}'
+
+            if build != SOURCE:
+                filetowrite.write(row + "\n")
 
         # dictInput - dict from testRaptor
         # every item dictInput : dest - key, info - value
@@ -956,49 +993,19 @@ def make_protocol_detailed(raptor_mode,
         for dest, info in dictInput.items():
 
             SOURCE = info[0]
-
-            if not write_first_line:
-
-                start_time = seconds_to_time(D_TIME)
-                
-
-                if raptor_mode == 1:
-                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}X{sep}0'
-                else:
-                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}0'
-
-                filetowrite.write(row + "\n")
-
-                for build, dist in nearby_buildings_from_start:
-
-                    if raptor_mode == 1:
-                        finish_time = seconds_to_time(D_TIME+dist)
-                        row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{build}{sep}{finish_time}{sep}X{sep}{dist}'
-                    else:
-                        finish_time = seconds_to_time(D_TIME-dist)
-                        row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}{dist}'
-
-                    if build != SOURCE:
-                        filetowrite.write(row + "\n")
-
-                write_first_line = True
-
-            '''
-    Examle info[3] = pareto_set =
-    [(0, [('walking', 2003, 24206.0, Timedelta('0 days 00:02:47'),Timestamp('2023-06-30 08:37:13')), 
-    (Timestamp('2023-06-30 08:36:59'), 24206, 14603, Timestamp('2023-06-30 08:33:36'), '3150_67'), 
-    ('walking', 14603, 1976.0, Timedelta('0 days 00:02:03.300000'), Timestamp('2023-06-30 08:31:32.700000'))])]    
-    '''     
             duration = info[1]
             pareto_set = info[2]
             transfers = info[3]
 
-            if pareto_set is None or dest is None:
 
+            '''
+    Examle pareto_set =
+    [(0, [('walking', 2003, 24206.0, Timedelta('0 days 00:02:47'),Timestamp('2023-06-30 08:37:13')), 
+    (Timestamp('2023-06-30 08:36:59'), 24206, 14603, Timestamp('2023-06-30 08:33:36'), '3150_67'), 
+    ('walking', 14603, 1976.0, Timedelta('0 days 00:02:03.300000'), Timestamp('2023-06-30 08:31:32.700000'))])]    
+    '''     
+
+            if pareto_set is None or dest is None:
                 continue
 
             '''

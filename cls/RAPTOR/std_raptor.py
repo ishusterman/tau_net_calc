@@ -27,6 +27,7 @@ def raptor(SOURCE,
            timetable_mode,
            MaxExtraTime,
            departure_interval,
+           timetable_mode_sim = False
            
            ) -> list:
 
@@ -61,6 +62,10 @@ def raptor(SOURCE,
         max_time = np.int64(D_TIME + Maximal_travel_time + MaxExtraTime)
         TIME_START = D_TIME + departure_interval
     
+    if timetable_mode_sim:
+        MaxWaitTime = MaxExtraTime
+        max_time = np.int64(D_TIME + Maximal_travel_time)
+
 
     if True:
         try:

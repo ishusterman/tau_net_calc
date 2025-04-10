@@ -5,6 +5,8 @@ import io
 import webbrowser
 import re
 import configparser
+import csv
+from datetime import datetime
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QGuiApplication
@@ -40,6 +42,7 @@ from tau_net_calc.cls.common import (getDateTime,
                     )
 from stat_destination import DayStat_DestinationID
 from stat_from_to import StatFromTo
+from TimeMarkGenerator import TimeMarkGenerator
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui')
@@ -527,8 +530,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if 'Admin_time_delta' not in self.config['Settings']:
             self.config['Settings']['Admin_time_delta'] = '900'    
 
-        if 'Admin_iteration' not in self.config['Settings']:
-            self.config['Settings']['Admin_iteration'] = '40'        
+        #if 'Admin_iteration' not in self.config['Settings']:
+        #    self.config['Settings']['Admin_iteration'] = '40'        
 
     # update config file
 
@@ -667,7 +670,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     def check_max_foothpath(self):
 
-        if self.UpperBoundMaxWalkDist > 0:
+        if self.UpperBoundMaxWalkDist > 0 and (int(self.txtMaxWalkDist1.text()) > self.UpperBoundMaxWalkDist
+                                               or int(self.txtMaxWalkDist2.text()) > self.UpperBoundMaxWalkDist
+                                               or int(self.txtMaxWalkDist3.text()) > self.UpperBoundMaxWalkDist):
 
             if self.txtMaxWalkDist1.text() and int(self.txtMaxWalkDist1.text()) > self.UpperBoundMaxWalkDist:
                 self.txtMaxWalkDist1.setText(str(self.UpperBoundMaxWalkDist))
@@ -684,7 +689,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             msgBox.setText(
                 f"The value 'Maximum walk distance' exceeds {self.UpperBoundMaxWalkDist} meters –<br>"
                 f"the maximum allowed walking distance used for the database construction.<br>"
-                f"if you want to continue with the new value of the maximum distance,<br>"
+                f"If you want to continue with the new value of the maximum distance,<br>"
                 f"the transit routing database must be rebuilt (see "
                 f"<a href='https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-transit-accessibility'>tutorial</a>).<br><br>"
                 f"Currently trimmed to {self.UpperBoundMaxWalkDist} meters."
@@ -797,7 +802,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         return ids
    
-
     def prepareRaptor(self):
         self.break_on = False
         QApplication.processEvents()
@@ -855,7 +859,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
             
             if not os.path.exists(self.folder_name):
-                if not (self.shift_ctrl_mode):
+                if not (self.shift_ctrl_mode) and not (self.shift_mode):
                     os.makedirs(self.folder_name)
             else:
                 self.setMessage(f"Folder '{self.folder_name}' already exists")
@@ -883,44 +887,66 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         )
             
             if self.shift_mode:
-                sources = [sources[0]]
-                START_TIME = time_to_seconds(self.config['Settings']['TIME'])
-                time_delta = int(self.config['Settings']['Admin_time_delta'])
-                if 'admin_t_f' in self.config['Settings']:
-                    Tf = time_to_seconds(self.config['Settings']['admin_t_f'])
-                else:
-                    Tf = time_to_seconds("20:00:00")
-                
                 self.folder_name_copy = self.folder_name
                 
-                os.makedirs(self.folder_name_copy, exist_ok=True)
+                generator = TimeMarkGenerator(
+                    start_hour=7,
+                    end_hour=19,
+                    marks_per_hour=2,
+                    n_experiments=1,
+                    )
+                times = generator.run()
+                self.textLog.append(f"Times: {times}")
                 
-                i = 0
-                while True:
-                    D_TIME = START_TIME + i * time_delta 
+                for i, source in enumerate(sources):
                 
-                    if D_TIME > Tf:
-                            break 
-                                        
-                    D_TIME_str = seconds_to_time(D_TIME)
-                    if not self.timetable_mode:
-                        if self.mode == 1:
-                            self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
-                        else:
-                            self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
-                    if self.timetable_mode:
-                       if self.mode == 1:
-                           self.textLog.append(f"<a style='font-weight:bold;'> Earliest start time: {D_TIME_str}</a>")
-                       else:
-                           self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
+                    source = [source]
+                    #if i == 3:
+                    #    break
+                    if i % 10 == 0:
+                        self.textLog.append(f"Num {i}")
+                    
+                    #START_TIME = time_to_seconds(self.config['Settings']['TIME'])
+                    #time_delta = int(self.config['Settings']['Admin_time_delta'])
+                    #if 'admin_t_f' in self.config['Settings']:
+                    #    Tf = time_to_seconds(self.config['Settings']['admin_t_f'])
+                    #else:
+                    #    Tf = time_to_seconds("20:00:00")
+                
+                    
+                
+                    #os.makedirs(self.folder_name_copy, exist_ok=True)
+                
+                    i = 0
+                    #while True:
+                    #    D_TIME = START_TIME + i * time_delta 
+                
+                    #    if D_TIME > Tf:
+                    #            break 
+                    for idx, D_TIME_str in enumerate(times):                    
+                        
+                        t = datetime.strptime(D_TIME_str, '%H:%M:%S')
+                        D_TIME = t.hour * 3600 + t.minute * 60 + t.second
+
+                        if not self.timetable_mode:
+                            if self.mode == 1:
+                                self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
+                            else:
+                                self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
+                        if self.timetable_mode:
+                            if self.mode == 1:
+                                self.textLog.append(f"<a style='font-weight:bold;'> Earliest start time: {D_TIME_str}</a>")
+                            else:
+                                self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
                 
                  
-                    postfix = i + 1 
-                    self.folder_name = os.path.join(self.folder_name_copy, f'{self.txtAliase.text()}-{postfix}')
-                    os.makedirs(self.folder_name, exist_ok=True)
+                        postfix = i + 1 
+                        self.folder_name = os.path.join(f'{self.folder_name_copy}_{source}', f'{self.txtAliase.text()}-{postfix}')
+
+                        os.makedirs(self.folder_name, exist_ok=True)
         
-                    runRaptorWithProtocol(self,
-                                  sources,
+                        runRaptorWithProtocol(self,
+                                  source,
                                   mode,
                                   protocol_type,
                                   timetable_mode,
@@ -932,20 +958,20 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   dictionary2,
                                   self.shift_mode
                                   )
-                    i += 1
+                        i += 1
                     
-                    if self.break_on:
-                        self.setMessage("Statistic computations are interrupted by user")
-                        self.textLog.append(f'<a><b><font color="red">Statistic computations are interrupted by user</font> </b></a>')
-                        self.progressBar.setValue(0)
-                        break
-                        #return 0
+                        if self.break_on:
+                            self.setMessage("Statistic computations are interrupted by user")
+                            self.textLog.append(f'<a><b><font color="red">Statistic computations are interrupted by user</font> </b></a>')
+                            self.progressBar.setValue(0)
+                            break
+                            #return 0
                     
-                base_path = self.folder_name_copy
-                output_path = os.path.join(base_path, f"stat_{self.aliase}.csv")
-                processor = DayStat_DestinationID(base_path, output_path)
-                processor.process_files()
-                self.textLog.append(f'<a href="file:///{base_path}" target="_blank" >Statistics in folder</a>')
+                    #base_path = f'{self.folder_name_copy}_{source}' # os.path.dirname(self.folder_name) #self.folder_name_copy
+                    #output_path = os.path.join(os.path.dirname(base_path), f"stat_{source}_{self.aliase}.csv")
+                    #processor = DayStat_DestinationID(base_path, output_path)
+                    #processor.process_files()
+                    #self.textLog.append(f'<a href="file:///{base_path}" target="_blank" >Statistics in folder</a>')
 
             if self.shift_ctrl_mode:
                 if  os.path.exists(f'{self.folder_name}_from'):  

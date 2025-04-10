@@ -165,9 +165,10 @@ class cls_footpath_on_projection:
             # searching for the nearest point on the line
             dist, min_dist_point, next_vertex_index, left_or_right = line_geom.closestSegmentWithContext(
                 polygon_geom)
-
+            
             # if the distance is smaller than the minimum, we update the values
             if dist < min_dist:
+                
                 min_dist = dist
                 nearest_point = min_dist_point  # nearest point on the line
 
