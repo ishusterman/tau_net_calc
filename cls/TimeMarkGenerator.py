@@ -23,7 +23,10 @@ class TimeMarkGenerator:
         return [round(start_sec + s) for s in marks]
 
     def seconds_to_time_string(self, seconds):
-        return str(timedelta(seconds=seconds))
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        s = seconds % 60
+        return f"{h:02d}:{m:02d}:{s:02d}"
 
     def time_str_to_seconds(self, time_str):
         h, m, s = map(int, time_str.split(':'))
