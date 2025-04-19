@@ -37,9 +37,6 @@ def get_route_desc__route_id(path):
 def myload_all_dict(self,
                     PathToNetwork,
                     mode,
-                    exclude_routes,
-                    numbers_routes,
-                    route_dict,
                     RunOnAir,
 
                     layer_origin,
@@ -51,8 +48,9 @@ def myload_all_dict(self,
 
     path = PathToNetwork
     
-    self.setMessage("Loading walking paths ...")
-    QApplication.processEvents()
+    if self is not None:
+        self.setMessage("Loading walking paths ...")
+        QApplication.processEvents()
 
     if RunOnAir:
         filename_transfer = 'transfers_dict_air.pkl'
@@ -65,76 +63,68 @@ def myload_all_dict(self,
     
     stop_ids = pd.read_pickle(path + '/stop_ids.pkl')
     stop_ids_set = set(stop_ids)
-    self.progressBar.setValue(2)
 
-    self.setMessage("Loading transit routes ...")
-    QApplication.processEvents()
+    if self is not None:
+        self.progressBar.setValue(2)
+        self.setMessage("Loading transit routes ...")
+        QApplication.processEvents()
+
     with open(path + '/routes_by_stop.pkl', 'rb') as file:
         routes_by_stop_dict = pickle.load(file)
 
-    if exclude_routes:
-
-        filtered_routes_by_stop_dict = {}
-
-        for key, routes in routes_by_stop_dict.items():
-            filtered_routes = []
-            for route in routes:
-                exclude = False
-                for nr in numbers_routes:
-                    if route in route_dict.get(nr, '0'):
-                        exclude = True
-                        break
-                if not exclude:
-                    filtered_routes.append(route)
-            filtered_routes_by_stop_dict[key] = filtered_routes
-
-        routes_by_stop_dict = filtered_routes_by_stop_dict
-
-    self.progressBar.setValue(3)
+    if self is not None:
+        self.progressBar.setValue(3)
 
     if mode == 1:
-        self.setMessage("Loading transit stops ...")
-        QApplication.processEvents()
+        if self is not None:
+            self.setMessage("Loading transit stops ...")
+            QApplication.processEvents()
         with open(path + '/stops_dict_pkl.pkl', 'rb') as file:
             stops_dict = pickle.load(file)
 
-        self.progressBar.setValue(4)
+        if self is not None:
+            self.progressBar.setValue(4)
+            self.setMessage("Loading transit time schedule ...")
+            QApplication.processEvents()
 
-        self.setMessage("Loading transit time schedule ...")
-        QApplication.processEvents()
         with open(path + '/stoptimes_dict_pkl.pkl', 'rb') as file:
             stoptimes_dict = pickle.load(file)
 
-        self.progressBar.setValue(5)
+        if self is not None:
+            self.progressBar.setValue(5)
+            self.setMessage("Loading index ...")
+            QApplication.processEvents()
 
-        self.setMessage("Loading index ...")
-        QApplication.processEvents()
         with open(path + '/idx_by_route_stop.pkl', 'rb') as file:
             idx_by_route_stop_dict = pickle.load(file)
 
-        self.progressBar.setValue(6)
+        if self is not None:
+            self.progressBar.setValue(6)
 
     else:
-        self.setMessage("Loading transit stops ...")
-        QApplication.processEvents()
+        if self is not None:
+            self.setMessage("Loading transit stops ...")
+            QApplication.processEvents()
         with open(path + '/stops_dict_reversed_pkl.pkl', 'rb') as file:  # reversed
             stops_dict = pickle.load(file)
 
-        self.progressBar.setValue(4)
-
-        self.setMessage("Loading transit time schedule ...")
-        QApplication.processEvents()
+        if self is not None:
+            self.progressBar.setValue(4)
+            self.setMessage("Loading transit time schedule ...")
+            QApplication.processEvents()
         with open(path + '/stoptimes_dict_reversed_pkl.pkl', 'rb') as file:  # reversed
             stoptimes_dict = pickle.load(file)
 
-        self.progressBar.setValue(5)
+        if self is not None:
+            self.progressBar.setValue(5)
+            self.setMessage("Loading index ...")
+            QApplication.processEvents()
 
-        self.setMessage("Loading index ...")
-        QApplication.processEvents()
         with open(path + '/rev_idx_by_route_stop.pkl', 'rb') as file:
             idx_by_route_stop_dict = pickle.load(file)
 
-        self.progressBar.setValue(6)
+        if self is not None:
+            self.progressBar.setValue(6)
 
     footpath_on_air_b_b = None
     footpath_on_projection = None
@@ -179,16 +169,17 @@ def verify_break(self,
                  fields_ok="",
                  f="",
                  protocol_type="",
-                 aliase=""):
+                 ):
 
-    if self.break_on:
+    if getattr(self, 'break_on', False):
+        if self.break_on:
 
-        self.textLog.append(f'<a><b><font color="red">Raptor Algorithm is interrupted by user</font> </b></a>')
-        time_after_computation = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.textLog.append(f'<a>Interrupted at: {time_after_computation}</a>')
+            self.textLog.append(f'<a><b><font color="red">Raptor Algorithm is interrupted by user</font> </b></a>')
+            time_after_computation = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            self.textLog.append(f'<a>Interrupted at: {time_after_computation}</a>')
 
-        if self.folder_name != "":
-            write_info(self,
+            if self.folder_name != "":
+                write_info(self,
                        Layer,
                        LayerDest,
                        False,
@@ -199,9 +190,9 @@ def verify_break(self,
                        protocol_type,
 
                        )
-        self.progressBar.setValue(0)
-        self.setMessage("Raptor Algorithm is interrupted by user")
-        return True
+            self.progressBar.setValue(0)
+            self.setMessage("Raptor Algorithm is interrupted by user")
+            return True
     return False
 
 def runRaptorWithProtocol(self,
@@ -212,17 +203,16 @@ def runRaptorWithProtocol(self,
                           D_TIME,
                           selected_only1,
                           selected_only2,
-                          aliase,
                           dictionary,
                           dictionary2,
                           shift_mode = False) -> tuple:
 
     
     count = len(sources)
-    self.progressBar.setMaximum(count + 5)
-    self.progressBar.setValue(0)
+    if hasattr(self, 'progressBar'):
+        self.progressBar.setMaximum(count + 5)
+        self.progressBar.setValue(0)
 
-    PathToNetwork = self.config['Settings']['PathToPKL']
     MAX_TRANSFER = int(self.config['Settings']['Max_transfer'])
     MIN_TRANSFER = int(self.config['Settings']['Min_transfer'])
 
@@ -259,8 +249,7 @@ def runRaptorWithProtocol(self,
     time_step_last = round((MaxTimeTravel/60) % number_bins)
 
     Layer = self.config['Settings']['Layer']
-    layer_origin_field = self.config['Settings']['Layer_field']
-
+    
     LayerDest = self.config['Settings']['LayerDest']
     layer_dest_field = self.config['Settings']['LayerDest_field']
 
@@ -284,8 +273,6 @@ def runRaptorWithProtocol(self,
         return 0, 0
     QApplication.processEvents()
 
-    # processing "exclude_routes.csv"
-    
 
     (
         stops_dict,
@@ -374,7 +361,7 @@ def runRaptorWithProtocol(self,
             protocol_header += ',bldg_total\n'
             field = "bldg"
             
-            f[field] = f'{self.folder_name}//{self.aliase}_bldg.csv'
+            f[field] = f'{self.folder_name}//{self.alias}_bldg.csv'
             fields_ok.extend([field])
             # aggregate_this_fields[field] = False
             aggregate_dict_all[field] = {}
@@ -447,7 +434,7 @@ def runRaptorWithProtocol(self,
 
                 protocol_header += f',{field}_total\n'
                 
-                f[field] = f'{self.folder_name}//{self.aliase}_{field}.csv'
+                f[field] = f'{self.folder_name}//{self.alias}_{field}.csv'
 
                 f_curr = f[field].replace(".csv", "_min_duration.csv")
                 with open(f_curr, 'w') as filetowrite:
@@ -457,8 +444,11 @@ def runRaptorWithProtocol(self,
                 with open(f_curr, 'w') as filetowrite:
                     filetowrite.write(protocol_header)
 
-    vis = visualization(self, LayerViz, mode=protocol_type,
+    if not (shift_mode):
+        vis = visualization(self, LayerViz, mode=protocol_type,
                         fieldname_layer=layer_vis_field, schedule_mode = timetable_mode)
+    else:
+        vis = None 
     
     
 
@@ -466,10 +456,10 @@ def runRaptorWithProtocol(self,
 
         #if i == 3:
         #   break
-
-        self.progressBar.setValue(i + 6)
-        self.setMessage(f'Calculating №{i+1} of {count}')
-        QApplication.processEvents()
+        if hasattr(self, 'progressBar'):
+            self.progressBar.setValue(i + 6)
+            self.setMessage(f'Calculating №{i+1} of {count}')
+            QApplication.processEvents()
         SOURCE = sources[i]
 
         if verify_break(self,
@@ -478,8 +468,7 @@ def runRaptorWithProtocol(self,
                         vis,
                         fields_ok,
                         f,
-                        protocol_type,
-                        aliase
+                        protocol_type                        
                         ):
             return 0, 0
 
@@ -622,12 +611,6 @@ def runRaptorWithProtocol(self,
 
                 for p_i, data in output_endtime.items():
 
-                    #print (f'data {data}')
-                    #print (f'end_time {data[4]}')
-
-                    #print (f'final_output_endtime[p_i] {final_output_endtime[p_i]}')
-                    #print (f'final_output_endtime[p_i][4] {final_output_endtime[p_i][4]}')
-                    #return
                                         
                     end_time = data[4]  # end_time
                     
@@ -685,7 +668,7 @@ def runRaptorWithProtocol(self,
 
         if protocol_type == 2:
             
-            f_curr = f'{self.folder_name}//{self.aliase}.csv'
+            f_curr = f'{self.folder_name}//{self.alias}.csv'
             f_min_duration = f_curr.replace(".csv", "_min_duration.csv")
             f_min_endtime = f_curr.replace(".csv", "_min_endtime.csv")
             f = (f_min_endtime, f_min_duration) 
@@ -720,8 +703,8 @@ def runRaptorWithProtocol(self,
                                    )
 
     if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
-        f_min_endtime = make_service_area_report(f_min_endtime, f'{self.aliase}_min_endtime')
-        f_min_duration = make_service_area_report(f_min_duration, f'{self.aliase}_min_duration')
+        f_min_endtime = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime')
+        f_min_duration = make_service_area_report(f_min_duration, f'{self.alias}_min_duration')
         
         f = (f_min_endtime, f_min_duration) 
     
@@ -751,9 +734,10 @@ def runRaptorWithProtocol(self,
                protocol_type,
                shift_mode,               
                )
-
-    self.setMessage(f'Finished')
-    self.progressBar.setValue(self.progressBar.maximum())
+    
+    if hasattr(self, 'progressBar'):   
+        self.setMessage(f'Finished')
+        self.progressBar.setValue(self.progressBar.maximum())
     return 1, self.folder_name
 
 """
@@ -802,11 +786,12 @@ def write_info(self,
                protocol_type,
                shift_mode = False,
                ):
-        
-    text = self.textLog.toPlainText()
-    filelog_name = f'{self.folder_name}//log_{self.aliase}.txt'
-    with open(filelog_name, "w") as file:
-        file.write(text)
+
+    if hasattr(self, 'textLog'):        
+        text = self.textLog.toPlainText()
+        filelog_name = f'{self.folder_name}//log_{self.alias}.txt'
+        with open(filelog_name, "w") as file:
+            file.write(text)
 
     if shift_mode:
         return 0
@@ -844,8 +829,8 @@ def write_info(self,
         if result == QMessageBox.Yes:
             if selected_only1:
 
-                zip_filename1 = f'{self.folder_name}//origins_{self.aliase}.zip'
-                filename1 = f'{self.folder_name}//origins_{self.aliase}.geojson'
+                zip_filename1 = f'{self.folder_name}//origins_{self.alias}.zip'
+                filename1 = f'{self.folder_name}//origins_{self.alias}.geojson'
 
                 self.setMessage(f'Zipping the layer of origins ...')
                 QApplication.processEvents()
@@ -854,8 +839,8 @@ def write_info(self,
 
             if selected_only2:
 
-                zip_filename2 = f'{self.folder_name}//destinations_{self.aliase}.zip'
-                filename2 = f'{self.folder_name}//destinations_{self.aliase}.geojson'
+                zip_filename2 = f'{self.folder_name}//destinations_{self.alias}.zip'
+                filename2 = f'{self.folder_name}//destinations_{self.alias}.geojson'
 
                 self.setMessage(f'Zipping the layer of destinations ...')
                 QApplication.processEvents()

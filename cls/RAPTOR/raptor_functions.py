@@ -261,8 +261,6 @@ def post_processingAll(
                                      MaxExtraTime,                                     
                                      )
         
-        if p_i == "403682406":
-            print (f'p_i = 403682406 pareto_set {pareto_set}')
 
         if pareto_set == None:
             continue
@@ -271,6 +269,7 @@ def post_processingAll(
 
         if pareto_set != None and len(pareto_set) > 0:
             # Just one journey with minimal end time will be in pareto set
+
             total_time_to_dest, transfers, optimal_journey, end_time  = get_optimal_journey_endtime(pareto_set)
             Dict_endtime[p_i] = [SOURCE, total_time_to_dest, optimal_journey, transfers, end_time]
 
@@ -284,6 +283,7 @@ def post_processingAll(
         #                count_print +=1
 
     return Dict_endtime, Dict_duration
+
 
 def get_optimal_journey_duration(pareto_set):
 

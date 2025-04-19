@@ -891,7 +891,7 @@ class GTFS ():
 
         points = []
 
-        filename = self.__path_to_file + 'stops.txt'
+        filename = os.path.join(self.__path_to_file, 'stops.txt')
         with open(filename, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
             
@@ -933,7 +933,7 @@ class GTFS ():
             geom = feature.geometry()
 
             centroid = geom.centroid().asPoint()
-            centroids_buildings.append((feature['osm_id'], Point(centroid)))
+            centroids_buildings.append((feature[self.layer_origins_field], Point(centroid)))
 
         centroids_coords = [(centroid[1].x, centroid[1].y)
                             for centroid in centroids_buildings]
@@ -999,7 +999,7 @@ class GTFS ():
                     close_pairs.append(
                         (stops.iloc[j]['stop_id'], stop_id1, round(distance)))
 
-        filename = self.__path_to_file + 'footpath_AIR.txt'
+        filename = os.path.join(self.__path_to_file,'footpath_AIR.txt')
         with open(filename, 'w') as file:
             file.write(f'from_stop_id,to_stop_id,min_transfer_time\n')
             for pair in close_pairs:
@@ -1010,14 +1010,15 @@ class GTFS ():
                 file.write(f'{stop_id1},{id_from_points_layer},{distance}\n')
 
     def verify_break(self):
-        if self.parent.break_on:
-            self.parent.setMessage("Database construction is interrupted by user")
-            if not self.already_display_break:
-                self.parent.textLog.append(f'<a><b><font color="red">Database construction is interrupted by user</font> </b></a>')
-                self.already_display_break = True
-            self.parent.progressBar.setValue(0)
-            return True
-        return False
+        if self.parent is not None:
+            if self.parent.break_on:
+                self.parent.setMessage("Database construction is interrupted by user")
+                if not self.already_display_break:
+                    self.parent.textLog.append(f'<a><b><font color="red">Database construction is interrupted by user</font> </b></a>')
+                    self.already_display_break = True
+                self.parent.progressBar.setValue(0)
+                return True
+            return False
     
     def expand_frequencies(self, stop_times_df, frequencies_df, trips_df):
         # Preprocess frequencies_df for start and end times in seconds

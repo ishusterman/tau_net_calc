@@ -1,18 +1,21 @@
-
 import os
 import sys
 import configparser
-import qgis.core
-import qgis.PyQt
-import osgeo.gdal
 import re
 import math
 import pandas as pd
 from zipfile import ZipFile
 from datetime import datetime
-from qgis.core import QgsProject
 import shutil
 
+try:
+    import qgis.core
+    import qgis.PyQt
+    import osgeo.gdal
+    from qgis.core import QgsProject
+    IN_QGIS = True
+except ImportError:
+    IN_QGIS = False
 
 def getDateTime():
     current_datetime = datetime.now()

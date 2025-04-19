@@ -4,13 +4,17 @@ import pickle
 from io import StringIO
 from collections import defaultdict
 
-from PyQt5.QtWidgets import QApplication
+try:
+    from PyQt5.QtWidgets import QApplication
+    IN_QGIS = True
+except ImportError:
+    IN_QGIS = False
 
 from common import time_to_seconds
 
 class PKL ():
 
-    def __init__(self, parent, path_to_pkl='', path_to_GTFS='', layer_buildings='', mode_append=False):
+    def __init__(self, parent, path_to_pkl='', path_to_GTFS='', layer_buildings='', mode_append=False, building_id_field = "osm_id"):
         if path_to_GTFS == '':
             self.__path_gtfs = path_to_pkl
         else:
@@ -33,6 +37,12 @@ class PKL ():
             os.makedirs(self.__path_pkl)
 
         self.already_display_break = False
+        self.building_id_field = building_id_field
+
+        self.IN_QGIS = True
+        if self.parent == None:
+            self.IN_QGIS = False
+
 
     def build_list_stops(self):
         list_stops = pd.read_csv(
@@ -42,41 +52,47 @@ class PKL ():
         stop_ids.to_pickle(f)
 
     def create_files(self):
-
-        self.parent.progressBar.setMaximum(12)
-        self.parent.progressBar.setValue(0)
+        if self.IN_QGIS:
+            self.parent.progressBar.setMaximum(12)
+            self.parent.progressBar.setValue(0)
 
         self.load_gtfs()
-        self.parent.progressBar.setValue(1)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(1)
         if self.verify_break():
             return 0
 
         self.build_list_stops()
 
         self.__stop_pkl = self.build_stops_dict()
-        self.parent.progressBar.setValue(2)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(2)
         if self.verify_break():
             return 0
 
         self.build_stopstimes_dict()
-        self.parent.progressBar.setValue(3)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(3)
         if self.verify_break():
             return 0
 
         self.build_stop_idx_in_route()
-        self.parent.progressBar.setValue(4)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(4)
         if self.verify_break():
             return 0
 
         self.build_footpath_dict(
             self.__transfers_start_file1, "transfers_dict_air.pkl")
-        self.parent.progressBar.setValue(5)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(5)
         if self.verify_break():
             return 0
 
         self.build_footpath_dict(
             self.__transfers_start_file2, "transfers_dict_projection.pkl")
-        self.parent.progressBar.setValue(5)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(5)
         if self.verify_break():
             return 0
 
@@ -89,32 +105,38 @@ class PKL ():
         """
 
         self.build__route_by_stop()
-        self.parent.progressBar.setValue(7)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(7)
         if self.verify_break():
             return 0
 
         self.build_routes_by_stop_dict()
-        self.parent.progressBar.setValue(8)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(8)
         if self.verify_break():
             return 0
 
         self.build_reversed_stops_dict()
-        self.parent.progressBar.setValue(9)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(9)
         if self.verify_break():
             return 0
 
         self.build_reversed_stoptimes_dict()
-        self.parent.progressBar.setValue(10)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(10)
         if self.verify_break():
             return 0
 
         self.build_reverse_stoptimes_file_txt()
-        self.parent.progressBar.setValue(11)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(11)
         if self.verify_break():
             return 0
 
         self.build_rev_stop_idx_in_route()
-        self.parent.progressBar.setValue(12)
+        if self.IN_QGIS:
+            self.parent.progressBar.setValue(12)
         if self.verify_break():
             return 0
 
@@ -127,38 +149,45 @@ class PKL ():
         """
 
     def load_gtfs(self):
-        self.parent.setMessage(f'Loading GTFS ...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Loading GTFS ...')
+        if self.IN_QGIS:    
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
         self.__trips_file = pd.read_csv(
             f'{self.__path_gtfs}/trips.txt', sep=',')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
         self.__stop_times_file = pd.read_csv(
             f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str})
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
         self.__stop_times_file = pd.merge(
             self.__stop_times_file, self.__trips_file, on='trip_id')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
         self.__routes_file = pd.read_csv(
             f'{self.__path_gtfs}/routes.txt', sep=',')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
     def build_route_desc__route_id_dict(self):
 
-        self.parent.setMessage(f'Building route desciption for {route_id} ...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building route desciption for {route_id} ...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -182,8 +211,9 @@ class PKL ():
 
     def build_stops_dict(self):
 
-        self.parent.setMessage(f'Building database for from-accessibility ...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for from-accessibility ...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -208,8 +238,10 @@ class PKL ():
         return stops_dict
 
     def build_stopstimes_dict(self):
-        self.parent.setMessage(f'Building database for from-accessibility ...')
-        QApplication.processEvents()
+
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for from-accessibility ...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -223,8 +255,9 @@ class PKL ():
 
             if cycle % 500 == 0:
 
-                self.parent.setMessage(f'Building database for route {cycle} of {len_data}...')
-                QApplication.processEvents()
+                if self.IN_QGIS:
+                    self.parent.setMessage(f'Building database for route {cycle} of {len_data}...')
+                    QApplication.processEvents()
                 if self.verify_break():
                     return 0
 
@@ -265,9 +298,9 @@ class PKL ():
         
     def build_footpath_dict(self, obj_txt, file_name):
         """Build footpath dictionary with optimized performance."""
-    
-        self.parent.setMessage(f'Building transfers {file_name}...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building transfers {file_name}...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -300,8 +333,9 @@ class PKL ():
 
     def build_stop_idx_in_route(self):
 
-        self.parent.setMessage(f'Building index ...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building index ...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -329,9 +363,9 @@ class PKL ():
         return 1
 
     def build_routes_by_stop_dict(self):
-
-        self.parent.setMessage(f'Building index ...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building index ...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -359,9 +393,9 @@ class PKL ():
         return 1
 
     def build_reversed_stops_dict(self):
-
-        self.parent.setMessage(f'Building database for to-accessibility...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for to-accessibility...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -385,9 +419,9 @@ class PKL ():
         return new_lst
 
     def build_reversed_stoptimes_dict(self):
-
-        self.parent.setMessage(f'Building database for to-accessibility...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for to-accessibility...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -400,9 +434,9 @@ class PKL ():
         for cycle, (route_id, group) in enumerate(grouped_data):
 
             if cycle % 500 == 0:
-
-                self.parent.setMessage(f'Building database, route {cycle} of {len_data}...')
-                QApplication.processEvents()
+                if self.IN_QGIS:    
+                    self.parent.setMessage(f'Building database, route {cycle} of {len_data}...')
+                    QApplication.processEvents()
                 if self.verify_break():
                     return 0
 
@@ -440,8 +474,9 @@ class PKL ():
 
     def build_reverse_stoptimes_file_txt(self):
 
-        self.parent.setMessage(f'Building database for to-accessibility...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for to-accessibility...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -469,30 +504,34 @@ class PKL ():
         return 1
 
     def build_rev_stop_idx_in_route(self):
-
-        self.parent.setMessage(f'Building database for to-accessibility...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for to-accessibility...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
         reverse_stoptimes_txt = pd.read_csv(
             f'{self.__path_gtfs}/rev_stop_times.txt', sep=',', dtype={'stop_id': str})
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
         rev_stop_times_file = pd.merge(
             reverse_stoptimes_txt, self.__trips_file, on='trip_id')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
         pandas_group = rev_stop_times_file.groupby(["route_id", "stop_id"])
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
         idx_by_route_stop = {
             route_stop_pair: details.stop_sequence.iloc[0] for route_stop_pair, details in pandas_group}
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -510,9 +549,9 @@ class PKL ():
         return 1
 
     def build__route_by_stop(self):
-
-        self.parent.setMessage(f'Building database for to-accessibility...')
-        QApplication.processEvents()
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for to-accessibility...')
+            QApplication.processEvents()
         if self.verify_break():
             return 0
 
@@ -521,11 +560,12 @@ class PKL ():
         route_by_stop_dict = {id: list(routes.route_id)
                               for id, routes in stops_by_route}
         # add buildings
-
+        
+        
         for feature in self.layer_buildings.getFeatures():
-            osm_id = feature['osm_id']
+            osm_id = feature[self.building_id_field]
             route_by_stop_dict[osm_id] = []
-
+                            
         f = f'{self.__path_pkl}/routes_by_stop.pkl'
         if not (self.mode_append):
             with open(f, "wb") as pickle_file:
@@ -540,11 +580,12 @@ class PKL ():
         return 1
 
     def verify_break(self):
-        if self.parent.break_on:
-            self.parent.setMessage("Building database is interrupted by user")
-            if not self.already_display_break:
-                self.parent.textLog.append(f'<a><b><font color="red">Building database is interrupted by user</font> </b></a>')
-                self.already_display_break = True
-            self.parent.progressBar.setValue(0)
-            return True
+        if self.IN_QGIS:  
+            if self.parent.break_on:
+                self.parent.setMessage("Building database is interrupted by user")
+                if not self.already_display_break:
+                    self.parent.textLog.append(f'<a><b><font color="red">Building database is interrupted by user</font> </b></a>')
+                    self.already_display_break = True
+                self.parent.progressBar.setValue(0)
+                return True
         return False

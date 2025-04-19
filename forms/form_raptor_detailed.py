@@ -361,7 +361,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             return 0
 
         self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAliase.text()}'
-        self.aliase = self.txtAliase.text()
+        self.alias = self.txtAliase.text()
 
         self.saveParameters()
         self.readParameters()
@@ -380,7 +380,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.textLog.append(f'<a> Mode: {self.title}</a>')
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
-        self.textLog.append(f'<a> Output alias: {self.aliase}</a>')
+        self.textLog.append(f'<a> Output alias: {self.alias}</a>')
         self.textLog.append(f"<a> Transit routing database folder: {self.config['Settings']['pathtopkl']}</a>")
         self.textLog.append(f"<a> Output folder: {self.config['Settings']['pathtoprotocols']}</a>")
         
@@ -578,7 +578,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
-        self.aliase = self.txtAliase.text(
+        self.alias = self.txtAliase.text(
         ) if self.txtAliase.text() != "" else self.default_alias
 
         layer = QgsProject.instance().mapLayersByName(
@@ -874,9 +874,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             dictionary, dictionary2 = myload_all_dict(self,
                         PathToNetwork,
                         raptor_mode,
-                        exlude_routes,
-                        numbers_routes,
-                        route_dict,
                         RunOnAir,
 
                         layer_origin,
@@ -953,7 +950,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
-                                  self.aliase,
                                   dictionary,
                                   dictionary2,
                                   self.shift_mode
@@ -968,7 +964,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                             #return 0
                     
                     #base_path = f'{self.folder_name_copy}_{source}' # os.path.dirname(self.folder_name) #self.folder_name_copy
-                    #output_path = os.path.join(os.path.dirname(base_path), f"stat_{source}_{self.aliase}.csv")
+                    #output_path = os.path.join(os.path.dirname(base_path), f"stat_{source}_{self.alias}.csv")
                     #processor = DayStat_DestinationID(base_path, output_path)
                     #processor.process_files()
                     #self.textLog.append(f'<a href="file:///{base_path}" target="_blank" >Statistics in folder</a>')
@@ -1028,7 +1024,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
-                                  self.aliase,
                                   dictionary,
                                   dictionary2,
                                   self.shift_ctrl_mode
@@ -1051,9 +1046,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 dictionary, dictionary2 = myload_all_dict(self,
                         PathToNetwork,
                         raptor_mode,
-                        exlude_routes,
-                        numbers_routes,
-                        route_dict,
                         RunOnAir,
 
                         layer_origin,
@@ -1094,7 +1086,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
-                                  self.aliase,
                                   dictionary,
                                   dictionary2,
                                   self.shift_ctrl_mode
@@ -1111,7 +1102,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                            self.folder_name_from, 
                                            self.folder_name_to, 
                                            self.txtPathToProtocols.text(), 
-                                           self.aliase,                                    
+                                           self.alias,                                    
                                            timetable_mode
                                            )
                     processor.process_files()
@@ -1129,7 +1120,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
-                                  self.aliase,
                                   dictionary,
                                   dictionary2
                                   )

@@ -309,10 +309,10 @@ class form_relative(QDialog, FORM_CLASS):
             self.config['Settings']['VisLayer_relative'])[0]
         self.layer_vis_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
-        self.aliase = self.txtAliase.text()
+        self.alias = self.txtAliase.text()
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
-        self.textLog.append(f'<a> Scenario name: {self.aliase}</a>')
+        self.textLog.append(f'<a> Scenario name: {self.alias}</a>')
         self.textLog.append(f"<a>Results_1 folder: {self.config['Settings']['PathToPT_relative']}</a>")
         self.textLog.append(f"<a>Results_2 folder: {self.config['Settings']['PathToCAR_relative']}</a>")
         self.textLog.append(f"<a>Output folder: {self.config['Settings']['PathToOutput_relative']}</a>")
@@ -349,7 +349,7 @@ class form_relative(QDialog, FORM_CLASS):
         if self.cb_ratio.isChecked():
             self.mode_calc = "ratio"
             self.prepare()
-            aliase_res = f'ratio_{self.aliase}'
+            aliase_res = f'ratio_{self.alias}'
             type_compare = "RatioRelative"
             vis.add_thematic_map(self.path_output, 
                                  aliase_res, 
@@ -361,7 +361,7 @@ class form_relative(QDialog, FORM_CLASS):
         if self.cb_difference.isChecked():
             self.mode_calc = "difference"
             self.prepare()
-            aliase_res = f'diff_{self.aliase}'
+            aliase_res = f'diff_{self.alias}'
             if self.MAP_first:
                 type_compare = "DifferenceRegion"
             else:
@@ -376,7 +376,7 @@ class form_relative(QDialog, FORM_CLASS):
         if self.cb_relative_difference.isChecked():
             self.mode_calc = "relative_difference"
             self.prepare()
-            aliase_res = f'rel_diff_{self.aliase}'
+            aliase_res = f'rel_diff_{self.alias}'
 
             type_compare = "RatioRelative"
             
@@ -413,7 +413,7 @@ class form_relative(QDialog, FORM_CLASS):
 
         self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name1}_only'
         df1.to_csv(self.path_output, index=False, na_rep='NaN')
-        aliase_res = f'{self.aliase}_{self.file_name1}_only'
+        aliase_res = f'{self.alias}_{self.file_name1}_only'
         vis2.add_thematic_map(self.path_output,
                               aliase_res,
                               type_compare = "CompareFirstOnly"
@@ -438,7 +438,7 @@ class form_relative(QDialog, FORM_CLASS):
         df2 = df2[[col for col in columns_to_keep if col in df1.columns]]
 
         df2.to_csv(self.path_output, index=False, na_rep='NaN')
-        aliase_res = f'{self.aliase}_{self.file_name2}_only'
+        aliase_res = f'{self.alias}_{self.file_name2}_only'
         vis2.add_thematic_map(self.path_output,
                               aliase_res,
                               type_compare = "CompareSecondOnly"
@@ -454,7 +454,7 @@ class form_relative(QDialog, FORM_CLASS):
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
         text = self.textLog.toHtml()
-        filelog_name = f'{self.folder_name}//log_{self.aliase}.html'
+        filelog_name = f'{self.folder_name}//log_{self.alias}.html'
         with open(filelog_name, "w") as file:
             file.write(text)
         self.textLog.append(f'<a>Output</a>')
