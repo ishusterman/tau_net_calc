@@ -487,8 +487,15 @@ class PKL ():
         data_str = '\n'.join(allrows)
         df = pd.read_csv(StringIO(data_str))
 
-        df_result = df.groupby('trip_id', group_keys=False).apply(
-            self.reverse_stop_sequence)
+        #df_result = df.groupby('trip_id', group_keys=False).apply(self.reverse_stop_sequence)
+
+        df_result = (
+                    df.drop(columns='trip_id')
+                    .groupby(df['trip_id'], group_keys=False)
+                    .apply(self.reverse_stop_sequence)
+                    )
+        df_result['trip_id'] = df_result.index
+        df_result.reset_index(drop=True, inplace=True)
 
         # using StringIO again to write a DataFrame to a String
         output_str = StringIO()

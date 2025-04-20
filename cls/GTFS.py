@@ -1018,7 +1018,7 @@ class GTFS ():
                     self.already_display_break = True
                 self.parent.progressBar.setValue(0)
                 return True
-            return False
+        return False
     
     def expand_frequencies(self, stop_times_df, frequencies_df, trips_df):
         # Preprocess frequencies_df for start and end times in seconds

@@ -203,34 +203,36 @@ class visualization:
             if self.mode == 1:
                 self.slyle_Region()
     
-    def slyle_compare (self):
-
+    def slyle_compare(self):
         if self.type_compare == "CompareFirstOnly":
             style_filename = "CompareFirstOnly.qml"
-        if self.type_compare == "CompareSecondOnly":
+        elif self.type_compare == "CompareSecondOnly":
             style_filename = "CompareSecondOnly.qml"
-        if self.type_compare == "DifferenceRegion":
+        elif self.type_compare == "DifferenceRegion":
             style_filename = "DifferenceRegion.qml"
-        if self.type_compare == "DifferenceServiceAreas":
+        elif self.type_compare == "DifferenceServiceAreas":
             style_filename = "DifferenceServiceAreas.qml"
-        if self.type_compare == "RatioRelative":
+        elif self.type_compare == "RatioRelative":
             style_filename = "RatioRelative.qml"
+        else:
+            print(f"Unknown compare type: {self.type_compare}")
+            return
 
         self.style_file = os.path.normpath(os.path.join(self.style_directory, style_filename))
         layer = self.layer_clone
 
-        if self.type_compare == "DifferenceRegion":
-            if self.max_abs_value > 0:
-                
-                new_renderer = self.get_render_DifferenceRegion()
-                layer.setRenderer(new_renderer)
-                layer.triggerRepaint()
-                return
-        
+        # Особый случай для DifferenceRegion
+        if self.type_compare == "DifferenceRegion" and self.max_abs_value > 0:
+            new_renderer = self.get_render_DifferenceRegion()
+            layer.setRenderer(new_renderer)
+            layer.triggerRepaint()
+            return
         
         layer.loadNamedStyle(self.style_file)
-        layer.renderer().setClassAttribute(self.targetField_base)
+        renderer = layer.renderer()
+        renderer.setClassAttribute(self.targetField_base)
         layer.triggerRepaint()
+
 
     def get_render_DifferenceRegion(self):
         layer = self.layer_clone

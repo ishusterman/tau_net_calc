@@ -13,6 +13,9 @@ from query_file import myload_all_dict, runRaptorWithProtocol
 from common import time_to_seconds
 
 from qgis.core import QgsApplication, QgsVectorLayer, QgsProject
+from types import SimpleNamespace
+
+
 
 
 class GTFSGenerator:
@@ -60,7 +63,11 @@ class GTFSGenerator:
         self.l_length.update({
             (j, i): d for (_, i, j, d) in self.r_links[['link_id', 'from_node', 'to_node', 'length']].to_records(index=False)
         })
-                
+
+    def dict_to_namespace(self, d):
+        if isinstance(d, dict):
+            return SimpleNamespace(**{k: self.dict_to_namespace(v) for k, v in d.items()})
+        return d            
 
     def timestr2sec(self, time_string):
         try:
@@ -204,10 +211,12 @@ if __name__ == "__main__":
     QgsApplication.setPrefixPath("C:/Program Files/QGIS 3.40.2", True)
     qgs = QgsApplication([], False)
     qgs.initQgis()
+    class config:
+        def __init__(self, config_dict):
+            self.config = config_dict['config']
+            self.folder_name = config_dict['folder_name']
+            self.alias = config_dict['alias']
 
-    class MyObject:
-        pass
-    var = MyObject()
 
     ROUTES = [
     {
@@ -222,41 +231,43 @@ if __name__ == "__main__":
     }
     ]
 
-    sources = ['B1', 'B2']
-    var.config = {} 
-    var.config['Settings'] = {}
-    var.config['Settings']['Min_transfer'] = "0"  
-    var.config['Settings']['Max_transfer'] = "2"  
-    var.config['Settings']['MaxExtraTime'] = "0"  
-    var.config['Settings']['Speed'] = "3.6"  
-    var.config['Settings']['MaxWalkDist1'] = "150"  
-    var.config['Settings']['MaxWalkDist2'] = "150"  
-    var.config['Settings']['MaxWalkDist3'] = "150"  
-
-    var.config['Settings']['MaxTimeTravel'] = "20"  
-    var.config['Settings']['MaxWaitTime'] = "10"  
-    var.config['Settings']['MaxWaitTimeTransfer'] = "10"  
-    var.config['Settings']['TimeInterval'] = "1"  
-
-    var.config['Settings']['Layer'] = "RCity_Nodes"  
-    var.config['Settings']['Layer_field'] = "building_id"  
-    var.config['Settings']['LayerDest'] = "RCity_Nodes"  
-    var.config['Settings']['LayerDest_field'] = "building_id"  
     
 
-    var.config['Settings']['LayerViz'] = ""  
-    var.config['Settings']['LayerViz_field'] = ""  
-    var.config['Settings']['Field_ch'] = ""  
-    var.config['Settings']['RunOnAir'] = 'True'
-    var.folder_name = r'c:\temp\1'
-    var.alias = r'output'
+    config_dict = {
+    'config': {
+        'Settings': {
+            'Min_transfer': "0",
+            'Max_transfer': "2",
+            'MaxExtraTime': "0",
+            'Speed': "3.6",
+            'MaxWalkDist1': "150",
+            'MaxWalkDist2': "150",
+            'MaxWalkDist3': "150",
+            'MaxTimeTravel': "20",
+            'MaxWaitTime': "10",
+            'MaxWaitTimeTransfer': "10",
+            'TimeInterval': "1",
+            'Layer': "RCity_Nodes",
+            'Layer_field': "building_id",
+            'LayerDest': "RCity_Nodes",
+            'LayerDest_field': "building_id",
+            'LayerViz': "",
+            'LayerViz_field': "",
+            'Field_ch': "",
+            'RunOnAir': "True"
+        }
+    },
+    'folder_name': r'c:\temp\1',
+    'alias': 'output'
+    }
 
+    params = config(config_dict)
+    sources = ['B1', 'B2']
+    
     mode_raptor = 1
     time_start = "8:00:00"
     protocol_type = 2 
     timetable_mode = False
-
-
 
     gen = GTFSGenerator(
         path_nodes=r'c:\doc\QGIS_prj\RCity\RCity_Nodes.geojson',
@@ -270,7 +281,8 @@ if __name__ == "__main__":
     )
 
     gen.generate()
-    gen.create_output(var, 
+    
+    gen.create_output(params, 
                       mode = mode_raptor, 
                       time = time_start, 
                       protocol_type = protocol_type, 
@@ -278,4 +290,4 @@ if __name__ == "__main__":
                       sources = sources)
 
     qgs.exitQgis()
-    print("ok")
+    print("Finish")
