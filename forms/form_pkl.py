@@ -548,7 +548,8 @@ class form_pkl(QDialog, FORM_CLASS):
                                    path_to_pkl = pkl_path,
                                    path_to_GTFS = gtfs_path,
                                    layer_buildings = self.layer_building,
-                                   mode_append = False
+                                   mode_append = False,
+                                   building_id_field = layer_origins_field
                                    )
                     calc_PKL.create_files()
 

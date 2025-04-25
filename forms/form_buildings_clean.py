@@ -5,6 +5,7 @@ import configparser
 from time import sleep
 from datetime import datetime
 import glob
+import re
 
 
 from qgis.PyQt import QtCore
@@ -16,7 +17,8 @@ from qgis.core import (QgsApplication,
                        )
 
 from PyQt5.QtCore import (Qt,
-                          QEvent
+                          QEvent,
+                          QVariant
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -71,6 +73,12 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.showAllLayersInCombo_Line(self.cmbLayers)
         self.cmbLayers.installEventFilter(self)
 
+        self.cmbLayers_fields.installEventFilter(self)
+        self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
+        self.cmbLayers.currentIndexChanged.connect(
+            lambda: self.fillComboBoxFields_Id
+            (self.cmbLayers, self.cmbLayers_fields))
+
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
         self.run_button = self.buttonBox.addButton(
@@ -90,6 +98,52 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
         self.show_info()
+
+    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
+        obj_layer_fields.clear()
+        selected_layer_name = obj_layers.currentText()
+        layers = QgsProject.instance().mapLayersByName(selected_layer_name)
+
+        if not layers:
+            return
+        layer = layers[0]
+
+        fields = layer.fields()
+        osm_id_exists = False
+
+        # regular expression to check for the presence of only digit
+        digit_pattern = re.compile(r'^\d+$')
+
+        # field type and value validation
+        for field in fields:
+            field_name = field.name()
+            field_type = field.type()
+
+            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.String):
+                # add numeric fields
+                obj_layer_fields.addItem(field_name)
+                if field_name.lower() == "osm_id":
+                    osm_id_exists = True
+            elif field_type == QVariant.String:
+                # check the first value of the field for digits only
+                first_value = None
+                for feature in layer.getFeatures():
+                    first_value = feature[field_name]
+                    break  # stop after the first value
+
+                if first_value is not None and digit_pattern.match(str(first_value)):
+                    obj_layer_fields.addItem(field_name)
+                    if field_name.lower() == "osm_id":
+                        osm_id_exists = True
+
+        if osm_id_exists:
+            # iterate through all the items in the combobox and compare them with "osm_id", 
+            # ignoring the case
+            for i in range(obj_layer_fields.count()):
+                if obj_layer_fields.itemText(i).lower() == "osm_id":
+                    obj_layer_fields.setCurrentIndex(i)
+                    break
+
 
     def showAllLayersInCombo_Line(self, cmb):
         layers = QgsProject.instance().mapLayers().values()
@@ -179,8 +233,10 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         self.break_on = False
 
+        osm_id_field = self.config['Settings']['Layer_field_clean-buildings']
+        
         self.task = cls_clean_buildings(
-            self, begin_computation_time, self.layer_road, self.folder_name)
+            self, begin_computation_time, self.layer_road, self.folder_name, osm_id_field)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
         QApplication.processEvents()
@@ -209,6 +265,9 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         if 'PathToProtocols_clean-buildings' not in self.config['Settings']:
             self.config['Settings']['PathToProtocols_clean-buildings'] = 'C:/'
 
+        if 'Layer_field_clean-buildings' not in self.config['Settings']:
+            self.config['Settings']['Layer_field_clean-buildings'] = ''    
+
     # update config file
 
     def saveParameters(self):
@@ -217,6 +276,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         f = os.path.join(project_directory, 'parameters_accessibility.txt')
         self.config['Settings']['Layer_clean-buildings'] = self.cmbLayers.currentText()
         self.config['Settings']['PathToProtocols_clean-buildings'] = self.txtPathToProtocols.text()
+        self.config['Settings']['Layer_field_clean-buildings'] = self.cmbLayers_fields.currentText()
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
@@ -226,6 +286,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             self.config['Settings']['Layer_clean-buildings'])
         self.txtPathToProtocols.setText(
             self.config['Settings']['PathToProtocols_clean-buildings'])
+        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_clean-buildings'])
 
     def setMessage(self, message):
         self.lblMessages.setText(message)
@@ -233,6 +294,11 @@ class form_buildings_clean(QDialog, FORM_CLASS):
     def check_type_layer_road(self):
 
         layer = self.cmbLayers.currentText()
+
+        if layer == "":
+            self.setMessage(f"There are no open polygon layers")
+            return 0
+
         layer = QgsProject.instance().mapLayersByName(layer)[0]
 
         try:

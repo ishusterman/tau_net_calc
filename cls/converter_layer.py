@@ -3,6 +3,8 @@ from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
     QgsGeometry,
+    QgsVectorFileWriter,
+    QgsCoordinateTransformContext
 )
 from PyQt5.QtWidgets import QApplication
 
@@ -69,14 +71,26 @@ class MultiLineStringToLineStringConverter:
             self.temp_layer = None
 
     def verify_break(self):
-        if self.parent.break_on:
-            self.parent.setMessage("Layer of roads: conversion into lines is interrupted by user")
-            if not self.already_display_break:
-                self.parent.textLog.append(f'<a><b><font color="red">Layer of roads: conversion into lines is interrupted by user</font> </b></a>')
-                self.already_display_break = True
-            self.parent.progressBar.setValue(0)
-            return True
+        if self.parent is not None:
+            if self.parent.break_on:
+                self.parent.setMessage("Layer of roads: conversion into lines is interrupted by user")
+                if not self.already_display_break:
+                    self.parent.textLog.append(f'<a><b><font color="red">Layer of roads: conversion into lines is interrupted by user</font> </b></a>')
+                    self.already_display_break = True
+                self.parent.progressBar.setValue(0)
+                return True
         return False
+    
+    def save_temp_layer_to_geojson(self, file_path):
+        """Сохраняет временный слой в GeoJSON"""
+        QgsVectorFileWriter.writeAsVectorFormat(
+            self.temp_layer,
+            file_path,
+            "UTF-8",
+            self.temp_layer.crs(),
+            "GeoJSON"
+            )
+        
 
     def execute(self):
 
@@ -85,5 +99,6 @@ class MultiLineStringToLineStringConverter:
         if self.verify_break():
             return 0
         self.add_temp_layer_to_project()
+        #self.save_temp_layer_to_geojson(r'c:\temp\1\converter_layer.geojson')
 
         return self.temp_layer

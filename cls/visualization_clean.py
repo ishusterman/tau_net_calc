@@ -25,13 +25,21 @@ from qgis import processing
 from common import getDateTime, convert_meters_to_degrees
 
 class cls_clean_visualization(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, folder_name, mode, task_name="Voronoi and Hexagons task"):
+    def __init__(self, 
+                 parent, 
+                 begin_computation_time, 
+                 layer, 
+                 folder_name, 
+                 mode, 
+                 layer_field,
+                 task_name="Voronoi and Hexagons task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
         self.mode = mode
+        self.layer_field = layer_field
         self.exception = None
         self.break_on = False
         self.parent.progressBar.setMaximum(25)
@@ -105,7 +113,6 @@ class cls_clean_visualization(QgsTask):
             if width < spacing_current_x or height < spacing_current_y:
                 continue
             
-            
             hexagones_result = processing.run("native:creategrid", 
                        {'TYPE':4,
                         'EXTENT':extent,
@@ -117,7 +124,7 @@ class cls_clean_visualization(QgsTask):
                         'OUTPUT':'TEMPORARY_OUTPUT'}
                         )
             hexagones_layer = hexagones_result['OUTPUT']
-                    
+                                
             if self.break_on:
                 return 0
             self.parent.progressBar.setValue(6 + i*4)
@@ -128,6 +135,7 @@ class cls_clean_visualization(QgsTask):
             if self.break_on:
                 return 0
             self.parent.progressBar.setValue(7 + i*4)
+            
             #############################################
             self.parent.setMessage(f'Matching between buildings and hexagons {spacing_info}m...')
             self.add_nearest_osm_id(hexagones_layer, centroids_layer)
@@ -136,26 +144,27 @@ class cls_clean_visualization(QgsTask):
             if self.break_on:
                 return 0
             self.parent.progressBar.setValue(8 + i*4)
-
+            
             #############################################
             self.parent.setMessage(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on osm_id...')
             dissolve_result = processing.run("native:dissolve", 
                         {
                         'INPUT': hexagones_layer,
-                        'FIELD': ['osm_id'],
+                        'FIELD': [self.layer_field],
                         'OUTPUT': 'memory:'
                         })
             dissolved_layer = dissolve_result['OUTPUT']
             if self.break_on:
                 return 0
             self.parent.progressBar.setValue(9 + i*4)
-               
+                           
             #########################
             # Saving result
             #########################
         
             self.parent.setMessage('Saving ...')
             file_dir = self.folder_name
+            self.ext = ".shp"
             self.output_file_name = f"{self.name}_hexagons_{spacing_info}m{self.ext}"
             output_path = os.path.join(file_dir, self.output_file_name)
             self.unique_output_path = self.get_unique_path(output_path)
@@ -294,11 +303,11 @@ class cls_clean_visualization(QgsTask):
 
         hexagones_layer.startEditing()
 
-        if "osm_id" not in [field.name() for field in hexagones_layer.fields()]:
-            hexagones_layer.dataProvider().addAttributes([QgsField("osm_id", QVariant.String)])
+        if self.layer_field not in [field.name() for field in hexagones_layer.fields()]:
+            hexagones_layer.dataProvider().addAttributes([QgsField(self.layer_field, QVariant.String)])
             hexagones_layer.updateFields()
 
-        field_index = hexagones_layer.fields().lookupField("osm_id")    
+        field_index = hexagones_layer.fields().lookupField(self.layer_field)    
     
         input_index = QgsSpatialIndex(centroids_layer.getFeatures())
         input_features = {feat.id(): feat for feat in centroids_layer.getFeatures()}
@@ -315,7 +324,7 @@ class cls_clean_visualization(QgsTask):
             nearest_id = input_index.nearestNeighbor(hex_centroid.asPoint(), 1)
             if nearest_id:
                 nearest_feature = input_features[nearest_id[0]]
-                nearest_osm_id = nearest_feature["osm_id"]
+                nearest_osm_id = nearest_feature[self.layer_field]
                 updates[feat_id] = {field_index: nearest_osm_id}    
         
         hexagones_layer.dataProvider().changeAttributeValues(updates)
@@ -345,6 +354,7 @@ class cls_clean_visualization(QgsTask):
                     provider.addFeature(centroid_feature)
 
         file_dir = self.folder_name
+        self.ext = ".shp"
         self.output_file_name = f"{self.name}_centroids{self.ext}"
         output_path = os.path.join(file_dir, self.output_file_name)
         self.unique_output_path = self.get_unique_path(output_path)
@@ -352,7 +362,9 @@ class cls_clean_visualization(QgsTask):
             os.path.basename(self.unique_output_path))[0]
         
         output_path = self.unique_output_path
-        
+        output_path = os.path.normpath(output_path)
+        layer_name = os.path.splitext(os.path.basename(output_path))[0]
+
         QgsVectorFileWriter.writeAsVectorFormat(
             centroid_layer,
             output_path,
@@ -360,21 +372,23 @@ class cls_clean_visualization(QgsTask):
             input_layer.crs(),
             "ESRI Shapefile"
         )
-
-        layer_name = os.path.splitext(os.path.basename(output_path))[0]
-        centroid_layer = QgsProject.instance().addMapLayer(
-            QgsVectorLayer(output_path, layer_name, "ogr"), False)
+                
+        new_layer = QgsVectorLayer(output_path, layer_name, "ogr")
+        centroid_layer = QgsProject.instance().addMapLayer(new_layer, True)
         centroid_layer_id = centroid_layer.id()
-
+        
         return centroid_layer_id, centroid_layer
+                
     
     #############################################
     # Voronoi
     #########################
     def Voronoi (self):
       try:  
+        
         self.parent.setMessage('Constructing Voronoi polygons...')
         input_layer_path = self.centroids_layer_id
+        
         voronoi_result = processing.run("native:voronoipolygons",
                                         {'INPUT': input_layer_path,
                                          'BUFFER': 0,
@@ -383,7 +397,7 @@ class cls_clean_visualization(QgsTask):
                                          'OUTPUT': 'TEMPORARY_OUTPUT'}
                                         )
         voronoi_layer = voronoi_result['OUTPUT']
-        
+
         QgsProject.instance().addMapLayer(voronoi_layer, False)
         
         if self.break_on:
@@ -430,11 +444,12 @@ class cls_clean_visualization(QgsTask):
         #########################
         self.parent.setMessage('Saving ...')
         file_dir = self.folder_name
+        self.ext = ".shp"
         self.output_file_name = f"{self.name}_voronoi{self.ext}"
-        #print (f'self.output_file_name {self.output_file_name}')
+
         output_path = os.path.join(file_dir, self.output_file_name)
         self.unique_output_path = self.get_unique_path(output_path)
-        #print (f'self.unique_output_path {self.unique_output_path}')
+
         self.voronoi_layer_name = os.path.splitext(
             os.path.basename(self.unique_output_path))[0]
         QgsVectorFileWriter.writeAsVectorFormat(
@@ -444,9 +459,6 @@ class cls_clean_visualization(QgsTask):
             clip_layer.crs(),
             "ESRI Shapefile"
         )
-
-        #print (f'self.voronoi_layer_name {self.voronoi_layer_name}')
-
         saved_layer = QgsVectorLayer(
             self.unique_output_path, self.voronoi_layer_name, "ogr")
         if saved_layer.isValid():

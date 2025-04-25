@@ -835,9 +835,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if run:
             PathToNetwork = self.config['Settings']['PathToPKL']
             raptor_mode = mode
-            exlude_routes = False
-            numbers_routes = None
-            route_dict = None
+            
             RunOnAir = self.config['Settings']['RunOnAir'] == 'True'
 
             Layer = self.config['Settings']['Layer']

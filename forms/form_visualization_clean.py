@@ -4,6 +4,7 @@ import configparser
 from time import sleep
 from datetime import datetime
 import glob
+import re
 
 from qgis.PyQt import QtCore
 
@@ -15,7 +16,8 @@ from qgis.core import (QgsApplication,
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
-                          QRegExp
+                          QRegExp,
+                          QVariant
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -75,6 +77,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog ())
 
+        
+        
+
         self.toolButton_protocol.clicked.connect(
             lambda: self.showFoldersDialog(self.txtPathToProtocols))
 
@@ -83,6 +88,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.showAllLayersInCombo(self.cmbLayers)
         self.cmbLayers.installEventFilter(self)
+
+        self.cmbLayers_fields.installEventFilter(self)
+        
+        
         
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
@@ -108,7 +117,70 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         self.show()
         self.ParametrsShow()
+
+        file_path = self.cmbLayers.currentText()
+        if self.is_file_path(file_path):
+            file_name = os.path.splitext(os.path.basename(file_path))[0]
+            layer = QgsVectorLayer(file_path, file_name, "ogr")
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
+                if self.cmbLayers.findText(file_path) == -1:
+                    self.cmbLayers.addItem(file_path, file_path)
+                index = self.cmbLayers.findText(file_path)
+                self.cmbLayers.setCurrentIndex(index)
+
+                self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields) 
+        self.cmbLayers.currentIndexChanged.connect(
+            lambda: self.fillComboBoxFields_Id
+            (self.cmbLayers, self.cmbLayers_fields))
+        
+        self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
+
         self.show_info()
+
+    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
+        obj_layer_fields.clear()
+        selected_layer_name = obj_layers.currentText()
+        selected_layer_name = os.path.splitext(os.path.basename(selected_layer_name))[0]
+        
+        layers = QgsProject.instance().mapLayersByName(selected_layer_name)
+        layer = layers[0]
+
+        fields = layer.fields()
+        osm_id_exists = False
+
+        # regular expression to check for the presence of only digit
+        digit_pattern = re.compile(r'^\d+$')
+
+        # field type and value validation
+        for field in fields:
+            field_name = field.name()
+            field_type = field.type()
+
+            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.String):
+                # add numeric fields
+                obj_layer_fields.addItem(field_name)
+                if field_name.lower() == "osm_id":
+                    osm_id_exists = True
+            elif field_type == QVariant.String:
+                # check the first value of the field for digits only
+                first_value = None
+                for feature in layer.getFeatures():
+                    first_value = feature[field_name]
+                    break  # stop after the first value
+
+                if first_value is not None and digit_pattern.match(str(first_value)):
+                    obj_layer_fields.addItem(field_name)
+                    if field_name.lower() == "osm_id":
+                        osm_id_exists = True
+
+        if osm_id_exists:
+            # iterate through all the items in the combobox and compare them with "osm_id", 
+            # ignoring the case
+            for i in range(obj_layer_fields.count()):
+                if obj_layer_fields.itemText(i).lower() == "osm_id":
+                    obj_layer_fields.setCurrentIndex(i)
+                    break    
     
     def on_radio_selected(self, button):
         self.mode = self.button_group.id(button)
@@ -142,6 +214,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
                 self.cmbLayers.addItem(file_path, file_path)
                 index = self.cmbLayers.findText(file_path)
                 self.cmbLayers.setCurrentIndex(index)
+
+                self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
+
 
     def showAllLayersInCombo(self, cmb, geometry_type=QgsWkbTypes.PolygonGeometry):
         """
@@ -251,8 +326,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         self.break_on = False
 
+        self.layer_field = self.cmbLayers_fields.currentText()
         self.task = cls_clean_visualization(
-            self, begin_computation_time, self.layer_buildings, self.folder_name, self.mode)
+            self, begin_computation_time, self.layer_buildings, self.folder_name, self.mode, self.layer_field)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
         QApplication.processEvents()
@@ -281,7 +357,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.config['Settings']['AddHex_clean-visualization'] = '500'    
 
         if 'Mode_clean-visualization' not in self.config['Settings']:
-            self.config['Settings']['Mode_clean-visualization'] = '1'    
+            self.config['Settings']['Mode_clean-visualization'] = '1'   
+
+        if 'Layer_field_clean-visualization' not in self.config['Settings']:
+            self.config['Settings']['Layer_field_clean-visualization'] = ''         
 
     # update config file
 
@@ -298,9 +377,15 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         else:
             self.config['Settings']['Mode_clean-visualization'] = '2'
 
+        self.config['Settings']['Layer_field_clean-visualization'] = self.cmbLayers_fields.currentText()    
+
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
+
+    def is_file_path(self, text):
+        return os.path.isfile(text) and os.path.splitext(text)[1] in ['.shp', '.geojson', '.kml', '.gpx']
+        
 
     def ParametrsShow(self):
         self.readParameters()
@@ -317,6 +402,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         else:
             self.rbLength.setChecked(True)
             self.mode = 2
+
+        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_clean-visualization'])
+
+        
         
     def setMessage(self, message):
         self.lblMessages.setText(message)

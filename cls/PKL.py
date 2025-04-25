@@ -14,7 +14,14 @@ from common import time_to_seconds
 
 class PKL ():
 
-    def __init__(self, parent, path_to_pkl='', path_to_GTFS='', layer_buildings='', mode_append=False, building_id_field = "osm_id"):
+    def __init__(self, 
+                 parent, 
+                 path_to_pkl='', 
+                 path_to_GTFS='', 
+                 layer_buildings='', 
+                 mode_append=False, 
+                 building_id_field = "osm_id"):
+        
         if path_to_GTFS == '':
             self.__path_gtfs = path_to_pkl
         else:
@@ -95,15 +102,7 @@ class PKL ():
             self.parent.progressBar.setValue(5)
         if self.verify_break():
             return 0
-
-        """
-        if not(self.mode_append):
-            self.build_footpath_dict_b_b()
-            self.parent.progressBar.setValue(6)
-            if self.verify_break():
-                return 0
-        """
-
+        
         self.build__route_by_stop()
         if self.IN_QGIS:
             self.parent.progressBar.setValue(7)
@@ -139,14 +138,6 @@ class PKL ():
             self.parent.progressBar.setValue(12)
         if self.verify_break():
             return 0
-
-        """
-        if not(self.mode_append):
-            self.build_route_desc__route_id_dict()
-            self.parent.progressBar.setValue(13)
-            if self.verify_break():
-                return 0
-        """
 
     def load_gtfs(self):
         if self.IN_QGIS:
@@ -489,13 +480,7 @@ class PKL ():
 
         #df_result = df.groupby('trip_id', group_keys=False).apply(self.reverse_stop_sequence)
 
-        df_result = (
-                    df.drop(columns='trip_id')
-                    .groupby(df['trip_id'], group_keys=False)
-                    .apply(self.reverse_stop_sequence)
-                    )
-        df_result['trip_id'] = df_result.index
-        df_result.reset_index(drop=True, inplace=True)
+        df_result = df.groupby('trip_id', group_keys=False).apply(self.reverse_stop_sequence)
 
         # using StringIO again to write a DataFrame to a String
         output_str = StringIO()

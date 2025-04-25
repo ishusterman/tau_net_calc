@@ -199,7 +199,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.fillComboBoxFields_Id(item,
                                    self.cmbFieldsSpeed,
                                    "maxspeed",
-                                   only_digit=True,
+                                   only_digit=False,
                                    mode_road=True)
 
         # update the fields for direction

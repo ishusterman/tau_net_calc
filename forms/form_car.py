@@ -767,6 +767,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
 
+        
         car = car_accessibility(self,
                                 layer_dest,
                                 self.selected_only2,

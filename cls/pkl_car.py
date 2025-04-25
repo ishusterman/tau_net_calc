@@ -398,7 +398,7 @@ class pkl_car ():
             # create a circle with a radius of 250 meters around the building
             point_coords = [point.x(), point.y()]
             latitude = point.y()
-            buffer_radius = 250
+            buffer_radius = 500
             distances, indices = self.graph_vertex_index.query(point_coords,
                                                                k=1000,
                                                                distance_upper_bound=buffer_radius)

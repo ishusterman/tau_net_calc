@@ -146,7 +146,7 @@ def myload_all_dict(self,
             PathToNetwork)
         dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
             PathToNetwork)
-        
+            
     return (
             stops_dict,
             stoptimes_dict,
@@ -237,8 +237,6 @@ def runRaptorWithProtocol(self,
     
     MaxWaitTime = float(self.config['Settings']['MaxWaitTime'].replace(',', '.'))*60               # to sec
     MaxWaitTimeTransfer = float(self.config['Settings']['MaxWaitTimeTransfer'].replace(',', '.'))*60
-
-    MaxPath = int(self.config['Settings']['MaxWalkDist1'])
 
     
     CHANGE_TIME_SEC = 1

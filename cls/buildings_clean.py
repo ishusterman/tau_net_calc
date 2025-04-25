@@ -15,12 +15,13 @@ from common import getDateTime, convert_meters_to_degrees
 
 
 class cls_clean_buildings(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, folder_name, task_name="Buildings clean task"):
+    def __init__(self, parent, begin_computation_time, layer, folder_name, osm_id_field, task_name="Buildings clean task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
+        self.osm_id_field = osm_id_field
 
         self.exception = None
         self.break_on = False
@@ -76,25 +77,52 @@ class cls_clean_buildings(QgsTask):
         ############################################
 
         self.parent.setMessage('Renumbering duplicated osm_id ...')
-        max_osm_id = max(int(feature['osm_id']) for feature in layer_singlepart.getFeatures() if feature['osm_id'].isdigit())
-        osm_id_counter = set()
+
+        field_name = self.osm_id_field
+        used_ids = set()
+        numeric_ids = []
+
+        # Сначала собираем числовые значения для вычисления максимального
+        for feature in layer_singlepart.getFeatures():
+            value = feature[field_name]
+            if value is None:
+                continue
+            value_str = str(value)
+            if value_str.isdigit():
+                numeric_ids.append(int(value_str))
+            used_ids.add(value_str)
+
+        max_numeric_id = max(numeric_ids) if numeric_ids else 0
+
         layer_singlepart.startEditing()
+        seen_ids = set()
 
         for feature in layer_singlepart.getFeatures():
-            osm_id = feature['osm_id']
-    
-            if osm_id.isdigit():
-                osm_id_int = int(osm_id)
+            value = feature[field_name]
+            if value is None:
+                new_value = str(max_numeric_id + 1)
+                max_numeric_id += 1
             else:
-                max_osm_id += 1
-                osm_id_int = max_osm_id
-    
-            if osm_id_int in osm_id_counter:
-                max_osm_id += 1
-                osm_id_int = max_osm_id
-    
-            osm_id_counter.add(osm_id_int)
-            feature['osm_id'] = str(osm_id_int)
+                value_str = str(value)
+                if value_str.isdigit():
+                    value_int = int(value_str)
+                    if value_str in seen_ids:
+                        max_numeric_id += 1
+                        new_value = str(max_numeric_id)
+                    else:
+                        new_value = value_str
+                else:
+                    # Текстовое значение
+                    if value_str in seen_ids:
+                        suffix = 1
+                        while f"{value_str}_{suffix}" in used_ids or f"{value_str}_{suffix}" in seen_ids:
+                            suffix += 1
+                        new_value = f"{value_str}_{suffix}"
+                    else:
+                        new_value = value_str
+
+            seen_ids.add(new_value)
+            feature[field_name] = new_value
             layer_singlepart.updateFeature(feature)
 
         layer_singlepart.commitChanges()
@@ -162,6 +190,7 @@ class cls_clean_buildings(QgsTask):
     def save_layer_single_part (self, layer_single_part):
         self.parent.setMessage('Saving layer of buildings...')
         file_dir = self.folder_name
+        self.ext = ".shp"
         output_file_name = f"{self.name}_corrected{self.ext}"
         output_path = os.path.join(file_dir, output_file_name)
         unique_output_path = self.get_unique_path(output_path)

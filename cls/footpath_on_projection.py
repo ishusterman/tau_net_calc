@@ -34,6 +34,20 @@ class cls_footpath_on_projection:
         self.already_display_break = False
         self.MaxPath = MaxPath
 
+    def getMax_link_id (self):
+        max_id = 0
+        for f in self.cloned_layer.getFeatures():
+
+            link_id = f.attribute('link_id')
+            if link_id is not None:
+                link_id = int(link_id)
+            else:
+                link_id = 0
+            if link_id > max_id:
+                max_id = link_id
+        
+        return int(max_id)
+
     def make_new_layer_with_projections(self,
                                         layer_roads,
                                         layer_buildings,
@@ -56,8 +70,9 @@ class cls_footpath_on_projection:
 
         self.new_field_id = f'{layer_buildings_field_id}_add'
 
-        self.parent.setMessage(f'Making a copy of the layer of roads...')
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.setMessage(f'Making a copy of the layer of roads...')
+            QApplication.processEvents()
         # create a new temporary layer based on the type of the source layer
         layer_type = self.layer_roads.wkbType()
         crs = self.layer_roads.crs().authid()
@@ -76,8 +91,9 @@ class cls_footpath_on_projection:
         # transfer all features (geometry and attributes) from the source layer to the new layer
         for i, feature in enumerate(self.layer_roads.getFeatures()):
             if i % 10000 == 0:
-                self.parent.setMessage(f'Making a copy of the layer of roads№ {i} of {count}...')
-                QApplication.processEvents()
+                if self.parent is not None:
+                    self.parent.setMessage(f'Making a copy of the layer of roads№ {i} of {count}...')
+                    QApplication.processEvents()
 
                 if self.verify_break():
                     return 0
@@ -90,23 +106,39 @@ class cls_footpath_on_projection:
             self.provider.addFeature(new_feature)
 
         # add new fields (if they don't already exist)
+        
         if self.new_field_id not in [f.name() for f in self.provider.fields()]:
             self.provider.addAttributes([
                 QgsField(self.new_field_id, QVariant.String),
-                QgsField("distance", QVariant.Double),
-                QgsField("type", QVariant.String, "", 1)
+                #QgsField("distance", QVariant.Double),
+                QgsField(name="distance", type=QVariant.Double),
+                QgsField("type", QVariant.String, "", 1),
+
+                QgsField(name="from_node", type=QVariant.Int),
+                QgsField(name="to_node", type=QVariant.Int),
+                QgsField(name="length", type=QVariant.Int),
+                QgsField(name="link_id", type=QVariant.Int),
+                
             ])
             self.cloned_layer.updateFields()  # update the fields of the cloned layer
         
-        self.cloned_layer.updateExtents()
+        
         #QgsProject.instance().addMapLayer(self.cloned_layer)
 
         self.osm_id_index = self.provider.fields().indexOf(self.new_field_id)
         self.distance_index = self.provider.fields().indexOf("distance")
         self.type_index = self.provider.fields().indexOf("type")
 
-        self.parent.setMessage(f'Building the index for the layer of roads...')
-        QApplication.processEvents()
+        self.from_node_index = self.provider.fields().indexOf("from_node")
+        self.to_node_index = self.provider.fields().indexOf("to_node")
+        self.length_index = self.provider.fields().indexOf("length")
+        self.link_id_index = self.provider.fields().indexOf("link_id")
+
+        self.Max_link_id = self.getMax_link_id()
+
+        if self.parent is not None:
+            self.parent.setMessage(f'Building the index for the layer of roads...')
+            QApplication.processEvents()
         # create a spatial index for the road layer
         self.index = QgsSpatialIndex(self.cloned_layer.getFeatures())
 
@@ -117,9 +149,9 @@ class cls_footpath_on_projection:
         count = len(features_list)
         for i, feature in enumerate(features_list):
             if i % 5000 == 0:
-                self.parent.setMessage(f'Projecting stops on links №{i} off {count}...')
-
-                QApplication.processEvents()
+                if self.parent is not None:
+                    self.parent.setMessage(f'Projecting stops on links №{i} off {count}...')
+                    QApplication.processEvents()
                 if self.verify_break():
                     return 0
             pFeature = feature.geometry
@@ -131,9 +163,9 @@ class cls_footpath_on_projection:
         # loop through all the polygons in the buildings layer
         for i, polygon_feat in enumerate(self.layer_buildings.getFeatures()):
             if i % 5000 == 0:
-                self.parent.setMessage(f'Projecting buildings on links №{i} of {count}...')
-
-                QApplication.processEvents()
+                if self.parent is not None:
+                    self.parent.setMessage(f'Projecting buildings on links №{i} of {count}...')
+                    QApplication.processEvents()
                 if self.verify_break():
                     return 0
             polygon_geom = polygon_feat.geometry()
@@ -185,7 +217,7 @@ class cls_footpath_on_projection:
 
             line_geom = QgsGeometry.fromPolylineXY(
                 [centroid_geom.asPoint(), nearest_point])
-            min_dist_meters = self.distance_area.measureLength(line_geom)
+            min_dist_meters = round (self.distance_area.measureLength(line_geom))
 
             # create the first line from the nearest point to the start of the segment
             feat1 = QgsFeature()
@@ -198,6 +230,16 @@ class cls_footpath_on_projection:
             feat1.setAttribute(self.distance_index, min_dist_meters)
             # setting the type value 
             feat1.setAttribute(self.type_index, type)
+
+            geometry = feat1.geometry()
+            length = round (geometry.length())
+            feat1.setAttribute(self.length_index, length)
+
+            self.Max_link_id = self.Max_link_id + 1
+            feat1.setAttribute(self.link_id_index, self.Max_link_id)
+
+            feat1.setAttribute(self.from_node_index, 999)
+
             self.provider.addFeature(feat1)
 
             # create the second line from the nearest point to the end of the segment
@@ -211,6 +253,16 @@ class cls_footpath_on_projection:
             feat2.setAttribute(self.distance_index, min_dist_meters)
             # setting the type value
             feat2.setAttribute(self.type_index, type)
+
+            geometry = feat2.geometry()
+            length = round (geometry.length())
+            feat2.setAttribute(self.length_index, length)
+
+            self.Max_link_id = self.Max_link_id + 1
+            feat2.setAttribute(self.link_id_index, self.Max_link_id)
+
+            feat2.setAttribute(self.from_node_index, 999)
+
             self.provider.addFeature(feat2)
 
     def build_graph(self, roads, file_path):
@@ -226,8 +278,9 @@ class cls_footpath_on_projection:
 
         for i, feature in enumerate(roads.getFeatures()):
             if i % 50000 == 0:
-                self.parent.setMessage(f'Constructing road network graph №{i} of {count}...')
-                QApplication.processEvents()
+                if self.parent is not None:
+                    self.parent.setMessage(f'Constructing road network graph №{i} of {count}...')
+                    QApplication.processEvents()
 
                 if self.verify_break():
                     return 0
@@ -297,8 +350,9 @@ class cls_footpath_on_projection:
             pickle.dump(graph_data, f)
 
     def load_graph(self, file_path):
-        self.parent.setMessage(f'Loading road network graph...')
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.setMessage(f'Loading road network graph...')
+            QApplication.processEvents()
         # read the saved graph.
         graph_path = os.path.join(file_path, 'graph_projection.pkl')
         with open(graph_path, 'rb') as f:
@@ -322,16 +376,18 @@ class cls_footpath_on_projection:
         return nx_graph
 
     def load_dict_osm_vertex(self, file_path):
-        self.parent.setMessage(f'Loading database...')
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.setMessage(f'Loading database...')
+            QApplication.processEvents()
         dict_path = os.path.join(file_path, 'dict_osm_vertex.pkl')
         with open(dict_path, 'rb') as f:
             osm_vertex = pickle.load(f)
         return osm_vertex
 
     def load_dict_vertex_osm(self, file_path):
-        self.parent.setMessage(f'Loading database...')
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.setMessage(f'Loading database...')
+            QApplication.processEvents()
         dict_path = os.path.join(file_path, 'dict_vertex_osm.pkl')
         with open(dict_path, 'rb') as f:
             vertex_osm = pickle.load(f)
@@ -362,9 +418,9 @@ class cls_footpath_on_projection:
             for i, feature in enumerate(features_list):
                 
                 if i % 100 == 0:
-                    self.parent.setMessage(f'Constructing walk routes between stops, stop №{i} of {count}...')
-
-                    QApplication.processEvents()
+                    if self.parent is not None:
+                        self.parent.setMessage(f'Constructing walk routes between stops, stop №{i} of {count}...')
+                        QApplication.processEvents()
                     if self.verify_break():
                         return 0
 
@@ -382,9 +438,9 @@ class cls_footpath_on_projection:
             for i, feature in enumerate(features):
             
                 if i % 500 == 0:
-                    self.parent.setMessage(f'Constructing walk routes between buildings and stops, building №{i} of {count}...')
-                    QApplication.processEvents()
-
+                    if self.parent is not None:
+                        self.parent.setMessage(f'Constructing walk routes between buildings and stops, building №{i} of {count}...')
+                        QApplication.processEvents()
                     if self.verify_break():
                         return 0
 
@@ -398,28 +454,6 @@ class cls_footpath_on_projection:
                 for to_stop_id, dist in dist_list:
                     writer.writerow([building_id, to_stop_id, dist])
                     writer.writerow([to_stop_id, building_id, dist])
-
-    def get_geom_y(self, id, mode):
-
-        # create a query to filter objects
-        request = QgsFeatureRequest()
-        if mode == "b":
-            filter_expression = f'"{self.layer_buildings_field_id}" = \'{id}\''
-            request = QgsFeatureRequest().setFilterExpression(filter_expression)
-            feature = next(self.layer_buildings.getFeatures(request), None)
-            geom = feature.geometry()
-            if geom.isMultipart():
-                polygon = geom.asMultiPolygon()[0]
-            else:
-                polygon = geom.asPolygon()
-            center_point = QgsGeometry.fromPolygonXY(
-                polygon).centroid().asPoint()
-            return center_point.y()
-
-        if mode == "s":
-            stop = self.stops[self.stops['stop_id'] == id]
-            geom = stop.iloc[0].geometry
-            return geom.y()
 
     def get_nearby_buildings(self, building_id, graph, dict_osm_vertex, dict_vertex_osm, mode):
 
@@ -477,13 +511,14 @@ class cls_footpath_on_projection:
         return dist_list
 
     def verify_break(self):
-        if self.parent.break_on:
-            self.parent.setMessage("Database construction is interrupted by user")
-            if not self.already_display_break:
-                self.parent.textLog.append(f'<a><b><font color="red">Database construction is interrupted by user</font> </b></a>')
-                self.already_display_break = True
-            self.parent.progressBar.setValue(0)
-            return True
+        if self.parent is not None:
+            if self.parent.break_on:
+                self.parent.setMessage("Database construction is interrupted by user")
+                if not self.already_display_break:
+                    self.parent.textLog.append(f'<a><b><font color="red">Database construction is interrupted by user</font> </b></a>')
+                    self.already_display_break = True
+                self.parent.progressBar.setValue(0)
+                return True
         return False
 
     def create_stops_gpd(self, path_to_stops):

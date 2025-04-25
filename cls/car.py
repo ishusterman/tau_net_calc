@@ -103,6 +103,7 @@ class car_accessibility:
         self.parent.progressBar.setValue(1)
         i = 0
 
+        
         for source in self.parent.points:
 
             QApplication.processEvents()
@@ -114,17 +115,19 @@ class car_accessibility:
             QApplication.processEvents()
 
             self.source = source
+            
+            idStart, _ = self.dict_building_vertex.get(self.source, ("xxx", "xxx"))
 
-            idStart, _ = self.dict_building_vertex.get(self.source, (0, 0))
-
-            if idStart == 0:
+            if idStart == "xxx":
                 self.parent.progressBar.setValue(count+1)
-                break
+                continue
 
             (self.tree, self.costs) = QgsGraphAnalyzer.dijkstra(
                 self.graph,  idStart, 0)
 
             self.calc_min_cost()
+
+
             if self.parent.protocol_type == 2:
                 self.makeProtocolArea()
             else:
@@ -197,7 +200,10 @@ class car_accessibility:
         sum_walk = self.parent.walk_on_start_m + self.parent.walk_on_finish_m
 
         # iterate through all edgeId in the tree
+
         for edgeId in self.tree:
+
+            
 
             count += 1
             if count % 10000 == 0:
@@ -215,6 +221,8 @@ class car_accessibility:
 
                 buildings, dists_finish = zip(
                     *self.dict_vertex_buildings[edgeId])
+                
+
             except KeyError:
                 continue
 
@@ -226,6 +234,8 @@ class car_accessibility:
 
             for building, dist_finish in zip(buildings, dists_finish):
                 # define the pair {self.source, building}
+                    
+
                 pair = (self.source, building)
 
                 Dist_OD = Dist_OD_0 + dist_finish

@@ -80,6 +80,7 @@ class cls_clean_roads(QgsTask):
             
             file_name = os.path.basename(self.layer_path)
             name, ext = os.path.splitext(file_name)
+            
             cleaned_layer_name = f"{name}_c"
             cleaned_layer_error_name = f"{name}_e"
 
@@ -225,11 +226,16 @@ class cls_clean_roads(QgsTask):
             #####
             self.parent.setMessage('Saving ...')
             file_dir = self.folder_name
+
+            ext = '.shp'
             self.output_file_name = f"{name}_topo_cleaned{ext}"
+
             output_path = os.path.join(file_dir, self.output_file_name)
             self.unique_output_path = self.get_unique_path(output_path)
             self.layer_name = os.path.splitext(
                 os.path.basename(self.unique_output_path))[0]
+            
+            
             
             QgsVectorFileWriter.writeAsVectorFormat(
                 filtered_layer,  
@@ -306,6 +312,7 @@ class cls_clean_roads(QgsTask):
             return base_path
 
         base, ext = os.path.splitext(base_path)
+        
         index = 1
         while os.path.exists(f"{base}_{index}{ext}"):
             index += 1

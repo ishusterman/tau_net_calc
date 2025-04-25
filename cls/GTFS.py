@@ -9,6 +9,7 @@ from scipy.spatial import cKDTree
 from shapely.geometry import Point
 from pyproj import Geod
 
+from qgis.core import QgsVectorFileWriter
 from PyQt5.QtWidgets import QApplication
 
 from footpath_on_projection import cls_footpath_on_projection
@@ -599,16 +600,22 @@ class GTFS ():
         ##########################################
         # Calc footpath on graph with projections
         ##########################################
+        self.create_footpath_on_graph()
+        return 1
 
-        self.parent.setMessage('Converting multilines into lines...')
+    def create_footpath_on_graph(self, need_save_layer_with_projection = False, filename = ""):
+        if self.parent is not None:
+            self.parent.setMessage('Converting multilines into lines...')
         self.converter = MultiLineStringToLineStringConverter(
             self.parent, self.layer_road)
         self.layer_road = self.converter.execute()
 
         if self.verify_break():
             return 0
-        self.parent.progressBar.setValue(10)
-        QApplication.processEvents()
+        
+        if self.parent is not None:
+            self.parent.progressBar.setValue(10)
+            QApplication.processEvents()
 
         path_to_stops = self.__path_to_file
 
@@ -618,28 +625,44 @@ class GTFS ():
                                                                            self.layer_origins_field,
                                                                            path_to_stops
                                                                            )
+        
+        if need_save_layer_with_projection:
+            QgsVectorFileWriter.writeAsVectorFormat(
+                new_layer,
+                filename,
+                "UTF-8",
+                new_layer.crs(),
+                "GeoJSON"
+                )
+
+
+
         if self.verify_break():
             return 0
-        self.parent.progressBar.setValue(11)
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.progressBar.setValue(11)
+            QApplication.processEvents()
         graph = footpath_on_projection.build_graph(new_layer, self.pkl_path)
         if self.verify_break():
             return 0
-        self.parent.progressBar.setValue(12)
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.progressBar.setValue(12)
+            QApplication.processEvents()
         footpath_on_projection.save_graph(graph, self.pkl_path)
         if self.verify_break():
             return 0
 
         graph_projection = footpath_on_projection.load_graph(self.pkl_path)
-        self.parent.progressBar.setValue(13)
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.progressBar.setValue(13)
+            QApplication.processEvents()
         dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
             self.pkl_path)
         dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
             self.pkl_path)
-        self.parent.progressBar.setValue(14)
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.progressBar.setValue(14)
+            QApplication.processEvents()
 
         footpath_on_projection.construct_dict_transfers_projections(graph_projection,
                                                                     dict_osm_vertex,
@@ -649,13 +672,12 @@ class GTFS ():
                                                                     self.__path_to_file,
                                                                     path_to_stops
                                                                     )
-
-        self.parent.progressBar.setValue(15)
-        QApplication.processEvents()
+        if self.parent is not None:
+            self.parent.progressBar.setValue(15)
+            QApplication.processEvents()
 
         self.converter.remove_temp_layer()
-        
-        return 1
+
 
     def found_repeated_in_trips_stops(self):
         stop_times_file = pd.read_csv(

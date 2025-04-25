@@ -56,7 +56,7 @@ def create_plugin_archive(plugin_dir):
 
         # Copy plugin contents, excluding .git and other unnecessary files
         for item in os.listdir(plugin_dir):
-            if item in ['.git', '__pycache__', '.gitignore', '.vscode']:
+            if item in ['.git', '__pycache__', '.gitignore', '.vscode', 'bat']:
                 continue
             src_path = os.path.join(plugin_dir, item)
             dst_path = os.path.join(plugin_folder_path, item)

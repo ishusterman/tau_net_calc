@@ -5,6 +5,8 @@ import numpy as np
 import shutil
 import transitfeed
 import geopandas as gpd
+import pandas as pd
+from types import SimpleNamespace
 
 from pyproj import Transformer
 from PKL import PKL
@@ -13,10 +15,7 @@ from query_file import myload_all_dict, runRaptorWithProtocol
 from common import time_to_seconds
 
 from qgis.core import QgsApplication, QgsVectorLayer, QgsProject
-from types import SimpleNamespace
-
-
-
+from shapely.geometry import LineString
 
 class GTFSGenerator:
     def __init__(self,
@@ -24,8 +23,9 @@ class GTFSGenerator:
                  path_links,
                  path_buildings,
                  
-                 path_to_GTFS = r'c:\temp\1\GTFS',
-                 path_to_PKL = r'c:\temp\1\PKL',
+                 path_to_GTFS,
+                 path_to_PKL,
+                 params,
                  route_definitions=None,
                  max_walking_distance = 150,
                  layer_building_field = "building_id"):
@@ -36,6 +36,7 @@ class GTFSGenerator:
         os.makedirs(self.path_to_GTFS, exist_ok=True)
         self.path_to_PKL = path_to_PKL
         os.makedirs(self.path_to_PKL, exist_ok=True)
+        self.params = params
 
         self.path_nodes = path_nodes
         self.path_links = path_links
@@ -51,8 +52,11 @@ class GTFSGenerator:
         self.r_links = gpd.read_file(self.path_links)
         self.r_buildings = gpd.read_file(self.path_buildings)
         
-        self.layer_buildings = QgsVectorLayer(self.path_buildings, "RCity_Nodes", "ogr")
+        self.layer_buildings = QgsVectorLayer(self.path_buildings, "RCity_Buildings", "ogr")
         QgsProject.instance().addMapLayer(self.layer_buildings)
+
+        self.layer_roads = QgsVectorLayer(self.path_links, "RCity_Roads", "ogr")
+        QgsProject.instance().addMapLayer(self.layer_roads)
 
         self.n_coords = {
             n: (x, y) for (n, x, y) in self.r_nodes[['node_id', 'x', 'y']].to_records(index=False)
@@ -63,6 +67,62 @@ class GTFSGenerator:
         self.l_length.update({
             (j, i): d for (_, i, j, d) in self.r_links[['link_id', 'from_node', 'to_node', 'length']].to_records(index=False)
         })
+
+    def create_layer_routes(self):
+        # Читаем узлы
+        nodes_gdf = self.r_nodes
+        nodes_gdf['node_id'] = nodes_gdf['node_id'].astype(int)
+
+        # Создаём пустые GeoDataFrame
+        all_routes = gpd.GeoDataFrame(columns=['name', 'FCLASS', 'ONEWAY', 'maxspeed', 'geometry'], crs=nodes_gdf.crs)
+        all_stops = gpd.GeoDataFrame(columns=['node_id', 'route_name', 'stop_sequence', 'geometry'], crs=nodes_gdf.crs)
+
+        for route_info in self.route_definitions:
+            name = route_info['name']
+            route_ids = route_info['route']
+            stops_ids = route_info['stops']
+
+            # --- Маршрут как линия ---
+            route_points = nodes_gdf[nodes_gdf['node_id'].isin(route_ids)]
+            route_points_sorted = route_points.set_index('node_id').loc[route_ids]
+            route_line = LineString(route_points_sorted.geometry.tolist())
+
+            
+            route_gdf = gpd.GeoDataFrame({
+                'name': [name],
+                'FCLASS': [None],      
+                'ONEWAY': ['B'],       
+                'maxspeed': [None],    
+                'geometry': [route_line]
+                }, crs=nodes_gdf.crs)
+
+            all_routes = pd.concat([all_routes, route_gdf], ignore_index=True)
+
+            # --- Остановки как точки ---
+            stops_gdf = nodes_gdf[nodes_gdf['node_id'].isin(stops_ids)].copy()
+            stops_gdf['route_name'] = name
+
+            # Добавляем stop_sequence в порядке следования
+            stop_sequence_df = pd.DataFrame({
+                'node_id': stops_ids,
+                'stop_sequence': range(1, len(stops_ids)+1)
+            })
+
+            # Объединяем с геометрией
+            stops_gdf = stops_gdf.merge(stop_sequence_df, on='node_id')
+            stops_gdf = stops_gdf[['node_id', 'route_name', 'stop_sequence', 'geometry']]
+
+            all_stops = pd.concat([all_stops, stops_gdf], ignore_index=True)
+
+        # --- Сохраняем итоговые файлы ---
+        routes_filename = os.path.join(self.params.folder_name, 'routes.geojson')
+        stops_filename = os.path.join(self.params.folder_name, 'stops.geojson')
+
+        all_routes.to_file(routes_filename, driver='GeoJSON')
+        all_stops.to_file(stops_filename, driver='GeoJSON')
+
+
+
 
     def dict_to_namespace(self, d):
         if isinstance(d, dict):
@@ -112,10 +172,10 @@ class GTFSGenerator:
                 t_start = self.timestr2sec(r['start_time'])
                 t_end = self.timestr2sec(r['end_time'])
                 r_hdw = self.timestr2sec(r['headway'])
-                r_departures = range(t_start, t_end, r_hdw)
+                r_departures = range(t_start, t_end + 1, r_hdw)
             else:
                 r_departures = [self.timestr2sec(t) for t in r['departures']]
-
+            
             r_profile = {r['stops'][0]: 0.0}
             dist = 0.0
             for k, n in enumerate(r['route'][1:]):
@@ -123,14 +183,23 @@ class GTFSGenerator:
                 if n in r['stops']:
                     r_profile[n] = dist / r['speed']
 
+            """
             for s in r['stops']:
                 lng, lat = self.transformer.transform(*self.n_coords[s])
                 gtfs_stop = schedule.AddStop(lng=lng, lat=lat, name=str(s), stop_id=str(s))
                 gtfs_stops[s] = gtfs_stop
                 stop_id_idx += 1
+            """    
+
+            for s in r['stops']:
+                if s not in gtfs_stops:
+                    lng, lat = self.transformer.transform(*self.n_coords[s])
+                    gtfs_stop = schedule.AddStop(lng=lng, lat=lat, name=str(s), stop_id=str(s))
+                    gtfs_stops[s] = gtfs_stop    
 
             route = schedule.AddRoute(short_name=r_name, long_name='', route_id=START_INDEX + idx, route_type=0)
             for dep_start in r_departures:
+                
                 route_trip = route.AddTrip(schedule, headsign=r_name + '_' + self.sec2timestring(dep_start))
                 for stop_id in r['stops']:
                     tt = r_profile[stop_id]
@@ -152,18 +221,18 @@ class GTFSGenerator:
             parent = None,
             path_to_file = self.path_to_GTFS,
             path_to_GTFS = self.path_to_GTFS,
-            pkl_path = "",
+            pkl_path = self.path_to_PKL,
             layer_origins = self.layer_buildings,
-            layer_road = "",
+            layer_road = self.layer_roads,
             layer_origins_field = self.layer_building_field,
             MaxPathRoad = str(self.max_walking_distance),
             MaxPathAir= str(self.max_walking_distance)
         )
         calc_GTFS.create_footpath_AIR()
-        src = os.path.join(self.path_to_GTFS, 'footpath_AIR.txt')
-        dst = os.path.join(self.path_to_GTFS, 'footpath_road_projection.txt')
-        shutil.copy(src, dst)
-
+        filename = os.path.join(self.params.folder_name, 'layer_with_projection.geojson')
+        calc_GTFS.create_footpath_on_graph(need_save_layer_with_projection = True, 
+                                           filename = filename)
+        
         calc_PKL = PKL(
             None,
             path_to_pkl = self.path_to_PKL,
@@ -180,7 +249,7 @@ class GTFSGenerator:
                         self = None,
                         PathToNetwork = self.path_to_PKL,
                         mode = mode,
-                        RunOnAir = True,
+                        RunOnAir = (var.config['Settings']['RunOnAir'] == "True"),
 
                         layer_origin = self.layer_buildings,
                         layer_dest = self.layer_buildings,
@@ -247,22 +316,22 @@ if __name__ == "__main__":
             'MaxWaitTime': "10",
             'MaxWaitTimeTransfer': "10",
             'TimeInterval': "1",
-            'Layer': "RCity_Nodes",
+            'Layer': "RCity_Buildings",
             'Layer_field': "building_id",
-            'LayerDest': "RCity_Nodes",
+            'LayerDest': "RCity_Buildings",
             'LayerDest_field': "building_id",
             'LayerViz': "",
             'LayerViz_field': "",
             'Field_ch': "",
-            'RunOnAir': "True"
+            'RunOnAir': "False"
         }
     },
-    'folder_name': r'c:\temp\1',
+    'folder_name': r'c:\temp\4',
     'alias': 'output'
     }
 
     params = config(config_dict)
-    sources = ['B1', 'B2']
+    sources = [1001, 1002]
     
     mode_raptor = 1
     time_start = "8:00:00"
@@ -272,9 +341,9 @@ if __name__ == "__main__":
     gen = GTFSGenerator(
         path_nodes=r'c:\doc\QGIS_prj\RCity\RCity_Nodes.geojson',
         path_links=r'c:\doc\QGIS_prj\RCity\RCity_Links.geojson',
-        path_buildings=r'c:\doc\QGIS_prj\RCity\RCity_Buildings.geojson',
-        path_to_GTFS = r'c:\temp\1\GTFS',
-        path_to_PKL = r'c:\temp\1\PKL',
+        path_buildings=r'c:\doc\QGIS_prj\RCity\RCity_buildings_digital.geojson',
+        path_to_GTFS = r'c:\temp\4\GTFS',
+        path_to_PKL = r'c:\temp\4\PKL',
         route_definitions = ROUTES,
         max_walking_distance = 150,
         layer_building_field = "building_id"
@@ -288,6 +357,8 @@ if __name__ == "__main__":
                       protocol_type = protocol_type, 
                       timetable_mode = timetable_mode, 
                       sources = sources)
+    
+    gen.create_layer_routes()
 
     qgs.exitQgis()
     print("Finish")
