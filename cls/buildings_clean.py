@@ -6,16 +6,21 @@ from qgis.core import (
     QgsVectorFileWriter,
     QgsTask,
     QgsProject,
-    QgsFeature,
     edit)
 
 from qgis import processing
 
-from common import getDateTime, convert_meters_to_degrees
-
+from common import getDateTime
 
 class cls_clean_buildings(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, folder_name, osm_id_field, task_name="Buildings clean task"):
+    def __init__(self, 
+                 parent, 
+                 begin_computation_time, 
+                 layer, 
+                 folder_name, 
+                 osm_id_field, 
+                 task_name="Buildings clean task"):
+        
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
@@ -26,6 +31,7 @@ class cls_clean_buildings(QgsTask):
         self.exception = None
         self.break_on = False
         self.parent.progressBar.setMaximum(5)
+        self.list_layer = []
 
     def run(self):
 
@@ -130,11 +136,8 @@ class cls_clean_buildings(QgsTask):
         if self.break_on:
             return 0
         self.parent.progressBar.setValue(4)
-
         self.layer_name_single_part =  self.save_layer_single_part (layer_singlepart)
-                
         self.write_finish_info()
-        
         self.parent.btnBreakOn.setEnabled(False)
         self.parent.close_button.setEnabled(True)
         self.parent.progressBar.setValue(5)
@@ -204,9 +207,13 @@ class cls_clean_buildings(QgsTask):
             "ESRI Shapefile"
         )
         
-        saved_layer = QgsVectorLayer(
-            unique_output_path, layer_name, "ogr")
-        if saved_layer.isValid():
-            QgsProject.instance().addMapLayer(saved_layer)
+        self.list_layer.append((unique_output_path, layer_name))    
         
         return layer_name
+    
+    def finished(self, result):
+        for path_shp, name_layer in self.list_layer:
+            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
+            if saved_layer.isValid():
+                QgsProject.instance().addMapLayer(saved_layer)
+                

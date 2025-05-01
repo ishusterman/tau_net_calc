@@ -81,10 +81,10 @@
           <widget class="QWidget" name="scrollAreaWidgetContents_2">
            <property name="geometry">
             <rect>
-             <x>-27</x>
+             <x>0</x>
              <y>0</y>
-             <width>400</width>
-             <height>210</height>
+             <width>397</width>
+             <height>310</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -146,18 +146,10 @@
                 </item>
                </layout>
               </item>
-              <item row="3" column="0">
-               <widget class="QRadioButton" name="rbStandart">
-                <property name="text">
-                 <string>The layer of the Voronoi polygons based on the buildings' centroids and 
-   the layers of hexagons with a side of 50, 100, 200, 400 and 800 m</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
+              <item row="9" column="0">
                <layout class="QHBoxLayout" name="horizontalLayout_7">
                 <item>
-                 <widget class="QRadioButton" name="rbLength">
+                 <widget class="QCheckBox" name="cbLength">
                   <property name="text">
                    <string>The layer of hexagons with a side of </string>
                   </property>
@@ -185,14 +177,14 @@
                 </item>
                </layout>
               </item>
-              <item row="6" column="0">
+              <item row="10" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Folder to store clean layer of buildings</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="0" colspan="2">
+              <item row="12" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols"/>
@@ -205,6 +197,66 @@
                  </widget>
                 </item>
                </layout>
+              </item>
+              <item row="3" column="0">
+               <widget class="QCheckBox" name="cbVoronoi">
+                <property name="text">
+                 <string>The layer of the Voronoi polygons based on the buildings' centroids </string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QCheckBox" name="cb100">
+                <property name="text">
+                 <string>The layer of hexagons with a side of 100 m</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QCheckBox" name="cb200">
+                <property name="text">
+                 <string>The layer of hexagons with a side of 200 m</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QCheckBox" name="cb400">
+                <property name="text">
+                 <string>The layer of hexagons with a side of 400 m</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QCheckBox" name="cb800">
+                <property name="text">
+                 <string>The layer of hexagons with a side of 800 m</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QCheckBox" name="cb50">
+                <property name="text">
+                 <string>The layer of hexagons with a side of 50 m</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>

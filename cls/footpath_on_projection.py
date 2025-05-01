@@ -460,7 +460,11 @@ class cls_footpath_on_projection:
         dist = self.MaxPath
 
         dist_dict = {}
-        vertex_id, dist_1 = dict_osm_vertex.get(building_id)
+        vertex_id, dist_1 = dict_osm_vertex.get(building_id, ("xxx","xxx"))
+
+        if vertex_id == "xxx":
+            return dist_dict
+
         cutoff = dist - dist_1
 
         lengths, _ = nx.single_source_dijkstra(graph,

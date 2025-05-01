@@ -236,6 +236,7 @@ def runRaptorWithProtocol(self,
     MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60           # to sec
     
     MaxWaitTime = float(self.config['Settings']['MaxWaitTime'].replace(',', '.'))*60               # to sec
+    MaxWaitTime_copy = MaxWaitTime
     MaxWaitTimeTransfer = float(self.config['Settings']['MaxWaitTimeTransfer'].replace(',', '.'))*60
 
     
@@ -321,7 +322,7 @@ def runRaptorWithProtocol(self,
                 ss += ",Earlest_arrival_time"
             if not(timetable_mode):
                 ss += ",Arrive_before"
-        ss += ",Transfers,Duration"
+        ss += ",Legs,Duration"
         protocol_header = ss + "\n"
 
     if protocol_type == 1:
@@ -482,7 +483,9 @@ def runRaptorWithProtocol(self,
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
 
         SOURCE = str(SOURCE)
+        D_TIME_copy = D_TIME
         if not (timetable_mode):
+
 
             if raptor_mode == 1:
             
@@ -532,12 +535,143 @@ def runRaptorWithProtocol(self,
                                 DepartureInterval                                
                                 )
             
-            #print (output)
+            
             #keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
             #for key in keys_to_remove:
             #    del output[key]
 
         
+        if  timetable_mode:
+            
+            final_output_endtime = {}  
+            final_output_duration = {}  
+            MaxWaitTime_copy = MaxWaitTime
+            
+            trans_info = footpath_dict.get(SOURCE, [])
+            if raptor_mode == 2: 
+                time_start = D_TIME - MaxExtraTime
+            else: 
+                time_start = D_TIME
+            available_boardings = get_available_boardings(time_start, 
+                                                          MaxExtraTime, 
+                                                          trans_info, 
+                                                          stoptimes_dict,
+                                                          raptor_mode)
+            
+            #for step in available_boardings:
+            #    (stop_id, time_departure, dist) = step
+            #    print (stop_id, seconds_to_time(time_departure), dist)
+            #continue
+                        
+                        
+            for step in available_boardings:
+                (stop_id, time_departure, dist) = step
+
+                if verify_break(self,
+                        Layer,
+                        LayerDest,
+                        vis,
+                        fields_ok,
+                        f,
+                        protocol_type                        
+                        ):
+                    return 0, 0
+                                    
+                #if not (stop_id == '13472' and seconds_to_time(time_departure) == '07:56:20'):
+                #    continue
+                if hasattr(self, 'setMessage'):
+                    if stop_id == "xxx":
+                        self.setMessage(f'Calculating №{i+1} of {count}')
+                    else:
+                        self.setMessage(f'Calculating №{i+1} of {count} (checking stop {stop_id} time {seconds_to_time(time_departure)})')
+                    QApplication.processEvents()
+
+                if stop_id == "xxx":
+                    D_TIME = D_TIME_copy
+                    firts_step = None
+                    MaxWaitTime = MaxWaitTime_copy
+                else:
+                    MaxWaitTime = 1
+
+
+                if raptor_mode == 1:
+                    if stop_id != "xxx":
+                        time_departure -= 1
+                        D_TIME = time_departure - dist
+                        firts_step = (stop_id, time_departure, dist)
+                                            
+                    output_endtime, output_duration = raptor(SOURCE,
+                            D_TIME,
+                            MAX_TRANSFER,
+                            MIN_TRANSFER,
+                            CHANGE_TIME_SEC,
+                            routes_by_stop_dict,
+                            stops_dict,
+                            stoptimes_dict,
+                            footpath_dict,
+
+                            idx_by_route_stop_dict,
+                            MaxTimeTravel,
+                            MaxWalkDist1,
+                            MaxWalkDist2,
+                            MaxWalkDist3,
+                            MaxWaitTime,
+                            MaxWaitTimeTransfer,
+                            timetable_mode,
+                            MaxExtraTime,
+                            DepartureInterval,
+                            first_step = firts_step
+                            )
+                    
+                else:
+                    
+                    if stop_id != "xxx":
+                        time_departure += 1
+                        D_TIME = time_departure + dist
+                        firts_step = (stop_id, time_departure, dist)
+                    output_endtime, output_duration = rev_raptor(SOURCE,
+                                D_TIME,
+                                MAX_TRANSFER,
+                                MIN_TRANSFER,
+                                CHANGE_TIME_SEC,
+                                routes_by_stop_dict,
+                                stops_dict,
+                                stoptimes_dict,
+                                footpath_dict,
+
+                                idx_by_route_stop_dict,
+                                MaxTimeTravel,
+                                MaxWalkDist1,
+                                MaxWalkDist2,
+                                MaxWalkDist3,
+                                MaxWaitTime,
+                                MaxWaitTimeTransfer,
+                                timetable_mode,
+                                MaxExtraTime,
+                                DepartureInterval,
+                                first_step= firts_step #None#(stop_id, time_departure, dist) 
+                                )
+                
+                for p_i, data in output_endtime.items():
+                                       
+                    end_time = data[4]  # end_time
+                    # Если p_i нет в final_output или найден меньший end_time, обновляем
+                    if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4]:
+                        final_output_endtime[p_i] = data
+                                        
+                for p_i, data in output_duration.items():
+                    
+                    duration = data[1]  # duration
+                                        
+                    # Если p_i нет в final_output или найден меньший end_time, обновляем
+                    if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
+                        final_output_duration[p_i] = data
+                    
+            output_endtime = final_output_endtime
+            output_duration = final_output_duration
+
+        
+        """
         if  timetable_mode:
             MaxExtraTime_copy = MaxExtraTime
             final_output_endtime = {}  
@@ -627,7 +761,7 @@ def runRaptorWithProtocol(self,
                 output_endtime = final_output_endtime
                 output_duration = final_output_duration
                 cycle += 1
-        
+        """
         if protocol_type == 1:
             f_new = []
             if len(fields_ok) > 0:
@@ -679,7 +813,7 @@ def runRaptorWithProtocol(self,
                     filetowrite.write(protocol_header)
                         
             make_protocol_detailed(raptor_mode,
-                                   D_TIME,
+                                   D_TIME_copy,
                                    output_endtime,
                                    f_min_endtime,
                                    timetable_mode,
@@ -690,7 +824,7 @@ def runRaptorWithProtocol(self,
                                    )
             QApplication.processEvents()
             make_protocol_detailed(raptor_mode,
-                                   D_TIME,
+                                   D_TIME_copy,
                                    output_duration,
                                    f_min_duration,
                                    timetable_mode,
@@ -738,7 +872,7 @@ def runRaptorWithProtocol(self,
         self.progressBar.setValue(self.progressBar.maximum())
     return 1, self.folder_name
 
-"""
+
 def get_available_boardings(start_time_seconds, max_delta_seconds, trans_info, stop_times, mode):
     available_departures = []
     
@@ -760,8 +894,10 @@ def get_available_boardings(start_time_seconds, max_delta_seconds, trans_info, s
                         if arrival_time_seconds <= stop_seconds <= max_time_seconds:
                             available_departures.append((stop_id, stop_seconds, walk_time))
         
+        available_departures.append(("xxx", "xxx", "xxx"))
+        
     return sorted(available_departures, key=lambda x: (x[0], x[1]))
-"""
+
 def make_service_area_report(file_path, alias):
     df = pd.read_csv(file_path)
 
@@ -949,10 +1085,10 @@ def make_protocol_detailed(raptor_mode,
 
         if raptor_mode == 1:
                     row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}X{sep}0'
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}0{sep}0'
         else:
                     row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}0'
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}0'
 
         filetowrite.write(row + "\n")
 
@@ -961,11 +1097,11 @@ def make_protocol_detailed(raptor_mode,
             if raptor_mode == 1:
                         finish_time = seconds_to_time(D_TIME+dist)
                         row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{build}{sep}{finish_time}{sep}X{sep}{dist}'
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{build}{sep}{finish_time}{sep}0{sep}{dist}'
             else:
                         finish_time = seconds_to_time(D_TIME-dist)
                         row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}X{sep}{dist}'
+{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}{dist}'
 
             if build != SOURCE:
                 filetowrite.write(row + "\n")
@@ -979,6 +1115,7 @@ def make_protocol_detailed(raptor_mode,
             duration = info[1]
             pareto_set = info[2]
             transfers = info[3]
+            legs = transfers + 1
 
 
             '''
@@ -1347,7 +1484,7 @@ def make_protocol_detailed(raptor_mode,
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
 {sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
 {sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
-{sep}{dest_walk_time}{sep}{orig_dest}{sep}{sarrival_time}{sep}{transfers}{sep}{duration}'
+{sep}{dest_walk_time}{sep}{orig_dest}{sep}{sarrival_time}{sep}{legs}{sep}{duration}'
 
                 else:
                     # if SOURCE_REV in list_stops or  SOURCE_REV in list_buildings_from_start:
@@ -1360,7 +1497,7 @@ def make_protocol_detailed(raptor_mode,
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
 {sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
 {sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
-{sep}{dest_walk_time}{sep}{SOURCE}{sep}{sarrival_time}{sep}{seconds_to_time(D_TIME)}{sep}{transfers}{sep}{duration}'
+{sep}{dest_walk_time}{sep}{SOURCE}{sep}{sarrival_time}{sep}{seconds_to_time(D_TIME)}{sep}{legs}{sep}{duration}'
 
                 filetowrite.write(row + "\n")
 

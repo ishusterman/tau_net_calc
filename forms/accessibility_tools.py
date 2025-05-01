@@ -8,8 +8,7 @@ from PyQt5.QtWidgets import (QApplication,
 from qgis.PyQt.QtGui import QIcon, QFont
 import os
 import webbrowser
-from qgis.core import QgsProject
-
+from qgis.core import QgsProject, QgsVectorLayer
 
 from .form_raptor_detailed import RaptorDetailed
 from .form_raptor_summary import RaptorSummary
@@ -177,6 +176,7 @@ class AccessibilityTools(QWidget):
         if item == self.item1:
             
             url = "https://ishusterman.github.io/tutorial/introduction.html"
+            
             webbrowser.open(url)
 
         if item == self.item2:

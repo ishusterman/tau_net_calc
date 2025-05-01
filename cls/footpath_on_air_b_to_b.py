@@ -50,10 +50,16 @@ class cls_footpath_on_air_b_b:
     def get_nearby_buildings(self, id):
 
         target_feature = None
-        for feature in self.features_origins:
-            if str(feature.attribute(self.layer_origins_field_id)) == str(id):
-                target_feature = feature
-                break
+        nearest_features = []
+        
+        try:
+            for feature in self.features_origins:
+                if str(feature.attribute(self.layer_origins_field_id)) == str(id):
+                    target_feature = feature
+                    break
+        except KeyError:
+            return nearest_features
+
 
         geom = target_feature.geometry()
         if geom.type() == QgsWkbTypes.PointGeometry:

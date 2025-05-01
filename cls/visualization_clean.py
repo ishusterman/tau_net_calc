@@ -16,9 +16,9 @@ from qgis.core import (
     QgsSpatialIndex,
     QgsFillSymbol,
     QgsRectangle,
-    edit)
-
-from qgis.core import QgsProcessing
+    QgsPointXY,
+    QgsGeometry
+    )
 
 from qgis import processing
 
@@ -30,30 +30,29 @@ class cls_clean_visualization(QgsTask):
                  begin_computation_time, 
                  layer, 
                  folder_name, 
-                 mode, 
                  layer_field,
+                 runVoronoi,
+                 spacing,
                  task_name="Voronoi and Hexagons task"):
         super().__init__(task_name)
         self.parent = parent
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
-        self.mode = mode
         self.layer_field = layer_field
+        self.runVoronoi = runVoronoi
         self.exception = None
         self.break_on = False
         self.parent.progressBar.setMaximum(25)
-        self.spacing = [50*math.sqrt(3), 100*math.sqrt(3), 200*math.sqrt(3), 400*math.sqrt(3), 800*math.sqrt(3)]
-        if self.mode == 2:
-            self.spacing = [int (self.parent.add_hex) *math.sqrt(3)]
-
-        #self.spacing = [800]
-        self.layer_result_list = []
+        self.spacing = spacing
+        
         self.dist_buffer = 50
-        self.voronoi_layer_name = ""
+        
+     
         
     def run(self):
        try: 
+        self.list_layer = []
         uri = self.layer.dataProvider().dataSourceUri()
         self.input_layer_path = uri.split("|")[0] if "|" in uri else uri
         self.file_name = os.path.basename(self.input_layer_path)
@@ -61,8 +60,7 @@ class cls_clean_visualization(QgsTask):
         input_layer = QgsVectorLayer(self.input_layer_path, "Layer Name", "ogr")
         #############################################
         self.parent.setMessage('Constructing buildings’ centroids ...')
-        centroid_layer_id, centroids_layer = self.make_centroids(self.layer)
-        self.centroids_layer_id = centroid_layer_id
+        centroids_layer = self.make_centroids(self.layer)
         
         if self.break_on:
             return 0
@@ -80,8 +78,8 @@ class cls_clean_visualization(QgsTask):
                 self.dist_buffer, first_point.y())
 
         #############################################
-        if self.mode == 1:
-            self.Voronoi()
+        if self.runVoronoi:
+            self.Voronoi(centroids_layer)
         #############################################
         if self.break_on:
                 return 0
@@ -170,8 +168,7 @@ class cls_clean_visualization(QgsTask):
             self.unique_output_path = self.get_unique_path(output_path)
         
             self.layer_name = os.path.splitext(os.path.basename(self.unique_output_path))[0]
-            self.layer_result_list.append(self.layer_name)
-
+            
             QgsVectorFileWriter.writeAsVectorFormat(
                 dissolved_layer,
                 self.unique_output_path,
@@ -179,23 +176,16 @@ class cls_clean_visualization(QgsTask):
                 dissolved_layer.crs(),
                 "ESRI Shapefile"
             )
-        
-            saved_layer = QgsVectorLayer(self.unique_output_path, self.layer_name, "ogr")
-            if saved_layer.isValid():
-                QgsProject.instance().addMapLayer(saved_layer)
-                self.style_polygon_layer(saved_layer)
+
+            self.list_layer.append((self.unique_output_path, self.layer_name))
+            
             if self.break_on:
                 return 0
             
             self.parent.progressBar.setValue(10 + i*4)
             ###################################
-
-        QgsProject.instance().removeMapLayer(self.centroids_layer_id) 
+        
         self.parent.progressBar.setValue(25)
-
-        ###
-        #self.voronoi_layer_name = "test"    
-        ###
 
         self.write_finish_info()
         self.parent.btnBreakOn.setEnabled(False)
@@ -222,12 +212,9 @@ class cls_clean_visualization(QgsTask):
         
         with open(filelog_name, "w") as file:
             file.write(text)
-
-        if self.voronoi_layer_name != "":
-            self.parent.textLog.append(f'"{self.voronoi_layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
                 
-        for item in self.layer_result_list:
-            self.parent.textLog.append(f'"{item}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        for _, name_layer in self.list_layer:    
+            self.parent.textLog.append(f'"{name_layer}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
 
         self.parent.setMessage(f'Finished')
 
@@ -330,92 +317,95 @@ class cls_clean_visualization(QgsTask):
         hexagones_layer.dataProvider().changeAttributeValues(updates)
         
         hexagones_layer.commitChanges()
-
+    
     def make_centroids(self, input_layer):
-
-        centroid_layer = QgsVectorLayer(
-            "Point?crs=" + input_layer.crs().authid(), "Centroids", "memory")
-        provider = centroid_layer.dataProvider()
-        provider.addAttributes(input_layer.fields())
-        centroid_layer.updateFields()
-
-        with edit(centroid_layer):
-            for i, feature in enumerate(input_layer.getFeatures()):
-                if i % 100 == 0:
-                    if self.break_on:
-                        return 0
-                centroid = feature.geometry().centroid()
-                if centroid.isEmpty():
-                    continue
-                centroid_feature = QgsFeature()
-                centroid_feature.setGeometry(centroid)
-                centroid_feature.setAttributes(feature.attributes())
-                if centroid_feature.geometry() is not None:
-                    provider.addFeature(centroid_feature)
-
-        file_dir = self.folder_name
-        self.ext = ".shp"
-        self.output_file_name = f"{self.name}_centroids{self.ext}"
-        output_path = os.path.join(file_dir, self.output_file_name)
-        self.unique_output_path = self.get_unique_path(output_path)
-        self.layer_name = os.path.splitext(
-            os.path.basename(self.unique_output_path))[0]
-        
-        output_path = self.unique_output_path
-        output_path = os.path.normpath(output_path)
-        layer_name = os.path.splitext(os.path.basename(output_path))[0]
-
-        QgsVectorFileWriter.writeAsVectorFormat(
-            centroid_layer,
-            output_path,
-            "utf-8",
-            input_layer.crs(),
-            "ESRI Shapefile"
+        result = processing.run(
+            "native:centroids",
+            {
+                'INPUT': input_layer,
+                'ALL_PARTS': False,
+                'OUTPUT': 'memory:'
+            }
         )
-                
-        new_layer = QgsVectorLayer(output_path, layer_name, "ogr")
-        centroid_layer = QgsProject.instance().addMapLayer(new_layer, True)
-        centroid_layer_id = centroid_layer.id()
-        
-        return centroid_layer_id, centroid_layer
-                
+    
+        new_layer = result['OUTPUT']
+        return new_layer            
     
     #############################################
     # Voronoi
     #########################
-    def Voronoi (self):
-      try:  
+    def Voronoi (self, centroids_layer):
+      
+        extent = centroids_layer.extent()
+        buffer = extent.width() * 0.2  # или фиксированное значение, например, 1000
+
+        expanded_extent = QgsRectangle(
+            extent.xMinimum() - buffer,
+            extent.yMinimum() - buffer,
+            extent.xMaximum() + buffer,
+            extent.yMaximum() + buffer
+            )
+
+        # Создаём фиктивные точки
+        extra_points = [
+            QgsFeature(),
+            QgsFeature(),
+            QgsFeature(),
+            QgsFeature()
+            ]
+
+        extra_coords = [
+                QgsPointXY(expanded_extent.xMinimum(), expanded_extent.yMinimum()),
+                QgsPointXY(expanded_extent.xMaximum(), expanded_extent.yMinimum()),
+                QgsPointXY(expanded_extent.xMaximum(), expanded_extent.yMaximum()),
+                QgsPointXY(expanded_extent.xMinimum(), expanded_extent.yMaximum()),
+                ]
+
+        for feat, pt in zip(extra_points, extra_coords):
+            feat.setGeometry(QgsGeometry.fromPointXY(pt))
+            feat.setAttributes([None] * centroids_layer.fields().count())  # Пустые атрибуты
+
+        # Копируем оригинальные точки + добавляем фиктивные
+        mem_layer = QgsVectorLayer("Point?crs=" + centroids_layer.crs().authid(), "temp_points", "memory")
+        mem_layer.dataProvider().addAttributes(centroids_layer.fields())
+        mem_layer.updateFields()
+
+        # Добавляем оригинальные + рамочные
+        features = list(centroids_layer.getFeatures()) + extra_points
+        mem_layer.dataProvider().addFeatures(features)
+
+        try: 
         
-        self.parent.setMessage('Constructing Voronoi polygons...')
-        input_layer_path = self.centroids_layer_id
-        
-        voronoi_result = processing.run("native:voronoipolygons",
-                                        {'INPUT': input_layer_path,
+            self.parent.setMessage('Constructing Voronoi polygons...')
+                        
+            voronoi_result = processing.run("native:voronoipolygons",
+                                        {'INPUT': mem_layer,
                                          'BUFFER': 0,
                                          'TOLERANCE': 0,
                                          'COPY_ATTRIBUTES': True,
                                          'OUTPUT': 'TEMPORARY_OUTPUT'}
                                         )
-        voronoi_layer = voronoi_result['OUTPUT']
+            voronoi_layer = voronoi_result['OUTPUT']
 
-        QgsProject.instance().addMapLayer(voronoi_layer, False)
-        
-        if self.break_on:
-            return 0
-        self.parent.progressBar.setValue(2)
-        #########################
-        # Index for voronoi_layer
-        #########################
-        
-        self.parent.setMessage('Constructing index ...')
-        processing.run("native:createspatialindex",
+            QgsProject.instance().addMapLayer(voronoi_layer, False)
+
+            if self.break_on:
+                return 0
+            self.parent.progressBar.setValue(2)
+            #########################
+            # Index for voronoi_layer
+            #########################
+            
+            self.parent.setMessage('Constructing index ...')
+            processing.run("native:createspatialindex",
                        {'INPUT': voronoi_layer})
         
-        #########################
-        # Buffer
-        #########################
-        self.parent.setMessage('Constructing buffers ...')
-        buffer_result = processing.run("native:buffer",
+            #########################
+            # Buffer
+            #########################
+            
+            self.parent.setMessage('Constructing buffers ...')
+            buffer_result = processing.run("native:buffer",
                                        {'INPUT': self.input_layer_path,
                                         'DISTANCE': self.dist_buffer,
                                         'SEGMENTS': 5,
@@ -425,51 +415,49 @@ class cls_clean_visualization(QgsTask):
                                         'DISSOLVE': True,
                                         'SEPARATE_DISJOINT': True,
                                         'OUTPUT': 'TEMPORARY_OUTPUT'})
-        buffer_layer = buffer_result['OUTPUT']
-        if self.break_on:
-            return 0
-        self.parent.progressBar.setValue(3)
-        #######################
-        # Clip - voronoi_layer and buffer_layer
-        ########################
-        self.parent.setMessage('Clipping ...')
-
-        clip_layer = self.make_clip(buffer_layer, voronoi_layer)
+            buffer_layer = buffer_result['OUTPUT']
+            if self.break_on:
+                return 0
+            self.parent.progressBar.setValue(3)
+            #######################
+            # Clip - voronoi_layer and buffer_layer
+            ########################
+            self.parent.setMessage('Clipping ...')
+            
+            clip_layer = self.make_clip(buffer_layer, voronoi_layer)
         
-        if self.break_on:
-            return 0
-        self.parent.progressBar.setValue(4)
-        #########################
-        # Saving result
-        #########################
-        self.parent.setMessage('Saving ...')
-        file_dir = self.folder_name
-        self.ext = ".shp"
-        self.output_file_name = f"{self.name}_voronoi{self.ext}"
+            if self.break_on:
+                return 0
+            self.parent.progressBar.setValue(4)
+            #########################
+            # Saving result
+            #########################
+            self.parent.setMessage('Saving ...')
+            file_dir = self.folder_name
+            ext = ".shp"
+            output_file_name = f"{self.name}_voronoi{ext}"
 
-        output_path = os.path.join(file_dir, self.output_file_name)
-        self.unique_output_path = self.get_unique_path(output_path)
+            output_path = os.path.join(file_dir, output_file_name)
+            unique_output_path = self.get_unique_path(output_path)
+            
+            voronoi_layer_name = os.path.splitext(
+                os.path.basename(unique_output_path))[0]
+            QgsVectorFileWriter.writeAsVectorFormat(
+                clip_layer,
+                unique_output_path,
+                "UTF-8",
+                clip_layer.crs(),
+                "ESRI Shapefile"
+            )
+            
+            self.list_layer.append((unique_output_path, voronoi_layer_name))
 
-        self.voronoi_layer_name = os.path.splitext(
-            os.path.basename(self.unique_output_path))[0]
-        QgsVectorFileWriter.writeAsVectorFormat(
-            clip_layer,
-            self.unique_output_path,
-            "UTF-8",
-            clip_layer.crs(),
-            "ESRI Shapefile"
-        )
-        saved_layer = QgsVectorLayer(
-            self.unique_output_path, self.voronoi_layer_name, "ogr")
-        if saved_layer.isValid():
-            QgsProject.instance().addMapLayer(saved_layer)
-            self.style_polygon_layer(saved_layer)
-        if self.break_on:
-            return 0
-        QgsProject.instance().removeMapLayer(voronoi_layer.id())
-        self.parent.progressBar.setValue(5)
+            if self.break_on:
+                return 0
+            QgsProject.instance().removeMapLayer(voronoi_layer.id())
+            self.parent.progressBar.setValue(5)
         
-      except Exception as e:
+        except Exception as e:
             print (f"error voronoi: {e}")
 
     ###################################
@@ -524,62 +512,24 @@ class cls_clean_visualization(QgsTask):
         result_layer.updateExtents()
         return result_layer
 
-    """
-    def make_clip(self, buffer_layer, voronoi_layer):
-
-        result_layer = QgsVectorLayer(
-            "Polygon?crs=" + voronoi_layer.crs().authid(), "Clipped Voronoi", "memory")
-        result_provider = result_layer.dataProvider()
-        result_provider.addAttributes(voronoi_layer.fields())
-        result_layer.updateFields()
-        count_buffers = buffer_layer.featureCount()
-
-        for i, buffer_feature in enumerate(buffer_layer.getFeatures()):
-            if i % 10 == 0:
-                if self.break_on:
-                    return 0
-                self.parent.setMessage(
-                    f'Clipping buffer {i + 1} from {count_buffers} ...')
-
-            single_buffer_layer = QgsVectorLayer(
-                "Polygon?crs=" + buffer_layer.crs().authid(), "Single Buffer", "memory")
-            buffer_provider = single_buffer_layer.dataProvider()
-            buffer_provider.addAttributes(buffer_layer.fields())
-            single_buffer_layer.updateFields()
-
-            buffer_provider.addFeature(QgsFeature(buffer_feature))
-
-            try:
-                clip_result = processing.run("native:clip",
-                                             {
-                                                 'INPUT': voronoi_layer.id(),
-                                                 'OVERLAY': single_buffer_layer,
-                                                 'OUTPUT': 'TEMPORARY_OUTPUT'
-                                             }
-                                             )
-                clipped_layer = clip_result['OUTPUT']
-                result_provider.addFeatures(clipped_layer.getFeatures())
-
-            except Exception as e:
-                print(f"Error clipped : {e}")
-
-            finally:
-                del single_buffer_layer
-                del clipped_layer
-
-        result_layer.updateExtents()
-        return result_layer
-    """ 
-    
-
-
     def style_polygon_layer(self, layer):
+
         
         color_list = list(CSS4_COLORS.values())
         random_color = choice(color_list)
 
         if layer.geometryType() == 2:
+
             symbol = QgsFillSymbol.createSimple({'color': '0,0,0,0', 
                                                  'outline_color': random_color})
             layer.renderer().setSymbol(symbol)
             layer.triggerRepaint()    
+
+
+    def finished(self, result):
+        for path_shp, name_layer in self.list_layer:
+            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
+            if saved_layer.isValid():
+                QgsProject.instance().addMapLayer(saved_layer)
+                self.style_polygon_layer(saved_layer)
+    

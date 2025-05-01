@@ -4,8 +4,8 @@ from qgis.core import (
     QgsFeature,
     QgsGeometry,
     QgsVectorFileWriter,
-    QgsCoordinateTransformContext
-)
+    )
+
 from PyQt5.QtWidgets import QApplication
 
 
@@ -99,6 +99,5 @@ class MultiLineStringToLineStringConverter:
         if self.verify_break():
             return 0
         self.add_temp_layer_to_project()
-        #self.save_temp_layer_to_geojson(r'c:\temp\1\converter_layer.geojson')
-
+        
         return self.temp_layer

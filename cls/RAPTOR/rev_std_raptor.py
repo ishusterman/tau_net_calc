@@ -26,7 +26,7 @@ def rev_raptor(SOURCE,
                timetable_mode,
                MaxExtraTime,
                departure_interval,
-               timetable_mode_sim = False               
+               first_step = None
                ) -> list:
 
     list_stops = set()
@@ -57,45 +57,55 @@ def rev_raptor(SOURCE,
 
     min_time = np.int64(D_TIME - Maximal_travel_time)
     TIME_START = D_TIME
-
     
+    """
     if timetable_mode:
         MaxWaitTime = MaxExtraTime
         min_time = np.int64(D_TIME - Maximal_travel_time - MaxExtraTime)
         TIME_START = D_TIME - departure_interval
-
-    if timetable_mode_sim:
-        MaxWaitTime = MaxExtraTime
-        min_time = np.int64(D_TIME - Maximal_travel_time)    
-    
-    if True:
-        try:
+    """
             
-            if trans_info == -1:
+    if first_step is None:
+                if trans_info == -1:
                     trans_info = footpath_dict.get(SOURCE, [])
 
-            for i in trans_info:
-                (p_dash, to_pdash_time) = i
-                if not (label[0].get(p_dash)):
-                    continue
-                if to_pdash_time > MaxWalkDist3_time:
-                    continue
-                new_p_dash_time = TIME_START - to_pdash_time
-                label[0][p_dash] = new_p_dash_time
-                pi_label[0][p_dash] = ('walking',
+                for i in trans_info:
+                    (p_dash, to_pdash_time) = i
+                    if not (label[0].get(p_dash)):
+                        continue
+                    if to_pdash_time > MaxWalkDist3_time:
+                        continue
+                    new_p_dash_time = TIME_START - to_pdash_time
+                    label[0][p_dash] = new_p_dash_time
+                    pi_label[0][p_dash] = ('walking',
                                        SOURCE,
                                        p_dash,
                                        to_pdash_time,
                                        new_p_dash_time
                                        )
-                list_stops.add(p_dash)
+                    list_stops.add(p_dash)
 
-                if marked_stop_dict[p_dash] == 0:
-                    marked_stop.append(p_dash)
-                    marked_stop_dict[p_dash] = 1
+                    if marked_stop_dict[p_dash] == 0:
+                        marked_stop.append(p_dash)
+                        marked_stop_dict[p_dash] = 1
+
+    if first_step:
+                (stop_id, time_departure, dist) = first_step
+                label[0][stop_id] = time_departure
+                pi_label[0][stop_id] = ('walking',
+                                       SOURCE,
+                                       stop_id,
+                                       dist,
+                                       time_departure
+                                       )
+
+                list_stops.add(stop_id)
+
+                if marked_stop_dict[stop_id] == 0:
+                        marked_stop.append(stop_id)
+                        marked_stop_dict[stop_id] = 1
             
-        except KeyError as e:
-            pass
+        
 
     # Main Code
     # Main code part 1
@@ -116,6 +126,7 @@ def rev_raptor(SOURCE,
         Q.clear()
         while marked_stop:
             p = marked_stop.pop()
+
             marked_stop_dict[p] = 0
 
             # may by stop exist in layer but not exist in PKL
@@ -146,17 +157,16 @@ def rev_raptor(SOURCE,
             for p_i in stops_dict[route][current_stopindex_by_route - 1:]:
 
                 to_process = True
-
+                
                 if current_trip_t != -1:
 
                     try:
                         arr_by_t_at_pi = current_trip_t[current_stopindex_by_route-1][1]
-                    except:
+                    except: 
 
                         continue
 
                     if min_time > arr_by_t_at_pi:
-
                         to_process = False
 
                     # no rewrite if exist best solve!!!
@@ -166,6 +176,12 @@ def rev_raptor(SOURCE,
 
                     # and boarding_time >= arr_by_t_at_pi :
                     if to_process and boarding_point != p_i:
+
+                        #if boarding_point == '13472' and p_i == '25107':
+                        #    print (f'boarding_point={boarding_point} p_i={p_i} boarding_time {boarding_time} arr_by_t_at_pi= {arr_by_t_at_pi} tid= {tid} k={k}')    
+                        
+                        
+
 
                         label[k][p_i] = arr_by_t_at_pi
                         pi_label[k][p_i] = (boarding_time,
@@ -181,6 +197,7 @@ def rev_raptor(SOURCE,
                             marked_stop_dict[p_i] = 1
 
                 if current_trip_t == -1 or (label[k - 1][p_i] - change_time > current_trip_t[current_stopindex_by_route-1][1]):
+                    
                     # what means the last condition: we found new arrive time label[k - 1][p_i] to current stop
                     # and if we subtract from it change_time that still it will be greater than
                     # current_trip_t[current_stopindex_by_route][1] - so we need to find a trip
@@ -209,7 +226,22 @@ def rev_raptor(SOURCE,
 
 
         # Main code part 3
-
+        """
+        save_marked_stop = True
+        MaxWalkDist = max (MaxWalkDist1_time, MaxWalkDist2_time)
+        process_walking_stage(min_time,
+                              MaxWalkDist,
+                              k,
+                              footpath_dict,
+                              marked_stop_dict,
+                              marked_stop,
+                              label,
+                              pi_label,
+                              save_marked_stop,
+                              list_stops,
+                              )
+        """
+        MaxWalkTransfer = MaxWalkDist2_time
         if k < roundsCount and MaxWalkDist2_time != MaxWalkDist3_time:
 
             save_marked_stop = True
@@ -223,6 +255,7 @@ def rev_raptor(SOURCE,
                                   pi_label,
                                   save_marked_stop,
                                   list_stops,
+                                  MaxWalkTransfer
                                   )
 
         save_marked_stop = False
@@ -237,8 +270,8 @@ def rev_raptor(SOURCE,
                               pi_label,
                               save_marked_stop,
                               list_stops,
+                              MaxWalkTransfer
                               )
-
         # Main code End
         if marked_stop == deque([]):
             break
@@ -250,6 +283,7 @@ def rev_raptor(SOURCE,
         list_stops,
         pi_label,
         MIN_TRANSFER,
+        MaxWalkDist2,
         MaxWalkDist1,
         timetable_mode,
         Maximal_travel_time,
@@ -269,9 +303,11 @@ def process_walking_stage(min_time,
                           label,
                           pi_label,
                           save_marked_stop,
-                          list_stops):
+                          list_stops,
+                          MaxWalkTransfer):
 
     marked_stop_copy = marked_stop.copy()
+    #save_marked_stop = True
 
     for p in marked_stop_copy:
 
@@ -307,15 +343,23 @@ def process_walking_stage(min_time,
 
             # veryfy cause if exist solve for this p_dash (not was better?)
             if pi_label_k_p_dash != -1 and pi_label_k_p_dash[0] == "walking" and new_p_dash_time < pi_label_k_p_dash[4]:
+               continue
+
+            # если это остановка, но идти до нее дольше чем MaxWalkTransfer, то пропускаем
+            if (not(p_dash.isdigit()) or int(p_dash) < 100000) and to_pdash_time > MaxWalkTransfer:
                 continue
 
             label[k][p_dash] = new_p_dash_time
 
             pi_label[k][p_dash] = ('walking', p, p_dash,
                                    to_pdash_time, new_p_dash_time)
-
+            
             list_stops.add(p_dash)
 
+            # experiment !!!!!!!!!
+            #save_marked_stop = k != 2 or to_pdash_time <= 200    
+            # experiment !!!!!!!!!
+            
             if save_marked_stop:
                 marked_stop.append(p_dash)
                 marked_stop_dict[p_dash] = 1

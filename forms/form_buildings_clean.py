@@ -253,7 +253,11 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         webbrowser.open(url)
 
     def readParameters(self):
-        project_directory = os.path.dirname(QgsProject.instance().fileName())
+        project_path = QgsProject.instance().fileName()
+        project_directory = os.path.dirname(project_path)
+        project_name = os.path.splitext(os.path.basename(project_path))[0]
+        PathToProtocols_clean_buildings = os.path.join(project_directory, f'{project_name}_cleaned')
+        
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
 
@@ -263,7 +267,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             self.config['Settings']['layer_clean-buildings'] = ''
 
         if 'PathToProtocols_clean-buildings' not in self.config['Settings']:
-            self.config['Settings']['PathToProtocols_clean-buildings'] = 'C:/'
+            self.config['Settings']['PathToProtocols_clean-buildings'] = PathToProtocols_clean_buildings
 
         if 'Layer_field_clean-buildings' not in self.config['Settings']:
             self.config['Settings']['Layer_field_clean-buildings'] = ''    
@@ -320,9 +324,11 @@ class form_buildings_clean(QDialog, FORM_CLASS):
 
     def check_folder_and_file(self):
 
-        if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-            return False
+        os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
+
+        #if not os.path.exists(self.txtPathToProtocols.text()):
+        #    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
+        #    return False
 
         """
         # check for the presence of .shp files in the folder

@@ -1,9 +1,6 @@
 import os
 import processing
 from datetime import datetime
-from processing.tools import general
-
-from time import sleep
 
 from qgis.core import (
     QgsVectorLayer,
@@ -16,19 +13,14 @@ from qgis.core import (
     QgsFields,
     QgsTask,
     QgsProject,
-    QgsProcessingContext
+    QgsProcessingFeedback
     )
-from qgis.core import QgsProcessingFeedback
-from qgis.core import QgsApplication
-
-from PyQt5.QtCore import QTimer
 
 from PyQt5.QtCore import Qt
 
 from PyQt5.QtWidgets import QApplication
 
 from common import getDateTime, convert_meters_to_degrees
-
 
 class CustomFeedback(QgsProcessingFeedback):
     def __init__(self):
@@ -68,7 +60,7 @@ class cls_clean_roads(QgsTask):
        
         self.parent.progressBar.setValue(0)
         try:
-
+            self.list_layer = []
             units = self.layer.crs().mapUnits()
             crs_grad = (units == 6)
             first_feature = next(self.layer.getFeatures())
@@ -117,15 +109,10 @@ class cls_clean_roads(QgsTask):
             snapped_layer_path = result0['output']
             self.parent.progressBar.setValue(1)  
             QApplication.processEvents()   
-             
-            #snapped_layer = QgsVectorLayer(snapped_layer_path, "Snapped Layer", "ogr")
-            #QgsProject.instance().addMapLayer(snapped_layer)
                         
             #######################################################
             # first clean
-            # !!!EXPERIMENT!!
-            #snapped_layer_path = self.layer_path
-
+            
             self.parent.setMessage('Cleaning layer of roads, step 2 of 3, breaking overlapping links...')
             result1 = processing.run("grass:v.clean", {
                 'input': snapped_layer_path,
@@ -234,9 +221,7 @@ class cls_clean_roads(QgsTask):
             self.unique_output_path = self.get_unique_path(output_path)
             self.layer_name = os.path.splitext(
                 os.path.basename(self.unique_output_path))[0]
-            
-            
-            
+                        
             QgsVectorFileWriter.writeAsVectorFormat(
                 filtered_layer,  
                 self.unique_output_path, 
@@ -247,9 +232,9 @@ class cls_clean_roads(QgsTask):
             saved_layer = QgsVectorLayer(
                 self.unique_output_path, self.layer_name, "ogr")
             self.saved_layer_count = saved_layer.featureCount()
-            if saved_layer.isValid():
-                QgsProject.instance().addMapLayer(saved_layer)
-            
+
+            self.list_layer.append((self.unique_output_path, self.layer_name))
+                        
             self.write_finish_info()
             self.parent.btnBreakOn.setEnabled(False)
             self.parent.close_button.setEnabled(True)
@@ -317,3 +302,12 @@ class cls_clean_roads(QgsTask):
         while os.path.exists(f"{base}_{index}{ext}"):
             index += 1
         return f"{base}_{index}{ext}"
+    
+    def finished(self, result):
+        for path_shp, name_layer in self.list_layer:
+            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
+            if saved_layer.isValid():
+                QgsProject.instance().addMapLayer(saved_layer)
+                
+            
+        

@@ -5,6 +5,7 @@ from time import sleep
 from datetime import datetime
 import glob
 import re
+import math
 
 from qgis.PyQt import QtCore
 
@@ -108,12 +109,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.task = None
         self.already_show_info = False
-
-        # Создаем группу кнопок
-        self.button_group = QButtonGroup(self)
-        self.button_group.addButton(self.rbStandart, 1)
-        self.button_group.addButton(self.rbLength, 2)
-        self.button_group.buttonClicked.connect(self.on_radio_selected)
         
         self.show()
         self.ParametrsShow()
@@ -135,6 +130,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             (self.cmbLayers, self.cmbLayers_fields))
         
         self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
+        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_clean-visualization'])
+        #self.ParametrsShow()
 
         self.show_info()
 
@@ -144,6 +141,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         selected_layer_name = os.path.splitext(os.path.basename(selected_layer_name))[0]
         
         layers = QgsProject.instance().mapLayersByName(selected_layer_name)
+        if not layers:
+            return
         layer = layers[0]
 
         fields = layer.fields()
@@ -181,10 +180,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
                 if obj_layer_fields.itemText(i).lower() == "osm_id":
                     obj_layer_fields.setCurrentIndex(i)
                     break    
-    
-    def on_radio_selected(self, button):
-        self.mode = self.button_group.id(button)
-        
+            
     def get_layer_buildings(self):
         selected_item = self.cmbLayers.currentText()
         if os.path.isfile(selected_item):
@@ -279,16 +275,35 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
-
-        self.layer_buildings  = self.get_layer_buildings()
-        self.layer_buildings_path = self.layer_buildings.dataProvider().dataSourceUri().split("|")[
-            0]
         
         if not (self.check_type_layer_buildings()):
             self.run_button.setEnabled(True)
             return 0
         
+        spacing = []
+        if self.cb50.isChecked():
+            spacing.append(50 * math.sqrt(3))
+        if self.cb100.isChecked():
+            spacing.append(100 * math.sqrt(3))    
+        if self.cb200.isChecked():
+            spacing.append(200 * math.sqrt(3))    
+        if self.cb400.isChecked():
+            spacing.append(400 * math.sqrt(3))    
+        if self.cb800.isChecked():
+            spacing.append(800 * math.sqrt(3))   
+        if self.cbLength.isChecked():
+            spacing.append(int (self.txtAddHex.text()) * math.sqrt(3))  
+        
+        if spacing == [] and not self.cbVoronoi.isChecked():
+            self.setMessage(f"No checkbox is selected")
+            self.run_button.setEnabled(True)
+            return 0
 
+
+        self.layer_buildings  = self.get_layer_buildings()
+        self.layer_buildings_path = self.layer_buildings.dataProvider().dataSourceUri().split("|")[
+            0]
+        
         self.saveParameters()
         self.readParameters()
 
@@ -314,7 +329,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.add_hex = self.config['Settings']['AddHex_clean-visualization']
         self.textLog.append(f"<a>Layer of buildings: {self.layer_buildings_path}</a>")
         
-        if self.mode == 2:
+        if self.cbLength.isChecked() :
             self.textLog.append(f"<a>The layer of hexagons with a side of {self.add_hex}m</a>")        
         self.folder_name = self.config['Settings']['PathToProtocols_clean-visualization']
         self.textLog.append(f"<a>Folder to store layers for visualization: {self.folder_name}</a>")
@@ -327,8 +342,12 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.break_on = False
 
         self.layer_field = self.cmbLayers_fields.currentText()
+        runVoronoi = self.cbVoronoi.isChecked()
+
+             
+
         self.task = cls_clean_visualization(
-            self, begin_computation_time, self.layer_buildings, self.folder_name, self.mode, self.layer_field)
+            self, begin_computation_time, self.layer_buildings, self.folder_name, self.layer_field, runVoronoi, spacing)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
         QApplication.processEvents()
@@ -341,7 +360,11 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         webbrowser.open(url)
 
     def readParameters(self):
-        project_directory = os.path.dirname(QgsProject.instance().fileName())
+        project_path = QgsProject.instance().fileName()
+        project_directory = os.path.dirname(project_path)
+        project_name = os.path.splitext(os.path.basename(project_path))[0]
+        PathToProtocols_clean_visualization = os.path.join(project_directory, f'{project_name}_visio')
+
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
 
@@ -351,7 +374,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.config['Settings']['layer_clean-visualization'] = ''
 
         if 'PathToProtocols_clean-visualization' not in self.config['Settings']:
-            self.config['Settings']['PathToProtocols_clean-visualization'] = 'C:/'
+            self.config['Settings']['PathToProtocols_clean-visualization'] = PathToProtocols_clean_visualization
 
         if 'AddHex_clean-visualization' not in self.config['Settings']:
             self.config['Settings']['AddHex_clean-visualization'] = '500'    
@@ -372,11 +395,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.config['Settings']['PathToProtocols_clean-visualization'] = self.txtPathToProtocols.text()
         self.config['Settings']['AddHex_clean-visualization'] = self.txtAddHex.text()
 
-        if self.rbStandart.isChecked():
-            self.config['Settings']['Mode_clean-visualization'] = '1'
-        else:
-            self.config['Settings']['Mode_clean-visualization'] = '2'
-
         self.config['Settings']['Layer_field_clean-visualization'] = self.cmbLayers_fields.currentText()    
 
 
@@ -396,13 +414,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_clean-visualization'])
         self.txtAddHex.setText(self.config['Settings']['AddHex_clean-visualization'])
-        if self.config['Settings']['Mode_clean-visualization'] == '1':
-            self.rbStandart.setChecked(True)
-            self.mode = 1
-        else:
-            self.rbLength.setChecked(True)
-            self.mode = 2
-
+        
         self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_clean-visualization'])
 
         
@@ -412,8 +424,14 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
     def check_type_layer_buildings(self):
         
-        layer = self.layer_buildings
+        layer = self.cmbLayers.currentText()
+        
+        if layer == "":
+            self.setMessage(f"There are no open polygon layers")
+            return 0
 
+        layer = QgsProject.instance().mapLayersByName(layer)[0]
+        
         try:
             features = layer.getFeatures()
         except:
@@ -433,16 +451,18 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
     def check_add_hex(self):
 
-        if self.mode == 2 and self.txtAddHex.text() == "":
+        if self.cbLength.isChecked() and self.txtAddHex.text() == "":
             self.setMessage(f"Value of side length is empty")
             return False
         
         return True 
     def check_folder_and_file(self):
 
-        if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-            return False
+        os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
+
+        #if not os.path.exists(self.txtPathToProtocols.text()):
+        #    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
+        #    return False
 
         """
         # check for the presence of .shp files in the folder
@@ -504,3 +524,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         self.textInfo.setHtml(html)
         self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
+    
+    def closeEvent(self, event):
+        
+        self.task = None
+                
+        event.accept()

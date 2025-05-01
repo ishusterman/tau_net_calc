@@ -51,7 +51,8 @@ def get_latest_trip_new(stoptimes_dict,
 def post_processing(DESTINATION,
                     pi_label,
                     MIN_TRANSFER,
-                    MaxWalkDist,
+                    MaxWalkDist2,
+                    MaxWalkDist3,
                     timetable_mode,
                     Maximal_travel_time,
                     D_Time,
@@ -67,7 +68,6 @@ def post_processing(DESTINATION,
 
     pareto_set = []
 
-    count_print = 0
 
     if not rounds_inwhich_desti_reached:
         return None
@@ -136,7 +136,10 @@ def post_processing(DESTINATION,
             
             
             append = True
-
+            
+            if not (check_walking_jorney (journey, MaxWalkDist2, MaxWalkDist3)):
+                append = False
+                
             if timetable_mode:  # or mode_raptor == 2:
 
                 if len(journey) > 1 and journey[0][0] == "walking" and journey[1][0] != "walking":
@@ -166,15 +169,29 @@ def post_processing(DESTINATION,
                     if (duration > Maximal_travel_time) or end_time > D_Time: 
                         append = False
             
-            if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist) and (transfer_needed >= MIN_TRANSFER):
+            if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist3) and (transfer_needed >= MIN_TRANSFER):
                 if append:
                     pareto_set.append((transfer_needed, duration, end_time, journey))
 
     if len(pareto_set) == 0:
         return None
-
+    
     return pareto_set
 
+def check_walking_jorney (journey, MaxWalkDist2, MaxWalkDist3):
+    result = True
+    walking_indices = [i for i, item in enumerate(journey) if isinstance(item[0], str) and item[0] == 'walking']
+
+    distance_transfers = [journey[i][3] for i in walking_indices[1:-1]]
+    distance_finish = journey[walking_indices[-1]][3] if walking_indices else None
+
+    if any(d > MaxWalkDist2 for d in distance_transfers):
+        result = False
+
+    if distance_finish > MaxWalkDist3:
+        result = False
+
+    return result
 
 def get_duration(journey, mode_raptor):
     duration = 0
@@ -235,7 +252,8 @@ def post_processingAll(
         list_stops,
         pi_label,
         MIN_TRANSFER,
-        MaxWalkDist,
+        MaxWalkDist2,
+        MaxWalkDist3,
         timetable_mode,
         Maximal_travel_time,
         departure_interval,
@@ -252,7 +270,8 @@ def post_processingAll(
         pareto_set = post_processing(p_i,
                                      pi_label,
                                      MIN_TRANSFER,
-                                     MaxWalkDist,
+                                     MaxWalkDist2,
+                                     MaxWalkDist3,
                                      timetable_mode,
                                      Maximal_travel_time,
                                      D_TIME,
@@ -275,13 +294,7 @@ def post_processingAll(
 
             total_time_to_dest, transfers, optimal_journey, end_time = get_optimal_journey_duration(pareto_set)
             Dict_duration[p_i] = [SOURCE, total_time_to_dest, optimal_journey, transfers, end_time]
-
         
-
-        #if has_consecutive_walking (pareto_set) and count_print < 1200: 
-        #                print (pareto_set)
-        #                count_print +=1
-
     return Dict_endtime, Dict_duration
 
 

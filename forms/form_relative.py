@@ -489,20 +489,24 @@ class form_relative(QDialog, FORM_CLASS):
             obj.setText(obj.text())
 
     def readParameters(self):
-        project_directory = os.path.dirname(QgsProject.instance().fileName())
+        project_path = QgsProject.instance().fileName()
+        project_directory = os.path.dirname(project_path)
+        project_name = os.path.splitext(os.path.basename(project_path))[0]
+        PathToOutput_relative = os.path.join(project_directory, f'{project_name}_output')
+
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
 
         self.config.read(file_path)
 
-        if 'PathToOutput_relative' not in self.config['Settings']:
-            self.config['Settings']['PathToOutput_relative'] = 'C:/'
+        if 'PathToOutput_relative' not in self.config['Settings'] or self.config['Settings']['PathToOutput_relative'] == "C:/":
+            self.config['Settings']['PathToOutput_relative'] = PathToOutput_relative   
 
-        if 'PathToPT_relative' not in self.config['Settings']:
-            self.config['Settings']['PathToPT_relative'] = 'C:/'
+        if 'PathToPT_relative' not in self.config['Settings'] or self.config['Settings']['PathToPT_relative'] == "C:/":
+            self.config['Settings']['PathToPT_relative'] = PathToOutput_relative
 
-        if 'PathToCar_relative' not in self.config['Settings']:
-            self.config['Settings']['PathToCar_relative'] = 'C:/'
+        if 'PathToCar_relative' not in self.config['Settings'] or self.config['Settings']['PathToCar_relative'] == "C:/":
+            self.config['Settings']['PathToCar_relative'] = PathToOutput_relative   
 
         if 'calc_ratio_relative' not in self.config['Settings']:
             self.config['Settings']['calc_ratio_relative'] = "True"
@@ -578,9 +582,12 @@ class form_relative(QDialog, FORM_CLASS):
 
     def check_output_folder(self):
         self.setMessage("")
-        if not os.path.exists(self.txtPathToOutput.text()):
-            self.setMessage(f"Output folder '{self.txtPathToOutput.text()}' does not exist")
-            return False
+
+        os.makedirs(self.txtPathToOutput.text(), exist_ok=True)
+
+        #if not os.path.exists(self.txtPathToOutput.text()):
+        #    self.setMessage(f"Output folder '{self.txtPathToOutput.text()}' does not exist")
+        #    return False
 
         try:
             tmp_prefix = "write_tester"

@@ -123,6 +123,10 @@ class form_pkl(QDialog, FORM_CLASS):
         self.ParametrsShow()
         self.show_info()
 
+        #path = r'c:\doc\QGIS_prj\RCity\test\buffer11.shp'
+        #saved_layer = QgsVectorLayer(path, "test1", "ogr")
+        #QgsProject.instance().addMapLayer(saved_layer)
+
     def get_layer_road(self):
         selected_item = self.cbRoads.currentText()
 

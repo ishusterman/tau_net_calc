@@ -234,15 +234,17 @@ class car_accessibility:
 
             for building, dist_finish in zip(buildings, dists_finish):
                 # define the pair {self.source, building}
-                    
-
+                
                 pair = (self.source, building)
 
                 Dist_OD = Dist_OD_0 + dist_finish
                 Dist_to_drive = Dist_OD - sum_walk
                 if Dist_to_drive <= 0:
+                    
                     cost_res = round(Dist_OD / self.parent.walk_speed_m_s)
+                    veh_legs = 0
                 else:
+                    veh_legs = 1
                     if Dist_between_nodes != 0:
                         Time_to_drive = self.costs[edgeId] * \
                             (Dist_to_drive/Dist_between_nodes)/self.factor_speed
@@ -250,27 +252,29 @@ class car_accessibility:
                         Time_to_drive = 0
                     cost_res = round(
                         (sum_walk)/self.parent.walk_speed_m_s + Time_to_drive)
-
+                
                 if int(self.source) == int(building):
                     cost_res = 0
 
                 if cost_res > self.max_time_sec:
                     continue
              
-                # if the pair already exists in the dictionary, check the minimum cost.
-                if pair in self.min_costs:
-                    self.min_costs[pair] = min(self.min_costs[pair], cost_res)
+                # If the pair does not exist in the dictionary, add it with the current cost_res and veh_legs
+                if pair not in self.min_costs:
+                    self.min_costs[pair] = (cost_res, veh_legs)
                 else:
-                    self.min_costs[pair] = cost_res
+                    # If the new cost_res is less than the stored one, update it
+                    if cost_res < self.min_costs[pair][0]:
+                        self.min_costs[pair] = (cost_res, veh_legs)    
 
     def makeProtocolArea(self):
         
         with open(self.f, 'a') as filetowrite:
-            for (source, building), min_cost in self.min_costs.items():
+            for (source, building), (min_cost, veh_legs) in self.min_costs.items():
                 if self.parent.mode == 1:
-                    filetowrite.write(f'{source},{building},{min_cost}\n')
+                    filetowrite.write(f'{source},{building},{veh_legs},{min_cost}\n')
                 else:
-                    filetowrite.write(f'{building},{source},{min_cost}\n')
+                    filetowrite.write(f'{building},{source},{veh_legs},{min_cost}\n')
 
     def calc_min_cost_onAir(self):
         
@@ -475,9 +479,9 @@ class car_accessibility:
         self.create_head_files()
 
         if self.parent.mode == 1:
-            table_header = "Origin_ID,Destination_ID,Duration\n"
+            table_header = "Origin_ID,Destination_ID,Veh_legs,Duration\n"
         else:
-            table_header = "Destination_ID,Origin_ID,Duration\n"
+            table_header = "Destination_ID,Origin_ID,Veh_legs,Duration\n"
         
         if self.parent.protocol_type == 2:
             self.f = f'{self.parent.folder_name}//{self.parent.file_name}.csv'

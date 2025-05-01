@@ -510,7 +510,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
 
     def readParameters(self):
-        project_directory = os.path.dirname(QgsProject.instance().fileName())
+        project_path = QgsProject.instance().fileName()
+        project_directory = os.path.dirname(project_path)
+        project_name = os.path.splitext(os.path.basename(project_path))[0]
+        PathToProtocols = os.path.join(project_directory, f'{project_name}_output')
+
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
         self.config.read(file_path)
@@ -529,6 +533,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         if 'Admin_time_delta' not in self.config['Settings']:
             self.config['Settings']['Admin_time_delta'] = '900'    
+
+
+        if 'PathToProtocols' not in self.config['Settings'] or self.config['Settings']['PathToProtocols'] == "C:/":
+            self.config['Settings']['PathToProtocols'] = PathToProtocols      
 
         #if 'Admin_iteration' not in self.config['Settings']:
         #    self.config['Settings']['Admin_iteration'] = '40'        
@@ -703,9 +711,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
     
     def check_folder_and_file(self):
 
-        if not os.path.exists(self.txtPathToPKL.text()):
-            self.setMessage(f"Folder '{self.txtPathToPKL.text()}' does not exist")
-            return False
+        os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
+
+        #if not os.path.exists(self.txtPathToPKL.text()):
+        #    self.setMessage(f"Folder '{self.txtPathToPKL.text()}' does not exist")
+        #    return False
 
         required_files = [  # 'dict_building_vertex.pkl',
             # 'dict_vertex_buildings.pkl',

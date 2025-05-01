@@ -65,13 +65,13 @@ class StatFromTo:
 
         for file in files:
             
-            df = pd.read_csv(file, usecols=["Destination_ID", "Start_time", time_column, "Duration", "Transfers"], dtype={"Destination_ID": str})
+            df = pd.read_csv(file, usecols=["Destination_ID", "Start_time", time_column, "Duration", "Legs"], dtype={"Destination_ID": str})
             df = df[df["Destination_ID"].isin(common_ids)] 
 
             for row in df.itertuples(index=False):
                 start_time = row.Start_time #if pd.notna(row.Start_time) else "00:00:00"
                 dest_time = getattr(row, time_column) #if pd.notna(getattr(row, time_column)) else "00:00:00"
-                transfers = (int(row.Transfers) + 1) if row.Transfers != 'X' else "0"
+                transfers = (int(row.Legs))
                 data_dict[row.Destination_ID].append((start_time, dest_time, row.Duration, transfers))
 
         
@@ -84,9 +84,9 @@ class StatFromTo:
         
         with open(file_path, 'w', newline='') as f:
             if order_from is None :
-                f.write("Destination_ID,Start_time,Destination_time,Duration,Transfers\n")
+                f.write("Destination_ID,Start_time,Destination_time,Duration,Legs\n")
             else:
-                f.write("Origin_ID,Start_time,Destination_time,Duration,Transfers\n")
+                f.write("Origin_ID,Start_time,Destination_time,Duration,Legs\n")
 
             if order_from is None:
                 grouped_entries = {key: sorted(values, key=lambda x: (x[0], x[2])) for key, values in data_dict.items()}

@@ -45,45 +45,7 @@ class GTFS ():
         self.filelog_name = f'{self.__path_to_file}//log_processing_GTFS_{postfix}.txt'
         self.log_processing = []
         self.line_break = '-----------------------------'
-     
-
-    def create_cut_from_GTFS(self, path_routes_cut):
-
-        file1 = os.path.join(self.__path_to_GTFS, 'routes.txt')
-        file2 = os.path.join(self.__path_to_file, 'routes.txt')
-        routes_eilat = pd.read_csv(path_routes_cut)
-        routes = pd.read_csv(file1)
-        filtered_routes = routes[routes['route_id'].isin(
-            routes_eilat['route_id'])]
-        filtered_routes.to_csv(file2, index=False)
-
-        file3 = os.path.join(self.__path_to_GTFS, 'trips.txt')
-        file4 = os.path.join(self.__path_to_file, 'trips.txt')
-        trips = pd.read_csv(file3)
-        filtered_trips = trips[trips['route_id'].isin(
-            routes_eilat['route_id'])]
-        filtered_trips.to_csv(file4, index=False)
-
-        file5 = os.path.join(self.__path_to_GTFS, 'stop_times.txt')
-        file6 = os.path.join(self.__path_to_file, 'stop_times.txt')
-        stop_times = pd.read_csv(file5)
-        filtered_stop_times = stop_times[stop_times['trip_id'].isin(
-            filtered_trips['trip_id'])]
-        filtered_stop_times.to_csv(file6, index=False)
-
-        file7 = os.path.join(self.__path_to_GTFS, 'stops.txt')
-        file8 = os.path.join(self.__path_to_file, 'stops.txt')
-        stops = pd.read_csv(file7)
-        filtered_stops = stops[stops['stop_id'].isin(
-            filtered_stop_times['stop_id'])]
-        filtered_stops.to_csv(file8, index=False)
-
-        file9 = os.path.join(self.__path_to_GTFS, 'calendar.txt')
-        file10 = os.path.join(self.__path_to_file, 'calendar.txt')
-        calendar = pd.read_csv(file9)
-        filtered_calendar = calendar[calendar['service_id'].isin(
-            filtered_trips['service_id'])]
-        filtered_calendar.to_csv(file10, index=False)
+    
 
     def change_time(self, time1_str):
         # time conversion, with the ability to handle invalid values
@@ -784,30 +746,6 @@ class GTFS ():
             self.log_processing.append('Corrected repeated stops...')
             self.log_processing.extend(logs)
             self.log_processing.append(self.line_break)
-
-    
-    ##################
-    # For testing algo!!!!!!!!
-    ##################
-    def filter_trips(self, nth=2):
-        """
-        Filters self.stop_times_df, keeping every nth trip for each route.
-    
-        :param nth: The filtering parameter; every nth trip will be retained.
-        """
-        # Group trip_id by route_id
-        trips_by_route = self.trips_df.groupby('route_id')['trip_id'].apply(list)
-    
-        # Collect all trip_ids that should be kept
-        filtered_trip_ids = []
-        for trip_ids in trips_by_route:
-            # Select every nth trip
-            filtered_trip_ids.extend(trip_ids[::nth])
-    
-        # Filter self.stop_times_df based on the selected trip_ids
-        self.stop_times_df = self.stop_times_df[self.stop_times_df['trip_id'].isin(filtered_trip_ids)]
-
-
 
 
     def save_GTFS(self):

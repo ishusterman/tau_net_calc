@@ -88,6 +88,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.cmbFieldsSpeed.installEventFilter(self)
         self.cmbLayers_buildings.installEventFilter(self)
         self.cmbFieldsDirection.installEventFilter(self)
+        self.cmbLayers_buildings_fields.installEventFilter(self)
 
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
