@@ -335,7 +335,13 @@ class form_pkl(QDialog, FORM_CLASS):
             obj.setText(obj.text())
 
     def readParameters(self):
-        project_directory = os.path.dirname(QgsProject.instance().fileName())
+        project_path = QgsProject.instance().fileName()
+        project_directory = os.path.dirname(project_path)
+        project_name = os.path.splitext(os.path.basename(project_path))[0]
+        PathToProtocols_pkl = os.path.join(project_directory, f'{project_name}_pkl')
+
+
+
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
 
@@ -344,8 +350,8 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'PathToGTFS_pkl' not in self.config['Settings']:
             self.config['Settings']['PathToGTFS_pkl'] = 'C:/'
 
-        if 'PathToProtocols_pkl' not in self.config['Settings']:
-            self.config['Settings']['PathToProtocols_pkl'] = 'C:/'
+        if 'PathToProtocols_pkl' not in self.config['Settings'] or self.config['Settings']['PathToProtocols_pkl'] == "C:/":
+            self.config['Settings']['PathToProtocols_pkl'] = PathToProtocols_pkl
 
         if 'Roads_pkl' not in self.config['Settings']:
             self.config['Settings']['Roads_pkl'] = ''
@@ -426,9 +432,11 @@ class form_pkl(QDialog, FORM_CLASS):
             self.setMessage(f"Files are missing in the '{self.txtPathToGTFS.text()}' forlder: {missing_files_message}")
             return False
 
-        if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-            return False
+        os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
+
+        #if not os.path.exists(self.txtPathToProtocols.text()):
+        #    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
+        #    return False
         
         file_path = os.path.join(self.txtPathToProtocols.text(), "stoptimes_dict_pkl.pkl")
         if  os.path.isfile(file_path):

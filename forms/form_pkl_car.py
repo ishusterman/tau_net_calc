@@ -483,13 +483,18 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
     def readParameters(self):
         project_directory = os.path.dirname(QgsProject.instance().fileName())
+        project_path = QgsProject.instance().fileName()
+        project_directory = os.path.dirname(project_path)
+        project_name = os.path.splitext(os.path.basename(project_path))[0]
+        PathToProtocols_car_pkl = os.path.join(project_directory, f'{project_name}_pkl')
+
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
 
         self.config.read(file_path)
 
-        if 'PathToProtocols_car_pkl' not in self.config['Settings']:
-            self.config['Settings']['PathToProtocols_car_pkl'] = ''
+        if 'PathToProtocols_car_pkl' not in self.config['Settings'] or self.config['Settings']['PathToProtocols_car_pkl'] == "C:/":
+            self.config['Settings']['PathToProtocols_car_pkl'] = PathToProtocols_car_pkl
 
         if 'Roads_car_pkl' not in self.config['Settings']:
             self.config['Settings']['Roads_car_pkl'] = ''
@@ -576,9 +581,11 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
     def check_folder_and_file(self):
 
-        if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-            return False
+        os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
+
+        #if not os.path.exists(self.txtPathToProtocols.text()):
+        #    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
+        #    return False
         
         file_path = os.path.join(self.txtPathToProtocols.text(), "graph.pkl")
         if  os.path.isfile(file_path):

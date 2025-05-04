@@ -12,7 +12,8 @@ from qgis.core import (
     QgsGraduatedSymbolRenderer,
     QgsRendererRange,
     QgsLayerTreeLayer,
-)
+    QgsClassificationEqualInterval
+    )
 
 from qgis.utils import iface
 
@@ -273,7 +274,7 @@ class visualization:
         new_renderer.setClassAttribute(self.targetField)
     
         return new_renderer
-
+    
 
 
     def slyle_Region (self):
@@ -362,7 +363,9 @@ class visualization:
 
         # Создаём новый рендерер
         new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
-        new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
+        #new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
+        new_renderer.setClassificationMethod(QgsClassificationEqualInterval())
+        
         new_renderer.setClassAttribute(self.targetField)
         layer.setRenderer(new_renderer)
         layer.renderer().setClassAttribute(self.targetField_base)

@@ -83,14 +83,16 @@ class MultiLineStringToLineStringConverter:
     
     def save_temp_layer_to_geojson(self, file_path):
         """Сохраняет временный слой в GeoJSON"""
-        QgsVectorFileWriter.writeAsVectorFormat(
-            self.temp_layer,
-            file_path,
-            "UTF-8",
-            self.temp_layer.crs(),
-            "GeoJSON"
-            )
-        
+                
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GeoJSON"
+        options.fileEncoding = "UTF-8"
+
+        QgsVectorFileWriter.writeAsVectorFormatV3(
+                self.temp_layer, 
+                file_path, 
+                QgsProject.instance().transformContext(), 
+                options)
 
     def execute(self):
 

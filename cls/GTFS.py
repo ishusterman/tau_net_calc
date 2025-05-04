@@ -9,8 +9,9 @@ from scipy.spatial import cKDTree
 from shapely.geometry import Point
 from pyproj import Geod
 
-from qgis.core import QgsVectorFileWriter
+from qgis.core import QgsVectorFileWriter, QgsProject
 from PyQt5.QtWidgets import QApplication
+
 
 from footpath_on_projection import cls_footpath_on_projection
 from converter_layer import MultiLineStringToLineStringConverter
@@ -589,15 +590,16 @@ class GTFS ():
                                                                            )
         
         if need_save_layer_with_projection:
-            QgsVectorFileWriter.writeAsVectorFormat(
-                new_layer,
-                filename,
-                "UTF-8",
-                new_layer.crs(),
-                "GeoJSON"
-                )
 
+            options = QgsVectorFileWriter.SaveVectorOptions()
+            options.driverName = "GeoJSON"
+            options.fileEncoding = "UTF-8"
 
+            QgsVectorFileWriter.writeAsVectorFormatV3(
+                new_layer, 
+                filename, 
+                QgsProject.instance().transformContext(), 
+                options)
 
         if self.verify_break():
             return 0

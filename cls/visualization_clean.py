@@ -4,7 +4,7 @@ from random import choice
 from matplotlib.colors import CSS4_COLORS
 import math
 
-from PyQt5.QtCore import QVariant
+from PyQt5.QtCore import QMetaType
 
 from qgis.core import (
     QgsVectorLayer,
@@ -17,7 +17,7 @@ from qgis.core import (
     QgsFillSymbol,
     QgsRectangle,
     QgsPointXY,
-    QgsGeometry
+    QgsGeometry    
     )
 
 from qgis import processing
@@ -165,19 +165,21 @@ class cls_clean_visualization(QgsTask):
             self.ext = ".shp"
             self.output_file_name = f"{self.name}_hexagons_{spacing_info}m{self.ext}"
             output_path = os.path.join(file_dir, self.output_file_name)
-            self.unique_output_path = self.get_unique_path(output_path)
+            unique_output_path = self.get_unique_path(output_path)
         
-            self.layer_name = os.path.splitext(os.path.basename(self.unique_output_path))[0]
-            
-            QgsVectorFileWriter.writeAsVectorFormat(
-                dissolved_layer,
-                self.unique_output_path,
-                "UTF-8",
-                dissolved_layer.crs(),
-                "ESRI Shapefile"
-            )
+            self.layer_name = os.path.splitext(os.path.basename(unique_output_path))[0]
 
-            self.list_layer.append((self.unique_output_path, self.layer_name))
+            options = QgsVectorFileWriter.SaveVectorOptions()
+            options.driverName = "ESRI Shapefile"
+            options.fileEncoding = "UTF-8"
+
+            QgsVectorFileWriter.writeAsVectorFormatV3(
+                dissolved_layer, 
+                unique_output_path, 
+                QgsProject.instance().transformContext(), 
+                options)
+                        
+            self.list_layer.append((unique_output_path, self.layer_name))
             
             if self.break_on:
                 return 0
@@ -291,7 +293,7 @@ class cls_clean_visualization(QgsTask):
         hexagones_layer.startEditing()
 
         if self.layer_field not in [field.name() for field in hexagones_layer.fields()]:
-            hexagones_layer.dataProvider().addAttributes([QgsField(self.layer_field, QVariant.String)])
+            hexagones_layer.dataProvider().addAttributes([QgsField(self.layer_field, QMetaType.Type.QString)])
             hexagones_layer.updateFields()
 
         field_index = hexagones_layer.fields().lookupField(self.layer_field)    
@@ -442,14 +444,20 @@ class cls_clean_visualization(QgsTask):
             
             voronoi_layer_name = os.path.splitext(
                 os.path.basename(unique_output_path))[0]
-            QgsVectorFileWriter.writeAsVectorFormat(
-                clip_layer,
-                unique_output_path,
-                "UTF-8",
-                clip_layer.crs(),
-                "ESRI Shapefile"
-            )
+
             
+            options = QgsVectorFileWriter.SaveVectorOptions()
+            options.driverName = "ESRI Shapefile"
+            options.fileEncoding = "UTF-8"
+
+            QgsVectorFileWriter.writeAsVectorFormatV3(
+                clip_layer, 
+                unique_output_path, 
+                QgsProject.instance().transformContext(), 
+                options)
+
+            
+
             self.list_layer.append((unique_output_path, voronoi_layer_name))
 
             if self.break_on:

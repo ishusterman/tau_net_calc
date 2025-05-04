@@ -13,8 +13,12 @@ from qgis.core import (
     QgsFields,
     QgsTask,
     QgsProject,
-    QgsProcessingFeedback
+    QgsProcessingFeedback,
+    QgsField,
+    edit
     )
+
+from qgis.PyQt.QtCore import QVariant
 
 from PyQt5.QtCore import Qt
 
@@ -209,6 +213,34 @@ class cls_clean_roads(QgsTask):
             filtered_data.addFeatures(filtered_features)
             filtered_layer.updateExtents()
             self.parent.progressBar.setValue(5)
+            #####
+            # Список требуемых полей и их характеристик
+            required_fields = {
+                'FCLASS': (QVariant.String, 28, None),  # (тип, длина, значение по умолчанию)
+                'ONEWAY': (QVariant.String, 1, 'B'),
+                'maxspeed': (QVariant.Int, 10, None)  # 64-bit int в QGIS обозначается просто Int
+                }
+
+            provider = filtered_layer.dataProvider()
+            existing_field_names = [field.name() for field in filtered_layer.fields()]
+
+            # Добавление недостающих полей
+            for field_name, (field_type, length, default_value) in required_fields.items():
+                if field_name not in existing_field_names:
+                    new_field = QgsField(field_name, field_type, len=length)
+                    provider.addAttributes([new_field])
+            
+            filtered_layer.updateFields()
+            with edit(filtered_layer):
+                for feature in filtered_layer.getFeatures():
+                    updated = False
+                    for field_name, (_, _, default_value) in required_fields.items():
+                        if field_name in filtered_layer.fields().names():
+                            if feature[field_name] is None and default_value is not None:
+                                feature[field_name] = default_value
+                                updated = True
+                    if updated:
+                        filtered_layer.updateFeature(feature)
 
             #####
             self.parent.setMessage('Saving ...')
@@ -221,14 +253,17 @@ class cls_clean_roads(QgsTask):
             self.unique_output_path = self.get_unique_path(output_path)
             self.layer_name = os.path.splitext(
                 os.path.basename(self.unique_output_path))[0]
-                        
-            QgsVectorFileWriter.writeAsVectorFormat(
-                filtered_layer,  
+
+            options = QgsVectorFileWriter.SaveVectorOptions()
+            options.driverName = "ESRI Shapefile"
+            options.fileEncoding = "UTF-8"
+
+            QgsVectorFileWriter.writeAsVectorFormatV3(
+                filtered_layer, 
                 self.unique_output_path, 
-                "UTF-8",
-                filtered_layer.crs(),
-                "ESRI Shapefile"
-            )
+                QgsProject.instance().transformContext(), 
+                options)
+            
             saved_layer = QgsVectorLayer(
                 self.unique_output_path, self.layer_name, "ogr")
             self.saved_layer_count = saved_layer.featureCount()

@@ -268,7 +268,7 @@ class car_accessibility:
                         self.min_costs[pair] = (cost_res, veh_legs)    
 
     def makeProtocolArea(self):
-        
+               
         with open(self.f, 'a') as filetowrite:
             for (source, building), (min_cost, veh_legs) in self.min_costs.items():
                 if self.parent.mode == 1:
@@ -335,12 +335,13 @@ class car_accessibility:
                 building = dest_feature[self.layerdest_field] 
                    
                 distance = distance_calculator.measureLine(orig_feature_pt, dest_feature_pt)
+                
                 travel_time = (distance / V) / self.factor_speed 
                 if travel_time < t:
                     pair = (source, building)
                     cost_res = round(travel_time)
                     
-                    self.min_costs[pair] = cost_res
+                    self.min_costs[pair] = (cost_res,0)
                     
 
     def makeProtocolMap(self,
@@ -566,13 +567,13 @@ class car_accessibility:
                     zip_filename1 = f'{self.parent.folder_name}//origins_{self.parent.alias}.zip'
                     filename1 = f'{self.parent.folder_name}//origins_{self.parent.alias}.geojson'
                     self.save_layer_to_zip(
-                        self.parent.layer_origins, zip_filename1, filename1)
+                        self.layer_orig, zip_filename1, filename1)
                 if self.parent.selected_only2:
 
                     zip_filename2 = f'{self.parent.folder_name}//destinations_{self.parent.alias}.zip'
                     filename2 = f'{self.parent.folder_name}//destinations_{self.parent.alias}.geojson'
                     self.save_layer_to_zip(
-                        self.parent.layer_dest, zip_filename2, filename2)
+                        self.layer_dest, zip_filename2, filename2)
 
     def save_layer_to_zip(self, layer, zip_filename, filename):
 
@@ -580,13 +581,25 @@ class car_accessibility:
             temp_file = tmp_file.name
 
         QApplication.processEvents()
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GeoJSON"
+        options.fileEncoding = "UTF-8"
+        options.onlySelectedFeatures = True
 
+        QgsVectorFileWriter.writeAsVectorFormatV3(
+                layer, 
+                temp_file, 
+                QgsProject.instance().transformContext(), 
+                options)
+
+        """
         QgsVectorFileWriter.writeAsVectorFormat(layer,
                                                 temp_file,
                                                 "utf-8",
                                                 layer.crs(),
                                                 "GeoJSON",
                                                 onlySelected=True)
+        """
         QApplication.processEvents()
 
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:

@@ -442,6 +442,7 @@ def runRaptorWithProtocol(self,
                 f_curr = f[field].replace(".csv", "_min_endtime.csv")
                 with open(f_curr, 'w') as filetowrite:
                     filetowrite.write(protocol_header)
+        f_copy = f
 
     if not (shift_mode):
         vis = visualization(self, LayerViz, mode=protocol_type,
@@ -767,7 +768,7 @@ def runRaptorWithProtocol(self,
             if len(fields_ok) > 0:
                 for field in fields_ok:
                     
-                    path_file = f[field]
+                    path_file = f_copy[field]
                     f_curr = path_file.replace(".csv", "_min_duration.csv")
                     f_new.append(f_curr) 
                                         
@@ -795,6 +796,10 @@ def runRaptorWithProtocol(self,
                                           list_buildings_from_start,
                                           set_stops,
                                           field)
+            
+            f = f_new
+            
+            
              
 
 
@@ -1517,12 +1522,25 @@ def save_layer_to_zip(layer_name, zip_filename, filename):
 
     QApplication.processEvents()
 
+    options = QgsVectorFileWriter.SaveVectorOptions()
+    options.driverName = "GeoJSON"
+    options.fileEncoding = "UTF-8"
+    options.onlySelectedFeatures = True
+
+    QgsVectorFileWriter.writeAsVectorFormatV3(
+                layer, 
+                temp_file, 
+                QgsProject.instance().transformContext(), 
+                options)
+
+    """
     QgsVectorFileWriter.writeAsVectorFormat(layer,
                                             temp_file,
                                             "utf-8",
                                             layer.crs(),
                                             "GeoJSON",
                                             onlySelected=True)
+    """
     QApplication.processEvents()
 
     with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:

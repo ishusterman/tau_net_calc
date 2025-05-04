@@ -199,13 +199,16 @@ class cls_clean_buildings(QgsTask):
         unique_output_path = self.get_unique_path(output_path)
         
         layer_name = os.path.splitext(os.path.basename(unique_output_path))[0]
-        QgsVectorFileWriter.writeAsVectorFormat(
-            layer_single_part,
-            unique_output_path,
-            "UTF-8",
-            layer_single_part.crs(),
-            "ESRI Shapefile"
-        )
+        
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "ESRI Shapefile"
+        options.fileEncoding = "UTF-8"
+
+        QgsVectorFileWriter.writeAsVectorFormatV3(
+                layer_single_part, 
+                unique_output_path, 
+                QgsProject.instance().transformContext(), 
+                options)
         
         self.list_layer.append((unique_output_path, layer_name))    
         

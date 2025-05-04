@@ -10,18 +10,16 @@ from qgis.core import (
     QgsPointXY,
     QgsFeature,
     QgsSpatialIndex,
-    QgsProject,
     QgsField,
     QgsVectorLayer,
     QgsWkbTypes,
-    QgsFeatureRequest,
     QgsDistanceArea,
     QgsCoordinateTransformContext,
     )
 
 from PyQt5.QtWidgets import QApplication
 
-from PyQt5.QtCore import QVariant
+from PyQt5.QtCore import QMetaType
 
 class cls_footpath_on_projection:
     def __init__(
@@ -109,15 +107,17 @@ class cls_footpath_on_projection:
         
         if self.new_field_id not in [f.name() for f in self.provider.fields()]:
             self.provider.addAttributes([
-                QgsField(self.new_field_id, QVariant.String),
-                #QgsField("distance", QVariant.Double),
-                QgsField(name="distance", type=QVariant.Double),
-                QgsField("type", QVariant.String, "", 1),
+                QgsField(self.new_field_id, QMetaType.QString),
+               
 
-                QgsField(name="from_node", type=QVariant.Int),
-                QgsField(name="to_node", type=QVariant.Int),
-                QgsField(name="length", type=QVariant.Int),
-                QgsField(name="link_id", type=QVariant.Int),
+                #QgsField("distance", QVariant.Double),
+                QgsField(name="distance", type=QMetaType.Double),
+                QgsField("type", QMetaType.QString, "", 1),
+
+                QgsField(name="from_node", type=QMetaType.Int),
+                QgsField(name="to_node", type=QMetaType.Int),
+                QgsField(name="length", type=QMetaType.Int),
+                QgsField(name="link_id", type=QMetaType.Int),
                 
             ])
             self.cloned_layer.updateFields()  # update the fields of the cloned layer
