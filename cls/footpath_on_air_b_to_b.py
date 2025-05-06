@@ -91,7 +91,8 @@ class cls_footpath_on_air_b_b:
             else:
                 distance = target_feature_pt.distance(feature_geom)
             
-            nearest_features.append(
+            if str(feature.attribute(self.layer_origins_field_id)) != str(id):
+                nearest_features.append(
                 ((feature.attribute(self.layer_origins_field_id)), round(distance/self.speed)))
 
         return nearest_features

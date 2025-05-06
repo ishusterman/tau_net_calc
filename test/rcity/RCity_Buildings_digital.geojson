@@ -1,0 +1,18 @@
+{
+"type": "FeatureCollection",
+"name": "RCity_Buildings_digital",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2039" } },
+"features": [
+{ "type": "Feature", "properties": { "x": -386.0, "y": 261.0, "building_id": 1004 }, "geometry": { "type": "Point", "coordinates": [ -386.0, 261.0 ] } },
+{ "type": "Feature", "properties": { "x": -822.0, "y": 149.0, "building_id": 1008 }, "geometry": { "type": "Point", "coordinates": [ -822.0, 149.0 ] } },
+{ "type": "Feature", "properties": { "x": -1056.0, "y": 44.0, "building_id": 1009 }, "geometry": { "type": "Point", "coordinates": [ -1056.0, 44.0 ] } },
+{ "type": "Feature", "properties": { "x": 46.0, "y": 20.0, "building_id": 1001 }, "geometry": { "type": "Point", "coordinates": [ 46.0, 20.0 ] } },
+{ "type": "Feature", "properties": { "x": 434.0, "y": 216.0, "building_id": 1002 }, "geometry": { "type": "Point", "coordinates": [ 434.0, 216.0 ] } },
+{ "type": "Feature", "properties": { "x": 741.0, "y": -665.0, "building_id": 1005 }, "geometry": { "type": "Point", "coordinates": [ 741.0, -665.0 ] } },
+{ "type": "Feature", "properties": { "x": 44.0, "y": 892.0, "building_id": 1007 }, "geometry": { "type": "Point", "coordinates": [ 44.0, 892.0 ] } },
+{ "type": "Feature", "properties": { "x": 936.0, "y": 355.0, "building_id": 1006 }, "geometry": { "type": "Point", "coordinates": [ 936.0, 355.0 ] } },
+{ "type": "Feature", "properties": { "x": -49.0, "y": 465.0, "building_id": 1003 }, "geometry": { "type": "Point", "coordinates": [ -49.0, 465.0 ] } },
+{ "type": "Feature", "properties": { "x": -1020.2297237378327, "y": 1.2494210655705253e-13, "building_id": 1010 }, "geometry": { "type": "Point", "coordinates": [ -1020.229723737832728, 0.000000000000125 ] } },
+{ "type": "Feature", "properties": { "x": 0.0, "y": 1020.229723737832728, "building_id": 1011 }, "geometry": { "type": "Point", "coordinates": [ 0.0, 1020.229723737832728 ] } }
+]
+}

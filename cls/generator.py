@@ -17,7 +17,14 @@ from common import time_to_seconds
 from qgis.core import QgsApplication, QgsVectorLayer, QgsProject
 from shapely.geometry import LineString
 
-class GTFSGenerator:
+class config:
+        def __init__(self, config_dict):
+            self.config = config_dict['config']
+            self.folder_name = config_dict['folder_name']
+            self.alias = config_dict['alias']
+
+
+class generator:
     def __init__(self,
                  path_nodes,
                  path_links,
@@ -271,6 +278,21 @@ class GTFSGenerator:
                                   dictionary2 = dictionary2,
                                   shift_mode = True
                                   )
+    
+    def compare_files (self, script_dir, params, test_name, add_name = ""):
+        expected_result = os.path.join(script_dir, f'{params.alias}{add_name}_min_duration_expected.csv')
+        result = os.path.join(params.folder_name,f"{params.alias}{add_name}_min_duration.csv")
+
+        df1 = pd.read_csv(result)
+        df2 = pd.read_csv(expected_result)
+        df1_sorted = df1.sort_values(by=list(df1.columns)).reset_index(drop=True)
+        df2_sorted = df2.sort_values(by=list(df2.columns)).reset_index(drop=True)
+        try:
+            pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_dtype=False)
+            print(f"✅ {test_name} - OK")
+        except AssertionError as e:
+            print(f"❌ {test_name} - error")
+            print(e)
         
 
        
@@ -338,7 +360,7 @@ if __name__ == "__main__":
     protocol_type = 2 
     timetable_mode = False
 
-    gen = GTFSGenerator(
+    gen = generator(
         path_nodes=r'c:\doc\QGIS_prj\RCity\RCity_Nodes.geojson',
         path_links=r'c:\doc\QGIS_prj\RCity\RCity_Links.geojson',
         path_buildings=r'c:\doc\QGIS_prj\RCity\RCity_buildings_digital.geojson',

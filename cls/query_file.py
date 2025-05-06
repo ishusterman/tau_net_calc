@@ -381,8 +381,9 @@ def runRaptorWithProtocol(self,
             for field in fields_aggregate:
 
                 attribute_dict = {}
-                self.setMessage(f"Building dictionary for '{field}' ...")
-                QApplication.processEvents()
+                if hasattr(self, 'setMessage'):
+                    self.setMessage(f"Building dictionary for '{field}' ...")
+                    QApplication.processEvents()
 
                 # aggregate_this_fields[field] = True
 
@@ -474,9 +475,11 @@ def runRaptorWithProtocol(self,
 
         if RunOnAir:
             nearby_buildings_from_start = footpath_on_air_b_b.get_nearby_buildings(SOURCE)
+            #list_buildings_from_start = [
+            #    str(osm_id) for osm_id, _ in nearby_buildings_from_start]
             list_buildings_from_start = [
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
-
+            
         else:
             nearby_buildings_from_start = footpath_on_projection.get_nearby_buildings(str(
                 SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b")
@@ -1108,7 +1111,7 @@ def make_protocol_detailed(raptor_mode,
                         row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}{dist}'
 
-            if build != SOURCE:
+            if str(build) != str(SOURCE):
                 filetowrite.write(row + "\n")
 
         # dictInput - dict from testRaptor
