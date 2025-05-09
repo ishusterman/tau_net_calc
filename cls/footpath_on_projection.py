@@ -4,6 +4,7 @@ import os
 import csv
 import geopandas as gpd
 import pyproj
+import math
 
 from qgis.core import (
     QgsGeometry,
@@ -217,53 +218,57 @@ class cls_footpath_on_projection:
 
             line_geom = QgsGeometry.fromPolylineXY(
                 [centroid_geom.asPoint(), nearest_point])
-            min_dist_meters = round (self.distance_area.measureLength(line_geom))
+            
+            len = self.distance_area.measureLength(line_geom)
+            if not math.isnan(len):
 
-            # create the first line from the nearest point to the start of the segment
-            feat1 = QgsFeature()
-            feat1.setGeometry(QgsGeometry.fromPolylineXY(
-                [nearest_point, QgsPointXY(start_vertex.x(), start_vertex.y())]))
-            feat1.setAttributes(attributes)
-            # setting the osm_id value
-            feat1.setAttribute(self.osm_id_index, osm_id)
-            # setting the distance value 
-            feat1.setAttribute(self.distance_index, min_dist_meters)
-            # setting the type value 
-            feat1.setAttribute(self.type_index, type)
+                min_dist_meters = round (len)
 
-            geometry = feat1.geometry()
-            length = round (geometry.length())
-            feat1.setAttribute(self.length_index, length)
+                # create the first line from the nearest point to the start of the segment
+                feat1 = QgsFeature()
+                feat1.setGeometry(QgsGeometry.fromPolylineXY(
+                    [nearest_point, QgsPointXY(start_vertex.x(), start_vertex.y())]))
+                feat1.setAttributes(attributes)
+                # setting the osm_id value
+                feat1.setAttribute(self.osm_id_index, osm_id)
+                # setting the distance value 
+                feat1.setAttribute(self.distance_index, min_dist_meters)
+                # setting the type value 
+                feat1.setAttribute(self.type_index, type)
 
-            self.Max_link_id = self.Max_link_id + 1
-            feat1.setAttribute(self.link_id_index, self.Max_link_id)
+                geometry = feat1.geometry()
+                length = round (geometry.length())
+                feat1.setAttribute(self.length_index, length)
 
-            feat1.setAttribute(self.from_node_index, 999)
+                self.Max_link_id = self.Max_link_id + 1
+                feat1.setAttribute(self.link_id_index, self.Max_link_id)
 
-            self.provider.addFeature(feat1)
+                feat1.setAttribute(self.from_node_index, 999)
 
-            # create the second line from the nearest point to the end of the segment
-            feat2 = QgsFeature()
-            feat2.setGeometry(QgsGeometry.fromPolylineXY(
-                [nearest_point, QgsPointXY(end_vertex.x(), end_vertex.y())]))
-            feat2.setAttributes(attributes)
-            # setting the osm_id value
-            feat2.setAttribute(self.osm_id_index, osm_id)
-            # setting the distance value 
-            feat2.setAttribute(self.distance_index, min_dist_meters)
-            # setting the type value
-            feat2.setAttribute(self.type_index, type)
+                self.provider.addFeature(feat1)
 
-            geometry = feat2.geometry()
-            length = round (geometry.length())
-            feat2.setAttribute(self.length_index, length)
+                # create the second line from the nearest point to the end of the segment
+                feat2 = QgsFeature()
+                feat2.setGeometry(QgsGeometry.fromPolylineXY(
+                    [nearest_point, QgsPointXY(end_vertex.x(), end_vertex.y())]))
+                feat2.setAttributes(attributes)
+                # setting the osm_id value
+                feat2.setAttribute(self.osm_id_index, osm_id)
+                # setting the distance value 
+                feat2.setAttribute(self.distance_index, min_dist_meters)
+                # setting the type value
+                feat2.setAttribute(self.type_index, type)
 
-            self.Max_link_id = self.Max_link_id + 1
-            feat2.setAttribute(self.link_id_index, self.Max_link_id)
+                geometry = feat2.geometry()
+                length = round (geometry.length())
+                feat2.setAttribute(self.length_index, length)
 
-            feat2.setAttribute(self.from_node_index, 999)
+                self.Max_link_id = self.Max_link_id + 1
+                feat2.setAttribute(self.link_id_index, self.Max_link_id)
 
-            self.provider.addFeature(feat2)
+                feat2.setAttribute(self.from_node_index, 999)
+
+                self.provider.addFeature(feat2)
 
     def build_graph(self, roads, file_path):
         graph = nx.Graph()
