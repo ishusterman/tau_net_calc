@@ -57,7 +57,6 @@ def post_processing(DESTINATION,
                     Maximal_travel_time,
                     D_Time,
                     mode_raptor,
-                    departure_interval,
                     MaxExtraTime
                     ) -> tuple:
 
@@ -143,19 +142,12 @@ def post_processing(DESTINATION,
             if timetable_mode:  # or mode_raptor == 2:
 
                 if len(journey) > 1 and journey[0][0] == "walking" and journey[1][0] != "walking":
-                    
-                    
-                    if mode_raptor == 1:
-                        new_value = journey[1][0] - departure_interval
-                    else:
-                        new_value = journey[1][0] + departure_interval
-
-                    
+                                        
                     journey[0] = (journey[0][0],
                               journey[0][1],
                               journey[0][2],
                               journey[0][3],
-                              new_value)
+                              journey[1][0])
                     
                 
                     duration, start_time, end_time = get_duration(
@@ -256,7 +248,6 @@ def post_processingAll(
         MaxWalkDist3,
         timetable_mode,
         Maximal_travel_time,
-        departure_interval,
         MaxExtraTime,
         mode
         ) -> tuple:
@@ -276,7 +267,6 @@ def post_processingAll(
                                      Maximal_travel_time,
                                      D_TIME,
                                      mode,
-                                     departure_interval,
                                      MaxExtraTime,                                     
                                      )
         

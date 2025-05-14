@@ -217,12 +217,7 @@ def runRaptorWithProtocol(self,
     MIN_TRANSFER = int(self.config['Settings']['Min_transfer'])
 
     MaxExtraTime = int(self.config['Settings']['MaxExtraTime'])*60
-    # DepartureInterval = int (self.config['Settings']['DepartureInterval'])*60
-
-    # THE EXPERIMENT !!!!
-    DepartureInterval = 0
-    # THE EXPERIMENT !!!!
-
+    
     Speed = float(self.config['Settings']['Speed'].replace(
         ',', '.')) * 1000 / 3600                    # from km/h to m/sec
 
@@ -511,8 +506,7 @@ def runRaptorWithProtocol(self,
                             MaxWaitTime,
                             MaxWaitTimeTransfer,
                             timetable_mode,
-                            MaxExtraTime,
-                            DepartureInterval
+                            MaxExtraTime                            
                             )
 
             else:
@@ -535,8 +529,7 @@ def runRaptorWithProtocol(self,
                                 MaxWaitTime,
                                 MaxWaitTimeTransfer,
                                 timetable_mode,
-                                MaxExtraTime,
-                                DepartureInterval                                
+                                MaxExtraTime                                                                
                                 )
             
             
@@ -623,7 +616,6 @@ def runRaptorWithProtocol(self,
                             MaxWaitTimeTransfer,
                             timetable_mode,
                             MaxExtraTime,
-                            DepartureInterval,
                             first_step = firts_step
                             )
                     
@@ -652,7 +644,6 @@ def runRaptorWithProtocol(self,
                                 MaxWaitTimeTransfer,
                                 timetable_mode,
                                 MaxExtraTime,
-                                DepartureInterval,
                                 first_step= firts_step #None#(stop_id, time_departure, dist) 
                                 )
                 
@@ -713,7 +704,6 @@ def runRaptorWithProtocol(self,
                             MaxWaitTimeTransfer,
                             timetable_mode,
                             MaxExtraTime,
-                            DepartureInterval,
                             timetable_mode_sim                            
                             )
                 else:
@@ -736,7 +726,6 @@ def runRaptorWithProtocol(self,
                             MaxWaitTimeTransfer,
                             timetable_mode,
                             MaxExtraTime,
-                            DepartureInterval,
                             timetable_mode_sim
                             )
 
@@ -943,6 +932,7 @@ def write_info(self,
     if protocol_type == 1:
         if len(fields_ok) > 0:
             for item in f:
+                item = os.path.normpath (item)
                 self.textLog.append(f'<a>{item}</a>')
                 
                 alias = os.path.splitext(os.path.basename(item))[0]
@@ -952,6 +942,7 @@ def write_info(self,
 
     if protocol_type == 2:
         for item in f:
+            item = os.path.normpath (item)
             self.textLog.append(f'<a>{item}</a>')
         if not (shift_mode):
             for item in f:

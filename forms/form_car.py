@@ -370,6 +370,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.close_button.setEnabled(True)
 
     def on_close_button_clicked(self):
+        project = QgsProject.instance()
+        project.write()
         self.reject()
 
     def on_help_button_clicked(self):
@@ -433,7 +435,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
         else:
             obj.setText(obj.text())
 
@@ -442,14 +444,15 @@ class CarAccessibility(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToProtocols_car = os.path.join(project_directory, f'{project_name}_output')
+        PathToProtocols_car = os.path.normpath(PathToProtocols_car)
 
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
 
         self.config.read(file_path)
 
-        if 'PathToPKL_car' not in self.config['Settings']:
-            self.config['Settings']['PathToPKL_car'] = ''
+        if 'PathToPKL_car' not in self.config['Settings'] or self.config['Settings']['PathToPKL_car'] == "С:/":
+            self.config['Settings']['PathToPKL_car'] = self.config['Settings']['PathToProtocols_car_pkl']
 
         if 'Layer_field_car' not in self.config['Settings']:
             self.config['Settings']['Layer_field_car'] = '0'
@@ -477,6 +480,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         
         if 'PathToProtocols_car' not in self.config['Settings'] or self.config['Settings']['PathToProtocols_car'] == "C:/":
             self.config['Settings']['PathToProtocols_car'] = PathToProtocols_car
+        self.config['Settings']['PathToProtocols_car'] = os.path.normpath(self.config['Settings']['PathToProtocols_car'])
 
     # update config file
     def saveParameters(self):
@@ -530,8 +534,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer_car'])[0]
-        self.layer_origins_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_origins_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         if self.mode == 2:
             layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest_car'])[0]
@@ -542,8 +545,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest_car'])[0]
-        self.layer_destinations_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_destinations_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         if self.mode == 2:
             layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer_car'])[0]
@@ -553,8 +555,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerVis_car'])[0]
-        self.layer_visualization_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_visualization_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         
         
 
@@ -562,9 +563,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.readParameters()
 
-        self.txtPathToPKL.setText(self.config['Settings']['PathToPKL_car'])
-        self.txtPathToProtocols.setText(
-            self.config['Settings']['PathToProtocols_car'])
+        self.txtPathToPKL.setText(os.path.normpath(self.config['Settings']['PathToPKL_car']))
+        self.txtPathToProtocols.setText(os.path.normpath(
+            self.config['Settings']['PathToProtocols_car']))
         self.cmbLayers.setCurrentText(self.config['Settings']['Layer_car'])
 
         selected_only1 = self.config['Settings']['SelectedOnly1_car'].lower() == "true"
@@ -879,3 +880,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         hlp_file = os.path.join(hlp_directory, help_filename)
         hlp_file = os.path.normpath(hlp_file)
         self.load_text_with_bold_first_line (hlp_file)
+    
+    def closeEvent(self, event):
+        project = QgsProject.instance()
+        project.write()

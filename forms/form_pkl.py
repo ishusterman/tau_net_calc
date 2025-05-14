@@ -32,7 +32,7 @@ from GTFS import GTFS
 from PKL import PKL
 from datetime import datetime
 
-from common import get_qgis_info, zip_directory, getDateTime, check_file_parameters_accessibility
+from common import get_qgis_info, zip_directory, getDateTime, check_file_parameters_accessibility, get_documents_path
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'pkl.ui'))
@@ -302,8 +302,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
         
         layer = self.layer_building
-        self.layer_buildings_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_buildings_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
 
         self.textLog.append(f"<a> Layer of roads: {self.config['Settings']['Roads_pkl']}</a>")
         self.textLog.append(f"<a> Layer of buildings: {self.layer_buildings_path}</a>")
@@ -330,7 +329,7 @@ class form_pkl(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
         else:
             obj.setText(obj.text())
 
@@ -339,19 +338,21 @@ class form_pkl(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToProtocols_pkl = os.path.join(project_directory, f'{project_name}_pkl')
+        PathToProtocols_pkl = os.path.normpath(PathToProtocols_pkl)
 
-
-
+        documents_path = get_documents_path()
+        
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
 
         self.config.read(file_path)
 
-        if 'PathToGTFS_pkl' not in self.config['Settings']:
-            self.config['Settings']['PathToGTFS_pkl'] = 'C:/'
+        if 'PathToGTFS_pkl' not in self.config['Settings'] or self.config['Settings']['PathToGTFS_pkl'] == "C:/":
+            self.config['Settings']['PathToGTFS_pkl'] = documents_path
 
         if 'PathToProtocols_pkl' not in self.config['Settings'] or self.config['Settings']['PathToProtocols_pkl'] == "C:/":
             self.config['Settings']['PathToProtocols_pkl'] = PathToProtocols_pkl
+        self.config['Settings']['PathToProtocols_pkl'] = os.path.normpath(self.config['Settings']['PathToProtocols_pkl'])
 
         if 'Roads_pkl' not in self.config['Settings']:
             self.config['Settings']['Roads_pkl'] = ''
@@ -365,7 +366,6 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'MaxPathAir_pkl' not in self.config['Settings']:
             self.config['Settings']['MaxPathAir_pkl'] = '400'        
 
-    # update config file
 
     def saveParameters(self):
 
@@ -387,11 +387,11 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.readParameters()
 
-        self.txtPathToGTFS.setText(self.config['Settings']['PathToGTFS_pkl'])
+        self.txtPathToGTFS.setText(os.path.normpath(self.config['Settings']['PathToGTFS_pkl']))
 
         #self.cmbLayers.setCurrentText(self.config['Settings']['Layer_pkl'])
         self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_pkl'])
-        self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_pkl'])
+        self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols_pkl']))
         self.txtMaxPathRoad.setText(self.config['Settings']['MaxPathRoad_pkl'])
         self.txtMaxPathAir.setText(self.config['Settings']['MaxPathAir_pkl'])
 

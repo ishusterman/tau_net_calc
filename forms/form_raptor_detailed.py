@@ -77,8 +77,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWalkDist3.setFixedWidth(fix_size)
 
         self.dtStartTime.setFixedWidth(fix_size)
-
-        self.txtDepartureInterval.setFixedWidth(fix_size)
+        
         self.txtMaxExtraTime.setFixedWidth(fix_size)
         self.txtSpeed.setFixedWidth(fix_size)
         self.txtMaxWaitTime.setFixedWidth(fix_size)
@@ -121,9 +120,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
             self.lblMaxExtraTime.setVisible(False)
             self.txtMaxExtraTime.setVisible(False)
-            self.lblDepartureInterval.setVisible(False)
-            self.txtDepartureInterval.setVisible(False)
-            
+                        
             parent_layout = self.horizontalLayout_11.parent()
             parent_layout.removeItem(self.horizontalLayout_11)
 
@@ -144,13 +141,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             if self.mode == 1:    
                 self.label_17.setText("Layer of all origins in the region")
 
-
-        # THE EXPERIMENT - CANCEL DepartureInterval for TIMETABLE MODE
-        self.lblDepartureInterval.setVisible(False)
-        self.txtDepartureInterval.setVisible(False)
-        parent_layout = self.horizontalLayout_10.parent()
-        parent_layout.removeItem(self.horizontalLayout_10)
-
+        
         if timetable_mode and self.mode == 1:
             self.label_21.setText("Earliest start time")
             self.lblMaxExtraTime.setText("Latest start time is T minutes later, T =")
@@ -235,11 +226,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWaitTimeTransfer.setValidator(int_validator3)
         self.txtMaxTimeTravel.setValidator(int_validator3)
         self.txtMaxExtraTime.setValidator(int_validator3)
-        self.txtDepartureInterval.setValidator(int_validator3)
-        
-        
-
-        
+                
         self.default_alias = get_prefix_alias(True, 
                                 self.protocol_type, 
                                 self.mode, 
@@ -461,6 +448,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.close_button.setEnabled(True)
 
     def on_close_button_clicked(self):
+        project = QgsProject.instance()
+        project.write()
         self.reject()
 
     def on_help_button_clicked(self):
@@ -502,7 +491,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
             self.handleRunOnAirClick()
         else:
             obj.setText(obj.text())
@@ -514,11 +503,15 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToProtocols = os.path.join(project_directory, f'{project_name}_output')
+        PathToProtocols = os.path.normpath(PathToProtocols)
 
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
         self.config.read(file_path)
 
+        if 'PathToPKL' not in self.config['Settings'] or self.config['Settings']['PathToPKL'] == "С:/":
+            self.config['Settings']['PathToPKL'] = self.config['Settings']['PathToProtocols_pkl']
+            
         if 'Layer_field' not in self.config['Settings']:
             self.config['Settings']['Layer_field'] = ''
 
@@ -537,6 +530,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if 'PathToProtocols' not in self.config['Settings'] or self.config['Settings']['PathToProtocols'] == "C:/":
             self.config['Settings']['PathToProtocols'] = PathToProtocols      
+        self.config['Settings']['PathToProtocols'] = os.path.normpath(self.config['Settings']['PathToProtocols'])
 
         #if 'Admin_iteration' not in self.config['Settings']:
         #    self.config['Settings']['Admin_iteration'] = '40'        
@@ -570,8 +564,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.config['Settings']['Min_transfer'] = self.txtMinTransfers.text()
         self.config['Settings']['Max_transfer'] = self.txtMaxTransfers.text()
         self.config['Settings']['MaxExtraTime'] = self.txtMaxExtraTime.text()
-        self.config['Settings']['DepartureInterval'] = self.txtDepartureInterval.text()
-
+        
         self.config['Settings']['MaxWalkDist1'] = self.txtMaxWalkDist1.text()
         self.config['Settings']['MaxWalkDist2'] = self.txtMaxWalkDist2.text()
         self.config['Settings']['MaxWalkDist3'] = self.txtMaxWalkDist3.text()
@@ -591,8 +584,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer'])[0]
-        self.layer_origins_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_origins_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         if self.mode == 2:
             layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest'])[0]
@@ -605,8 +597,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest'])[0]
-        self.layer_destinations_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_destinations_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         if self.mode == 2:
             layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['Layer'])[0]
@@ -618,15 +609,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerViz'])[0]
-        self.layer_visualization_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_visualization_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         
 
     def ParametrsShow(self):
 
         self.readParameters()
-        self.txtPathToPKL.setText(self.config['Settings']['PathToPKL'])
-        self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols'])
+        self.txtPathToPKL.setText(os.path.normpath(self.config['Settings']['PathToPKL']))
+        self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols']))
 
         
         self.cmbLayers.setCurrentText(self.config['Settings']['Layer'])
@@ -660,9 +650,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         max_extra_time = self.config['Settings'].get('maxextratime', '30')
         self.txtMaxExtraTime.setText(max_extra_time)
-
-        DepartureInterval = self.config['Settings'].get('departureinterval', '5')
-        self.txtDepartureInterval.setText(DepartureInterval)
 
         self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field'])
         self.cmbLayersDest_fields.setCurrentText(self.config['Settings']['LayerDest_field'])
@@ -1259,5 +1246,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                             pass
     
         return params
+    
+    def closeEvent(self, event):
+        project = QgsProject.instance()
+        project.write()
         
 

@@ -119,7 +119,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             field_name = field.name()
             field_type = field.type()
 
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.String):
+            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
                 # add numeric fields
                 obj_layer_fields.addItem(field_name)
                 if field_name.lower() == "osm_id":
@@ -167,7 +167,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
         else:
             obj.setText(obj.text())
 
@@ -257,6 +257,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToProtocols_clean_buildings = os.path.join(project_directory, f'{project_name}_cleaned')
+        PathToProtocols_clean_buildings = os.path.normpath(PathToProtocols_clean_buildings)
         
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
@@ -268,6 +269,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
 
         if 'PathToProtocols_clean-buildings' not in self.config['Settings']:
             self.config['Settings']['PathToProtocols_clean-buildings'] = PathToProtocols_clean_buildings
+        self.config['Settings']['PathToProtocols_clean-buildings'] = os.path.normpath(self.config['Settings']['PathToProtocols_clean-buildings'])
 
         if 'Layer_field_clean-buildings' not in self.config['Settings']:
             self.config['Settings']['Layer_field_clean-buildings'] = ''    
@@ -349,7 +351,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
         
-        shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*corrected*.shp"))
+        shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*cleaned*.shp"))
         if shp_files:
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
@@ -388,3 +390,8 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         """
         self.textInfo.setHtml(html)
         self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
+
+    def closeEvent(self, event):
+        project = QgsProject.instance()
+        project.write()
+        

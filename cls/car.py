@@ -357,7 +357,7 @@ class car_accessibility:
         for source in set(src for src, _ in self.min_costs.keys()):
 
             # iterate through the minimum cost values for each pair (source, building)
-            for (src, building), cost in self.min_costs.items():
+            for (src, building), (cost, veh_legs) in self.min_costs.items():
                 if src == source and cost <= self.max_time_sec:
                     # find the corresponding gradation
                     for i in range(0, len(self.grades)):
@@ -540,12 +540,12 @@ class car_accessibility:
                     alias = os.path.splitext(
                         os.path.basename(self.f[field]))[0]
                     vis.add_thematic_map(self.f[field], alias, set_min_value=0)
-                    self.parent.textLog.append(f'<a>{self.f[field]}</a>')
+                    self.parent.textLog.append(f'<a>{os.path.normpath(self.f[field])}</a>')
 
         if self.parent.protocol_type == 2:
             alias = os.path.splitext(os.path.basename(self.f))[0]
             vis.add_thematic_map(self.f, alias, set_min_value=0)
-            self.parent.textLog.append(f'<a>{self.f}</a>')
+            self.parent.textLog.append(f'<a>{os.path.normpath(self.f)}</a>')
 
         text = self.parent.textLog.toPlainText()
         filelog_name = f'{self.parent.folder_name}//log_{self.parent.alias}.txt'

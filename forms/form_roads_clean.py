@@ -118,7 +118,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
         else:
             obj.setText(obj.text())
 
@@ -173,7 +173,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
             self.config['Settings']['layerroad_clean'])[0]
         self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[
             0]
-        self.textLog.append(f"<a>Initial road network: {self.layer_road_path}</a>")
+        self.textLog.append(f"<a>Initial road network: {os.path.normpath(self.layer_road_path)}</a>")
         self.folder_name = self.config['Settings']['PathToProtocols_clean']
         self.textLog.append(f"<a>Folder to store clean road network: {self.folder_name}</a>")
 
@@ -201,6 +201,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToProtocols_clean = os.path.join(project_directory, f'{project_name}_cleaned')
+        PathToProtocols_clean = os.path.normpath(PathToProtocols_clean)
         
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
@@ -212,6 +213,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
 
         if 'PathToProtocols_clean' not in self.config['Settings']:
             self.config['Settings']['PathToProtocols_clean'] = PathToProtocols_clean
+        self.config['Settings']['PathToProtocols_clean'] = os.path.normpath(self.config['Settings']['PathToProtocols_clean'])
 
     # update config file
 
@@ -338,4 +340,8 @@ class form_roads_clean(QDialog, FORM_CLASS):
         html += '</span>'
         self.textInfo.setHtml(html)
         self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
+    
+    def closeEvent(self, event):
+        project = QgsProject.instance()
+        project.write()
         

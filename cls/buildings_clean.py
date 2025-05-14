@@ -194,7 +194,7 @@ class cls_clean_buildings(QgsTask):
         self.parent.setMessage('Saving layer of buildings...')
         file_dir = self.folder_name
         self.ext = ".shp"
-        output_file_name = f"{self.name}_corrected{self.ext}"
+        output_file_name = f"{self.name}_cleaned{self.ext}"
         output_path = os.path.join(file_dir, output_file_name)
         unique_output_path = self.get_unique_path(output_path)
         
@@ -219,4 +219,6 @@ class cls_clean_buildings(QgsTask):
             saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
             if saved_layer.isValid():
                 QgsProject.instance().addMapLayer(saved_layer)
+       
+
                 

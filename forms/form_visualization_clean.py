@@ -156,7 +156,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             field_name = field.name()
             field_type = field.type()
 
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.String):
+            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
                 # add numeric fields
                 obj_layer_fields.addItem(field_name)
                 if field_name.lower() == "osm_id":
@@ -245,7 +245,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
         else:
             obj.setText(obj.text())
 
@@ -301,8 +301,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
 
         self.layer_buildings  = self.get_layer_buildings()
-        self.layer_buildings_path = self.layer_buildings.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_buildings_path = os.path.normpath(self.layer_buildings.dataProvider().dataSourceUri().split("|")[0])
         
         self.saveParameters()
         self.readParameters()
@@ -364,6 +363,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToProtocols_clean_visualization = os.path.join(project_directory, f'{project_name}_visio')
+        PathToProtocols_clean_visualization = os.path.normpath(PathToProtocols_clean_visualization)
 
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
@@ -375,6 +375,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         if 'PathToProtocols_clean-visualization' not in self.config['Settings']:
             self.config['Settings']['PathToProtocols_clean-visualization'] = PathToProtocols_clean_visualization
+        self.config['Settings']['PathToProtocols_clean-visualization'] = os.path.normpath (self.config['Settings']['PathToProtocols_clean-visualization'])
+        
 
         if 'AddHex_clean-visualization' not in self.config['Settings']:
             self.config['Settings']['AddHex_clean-visualization'] = '500'    
@@ -484,7 +486,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             return False
         
 
-        shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*voronoi*.shp"))
+        shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*_vor*.shp"))
         if shp_files:
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
@@ -526,7 +528,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
     
     def closeEvent(self, event):
-        
+        project = QgsProject.instance()
+        project.write()
         self.task = None
-                
         event.accept()
+

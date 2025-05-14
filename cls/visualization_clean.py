@@ -163,7 +163,7 @@ class cls_clean_visualization(QgsTask):
             self.parent.setMessage('Saving ...')
             file_dir = self.folder_name
             self.ext = ".shp"
-            self.output_file_name = f"{self.name}_hexagons_{spacing_info}m{self.ext}"
+            self.output_file_name = f"{self.name}_hex_{spacing_info}m{self.ext}"
             output_path = os.path.join(file_dir, self.output_file_name)
             unique_output_path = self.get_unique_path(output_path)
         
@@ -437,7 +437,7 @@ class cls_clean_visualization(QgsTask):
             self.parent.setMessage('Saving ...')
             file_dir = self.folder_name
             ext = ".shp"
-            output_file_name = f"{self.name}_voronoi{ext}"
+            output_file_name = f"{self.name}_vor{ext}"
 
             output_path = os.path.join(file_dir, output_file_name)
             unique_output_path = self.get_unique_path(output_path)
@@ -521,17 +521,25 @@ class cls_clean_visualization(QgsTask):
         return result_layer
 
     def style_polygon_layer(self, layer):
-
+        from tempfile import NamedTemporaryFile
         
-        color_list = list(CSS4_COLORS.values())
+        color_list = [color for color in CSS4_COLORS.values() if color.lower() != '#ffffff']
         random_color = choice(color_list)
-
+        
         if layer.geometryType() == 2:
 
             symbol = QgsFillSymbol.createSimple({'color': '0,0,0,0', 
                                                  'outline_color': random_color})
             layer.renderer().setSymbol(symbol)
             layer.triggerRepaint()    
+
+            with NamedTemporaryFile(suffix=".qml", delete=False) as tmpfile:
+                style_path = tmpfile.name
+            layer.saveNamedStyle(style_path)
+
+        
+            layer.loadNamedStyle(style_path)
+            layer.triggerRepaint()
 
 
     def finished(self, result):
@@ -540,4 +548,5 @@ class cls_clean_visualization(QgsTask):
             if saved_layer.isValid():
                 QgsProject.instance().addMapLayer(saved_layer)
                 self.style_polygon_layer(saved_layer)
+        
     

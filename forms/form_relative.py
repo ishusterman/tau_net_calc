@@ -316,7 +316,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.textLog.append(f"<a>Results_1 folder: {self.config['Settings']['PathToPT_relative']}</a>")
         self.textLog.append(f"<a>Results_2 folder: {self.config['Settings']['PathToCAR_relative']}</a>")
         self.textLog.append(f"<a>Output folder: {self.config['Settings']['PathToOutput_relative']}</a>")
-        self.textLog.append(f"<a>Visualization layer : {self.layer_vis_path}</a>")
+        self.textLog.append(f"<a>Visualization layer: {os.path.normpath(self.layer_vis_path)}</a>")
                 
         self.textLog.append(f"<a>Calculate ratio: {self.config['Settings']['calc_ratio_relative']}</a>")
         self.textLog.append(f"<a>Calculate difference: {self.config['Settings']['calc_difference_relative']}</a>")
@@ -457,9 +457,9 @@ class form_relative(QDialog, FORM_CLASS):
         filelog_name = f'{self.folder_name}//log_{self.alias}.html'
         with open(filelog_name, "w") as file:
             file.write(text)
-        self.textLog.append(f'<a>Output</a>')
+        self.textLog.append(f'<a>Output:</a>')
         for file_name in list_file_name:
-            self.textLog.append(f'<a>{file_name}</a>')
+            self.textLog.append(f'<a>{os.path.normpath(file_name)}</a>')
 
         self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Protocol in folder</a>')
 
@@ -469,7 +469,8 @@ class form_relative(QDialog, FORM_CLASS):
         self.close_button.setEnabled(True)
 
     def on_close_button_clicked(self):
-
+        project = QgsProject.instance()
+        project.write()
         self.reject()
 
     def on_help_button_clicked(self):
@@ -484,7 +485,7 @@ class form_relative(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
         else:
             obj.setText(obj.text())
 
@@ -493,6 +494,7 @@ class form_relative(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToOutput_relative = os.path.join(project_directory, f'{project_name}_output')
+        PathToOutput_relative = os.path.normpath(PathToOutput_relative)
 
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
@@ -501,12 +503,15 @@ class form_relative(QDialog, FORM_CLASS):
 
         if 'PathToOutput_relative' not in self.config['Settings'] or self.config['Settings']['PathToOutput_relative'] == "C:/":
             self.config['Settings']['PathToOutput_relative'] = PathToOutput_relative   
+        self.config['Settings']['PathToOutput_relative'] = os.path.normpath(self.config['Settings']['PathToOutput_relative'])
 
         if 'PathToPT_relative' not in self.config['Settings'] or self.config['Settings']['PathToPT_relative'] == "C:/":
             self.config['Settings']['PathToPT_relative'] = PathToOutput_relative
+        self.config['Settings']['PathToPT_relative'] = os.path.normpath(self.config['Settings']['PathToPT_relative'])
 
         if 'PathToCar_relative' not in self.config['Settings'] or self.config['Settings']['PathToCar_relative'] == "C:/":
             self.config['Settings']['PathToCar_relative'] = PathToOutput_relative   
+        self.config['Settings']['PathToCar_relative'] = os.path.normpath(self.config['Settings']['PathToCar_relative'])
 
         if 'calc_ratio_relative' not in self.config['Settings']:
             self.config['Settings']['calc_ratio_relative'] = "True"
@@ -553,11 +558,11 @@ class form_relative(QDialog, FORM_CLASS):
 
         self.readParameters()
 
-        self.txtPathToOutput.setText(
-            self.config['Settings']['PathToOutput_relative'])
-        self.txtPathToPT.setText(self.config['Settings']['PathToPT_relative'])
-        self.txtPathToCar.setText(
-            self.config['Settings']['PathToCar_relative'])
+        self.txtPathToOutput.setText(os.path.normpath(
+            self.config['Settings']['PathToOutput_relative']))
+        self.txtPathToPT.setText(os.path.normpath(self.config['Settings']['PathToPT_relative']))
+        self.txtPathToCar.setText(os.path.normpath(
+            self.config['Settings']['PathToCar_relative']))
 
         cb1 = self.config['Settings']['calc_ratio_relative'].lower() == "true"
         self.cb_ratio.setChecked(cb1)
@@ -910,3 +915,7 @@ class form_relative(QDialog, FORM_CLASS):
         hlp_file = os.path.join(hlp_directory, help_filename)
         hlp_file = os.path.normpath(hlp_file)
         self.load_text_with_bold_first_line (hlp_file)
+    
+    def closeEvent(self, event):
+        project = QgsProject.instance()
+        project.write()

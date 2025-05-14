@@ -26,7 +26,6 @@ def raptor(SOURCE,
            MaxWaitTimeTransfer,
            timetable_mode,
            MaxExtraTime,
-           departure_interval,
            first_step = None
            ) -> list:
     
@@ -59,8 +58,6 @@ def raptor(SOURCE,
         pass
         #MaxWaitTime = MaxExtraTime
         #max_time = np.int64(D_TIME + Maximal_travel_time + MaxExtraTime)
-        #TIME_START = D_TIME + departure_interval
-       
             
     if first_step is None:
                 if trans_info == -1:
@@ -274,7 +271,6 @@ def raptor(SOURCE,
         MaxWalkDist3,
         timetable_mode,
         Maximal_travel_time,
-        departure_interval,
         MaxExtraTime,
         mode = 1       
     )

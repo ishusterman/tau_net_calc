@@ -25,10 +25,10 @@ from PyQt5.QtCore import (Qt,
 
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
-from PyQt5.QtWidgets import QTableWidgetItem, QPushButton
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from pkl_car import pkl_car
-from common import get_qgis_info, check_file_parameters_accessibility
+from common import get_qgis_info, check_file_parameters_accessibility, get_documents_path
 
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
@@ -442,7 +442,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
-            obj.setText(folder_path)
+            obj.setText(os.path.normpath(folder_path))
             if mode_road:
                 self.onLayerRoadChanged()
 
@@ -487,6 +487,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
         PathToProtocols_car_pkl = os.path.join(project_directory, f'{project_name}_pkl')
+        PathToProtocols_car_pkl = os.path.normpath(PathToProtocols_car_pkl)
+
 
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
@@ -495,6 +497,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         if 'PathToProtocols_car_pkl' not in self.config['Settings'] or self.config['Settings']['PathToProtocols_car_pkl'] == "C:/":
             self.config['Settings']['PathToProtocols_car_pkl'] = PathToProtocols_car_pkl
+        self.config['Settings']['PathToProtocols_car_pkl'] = os.path.normpath (self.config['Settings']['PathToProtocols_car_pkl'])
 
         if 'Roads_car_pkl' not in self.config['Settings']:
             self.config['Settings']['Roads_car_pkl'] = ''
@@ -551,15 +554,14 @@ class form_pkl_car(QDialog, FORM_CLASS):
         layer = self.layer_buildings
        
         self.count_layer_origins = layer.featureCount()
-        self.layer_origins_path = layer.dataProvider().dataSourceUri().split("|")[
-            0]
+        self.layer_origins_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
 
     def ParametrsShow(self):
 
         self.readParameters()
 
         self.txtPathToProtocols.setText(
-            self.config['Settings']['PathToProtocols_car_pkl'])
+            os.path.normpath(self.config['Settings']['PathToProtocols_car_pkl']))
 
         self.cmbFieldsSpeed.setCurrentText(
             self.config['Settings']['FieldSpeed_car_pkl'])

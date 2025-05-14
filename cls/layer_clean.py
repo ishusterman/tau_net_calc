@@ -247,7 +247,7 @@ class cls_clean_roads(QgsTask):
             file_dir = self.folder_name
 
             ext = '.shp'
-            self.output_file_name = f"{name}_topo_cleaned{ext}"
+            self.output_file_name = f"{name}_cleaned{ext}"
 
             output_path = os.path.join(file_dir, self.output_file_name)
             self.unique_output_path = self.get_unique_path(output_path)
@@ -343,6 +343,7 @@ class cls_clean_roads(QgsTask):
             saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
             if saved_layer.isValid():
                 QgsProject.instance().addMapLayer(saved_layer)
+        
                 
             
         

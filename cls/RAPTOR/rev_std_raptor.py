@@ -25,7 +25,6 @@ def rev_raptor(SOURCE,
                MaxWaitTimeTransfer,
                timetable_mode,
                MaxExtraTime,
-               departure_interval,
                first_step = None
                ) -> list:
 
@@ -62,7 +61,7 @@ def rev_raptor(SOURCE,
     if timetable_mode:
         MaxWaitTime = MaxExtraTime
         min_time = np.int64(D_TIME - Maximal_travel_time - MaxExtraTime)
-        TIME_START = D_TIME - departure_interval
+        
     """
             
     if first_step is None:
@@ -115,10 +114,7 @@ def rev_raptor(SOURCE,
 
         if k == 1:
             MaxWaitCurr = MaxWaitTime
-            """
-            if timetable_mode:
-                MaxWaitCurr -= departure_interval"
-            """
+            
         else:
             MaxWaitCurr = MaxWaitTimeTransfer
             
@@ -208,11 +204,7 @@ def rev_raptor(SOURCE,
                     # assuming arrival_time = departure_time
 
                     arrival_time_at_pi = label[k - 1][p_i]
-                    """
-                    if timetable_mode and k == 1:
-                        arrival_time_at_pi = arrival_time_at_pi - departure_interval"
-                    """
-                    
+                                        
                     tid, current_trip_t = get_earliest_trip_new(
                         stoptimes_dict, route, arrival_time_at_pi, current_stopindex_by_route, change_time, MaxWaitCurr)
 
@@ -287,7 +279,6 @@ def rev_raptor(SOURCE,
         MaxWalkDist1,
         timetable_mode,
         Maximal_travel_time,
-        departure_interval,
         MaxExtraTime,
         mode=2
         )

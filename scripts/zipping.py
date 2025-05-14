@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import configparser
 
+
 def get_version_from_metadata(plugin_dir):
     """Gets the plugin version from the metadata.txt file."""
     metadata_path = os.path.join(plugin_dir, 'metadata.txt')
@@ -54,14 +55,15 @@ def create_plugin_archive(plugin_dir):
         plugin_folder_path = os.path.join(temp_dir, plugin_name)
         os.makedirs(plugin_folder_path)
 
-        # Copy plugin contents, excluding .git and other unnecessary files
+        exclude_items = ['.git', '__pycache__', '.gitignore', '.vscode']
+
         for item in os.listdir(plugin_dir):
-            if item in ['.git', '__pycache__', '.gitignore', '.vscode', 'bat']:
+            if item in exclude_items or item.endswith('.bat'):
                 continue
             src_path = os.path.join(plugin_dir, item)
             dst_path = os.path.join(plugin_folder_path, item)
             if os.path.isdir(src_path):
-                shutil.copytree(src_path, dst_path)
+                shutil.copytree(src_path, dst_path, ignore=ignore_unwanted_files)
             else:
                 shutil.copy2(src_path, dst_path)
 
@@ -74,6 +76,10 @@ def create_plugin_archive(plugin_dir):
         )
 
     print(f"Archive created: {unique_output_path}")
+
+def ignore_unwanted_files(dir, files):
+    unwanted = ['.git', '__pycache__', '.gitignore', '.vscode']
+    return [f for f in files if f in unwanted or f.endswith('.bat')]
 
 # Define the plugin directory
 current_dir = os.path.dirname(os.path.abspath(__file__))

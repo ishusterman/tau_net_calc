@@ -8,6 +8,8 @@ from zipfile import ZipFile
 from datetime import datetime
 import shutil
 
+from pathlib import Path
+
 try:
     import qgis.core
     import qgis.PyQt
@@ -138,3 +140,39 @@ def check_file_parameters_accessibility ():
     source_path = os.path.join(config_path, 'parameters_accessibility_shablon.txt')
     if not os.path.exists(parameters_path):
         shutil.copy(source_path, parameters_path)
+
+
+
+def get_documents_path():
+    if sys.platform == "win32":
+        try:
+            import ctypes.wintypes
+
+            CSIDL_PERSONAL = 5  # Мои документы
+            SHGFP_TYPE_CURRENT = 0
+
+            buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+            ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_PERSONAL, None, SHGFP_TYPE_CURRENT, buf)
+
+            return str(Path(buf.value))
+        except Exception as e:
+            # fallback in rare case
+            return str(Path.home() / "Documents")
+    else:
+        # Linux и macOS
+        xdg_docs = Path.home() / "Documents"
+        user_dirs = Path.home() / ".config" / "user-dirs.dirs"
+
+        if user_dirs.exists():
+            try:
+                with user_dirs.open(encoding='utf-8') as f:
+                    for line in f:
+                        if line.startswith('XDG_DOCUMENTS_DIR'):
+                            path_str = line.split('=')[1].strip().strip('"')
+                            path_str = path_str.replace('$HOME', str(Path.home()))
+                            return str(Path(path_str))
+            except Exception:
+                pass  # fallback
+
+        return str(xdg_docs)
+

@@ -52,9 +52,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-290</y>
-             <width>402</width>
-             <height>842</height>
+             <y>-479</y>
+             <width>453</width>
+             <height>841</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -436,30 +436,6 @@
                </layout>
               </item>
               <item row="25" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_10">
-                <item>
-                 <widget class="QLabel" name="lblDepartureInterval">
-                  <property name="text">
-                   <string>Be at the first stop in advance of, min</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtDepartureInterval">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>20</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="26" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_11">
                 <item>
                  <widget class="QLabel" name="lblMaxExtraTime">
@@ -483,7 +459,7 @@
                 </item>
                </layout>
               </item>
-              <item row="27" column="0" colspan="2">
+              <item row="26" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_12">
                 <item>
                  <widget class="QLabel" name="label_4">
@@ -510,7 +486,7 @@
                 </item>
                </layout>
               </item>
-              <item row="28" column="0" colspan="2">
+              <item row="27" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_13">
                 <item>
                  <widget class="QLabel" name="lblMaxWaitTime">
@@ -534,7 +510,7 @@
                 </item>
                </layout>
               </item>
-              <item row="29" column="0" colspan="2">
+              <item row="28" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_14">
                 <item>
                  <widget class="QLabel" name="label_23">
@@ -558,7 +534,7 @@
                 </item>
                </layout>
               </item>
-              <item row="30" column="0" colspan="2">
+              <item row="29" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_15">
                 <item>
                  <widget class="QLabel" name="label_24">
@@ -582,7 +558,7 @@
                 </item>
                </layout>
               </item>
-              <item row="31" column="0" colspan="2">
+              <item row="30" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_16">
                 <item>
                  <widget class="QLabel" name="lblTimeInterval">
@@ -606,7 +582,7 @@
                 </item>
                </layout>
               </item>
-              <item row="32" column="0" colspan="2">
+              <item row="31" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
                  <widget class="QLabel" name="lblFields">
