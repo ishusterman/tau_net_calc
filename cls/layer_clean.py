@@ -13,43 +13,34 @@ from qgis.core import (
     QgsFields,
     QgsTask,
     QgsProject,
-    QgsProcessingFeedback,
     QgsField,
     edit
     )
 
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QVariant, QObject, pyqtSignal
 
-from PyQt5.QtCore import Qt
+from common import convert_meters_to_degrees
 
-from PyQt5.QtWidgets import QApplication
-
-from common import getDateTime, convert_meters_to_degrees
-
-class CustomFeedback(QgsProcessingFeedback):
-    def __init__(self):
-        super().__init__()
-        self.logs = []  # Список для хранения логов
-
-    def pushInfo(self, info):
-        self.logs.append(f"INFO: {info}")
-    
-    def pushCommandInfo(self, command):
-        self.logs.append(f"COMMAND: {command}")
-
-    def pushDebugInfo(self, debugInfo):
-        self.logs.append(f"DEBUG: {debugInfo}")
-
-    def pushWarning(self, warning):
-        self.logs.append(f"WARNING: {warning}")
-
-    def pushError(self, error):
-        self.logs.append(f"ERROR: {error}")
+class TaskSignals(QObject):
+    log = pyqtSignal(str)
+    progress = pyqtSignal(int)
+    set_message = pyqtSignal(str)
+    save_log = pyqtSignal(bool)
+    add_layers = pyqtSignal(list) 
+    change_button_status = pyqtSignal(bool) 
 
 class cls_clean_roads(QgsTask):
-    def __init__(self, parent, begin_computation_time, layer, layer_path, folder_name, feedback, task_name="Roads clean task"):
+    
+    def __init__(self, 
+                 begin_computation_time, 
+                 layer, 
+                 layer_path, 
+                 folder_name, 
+                 feedback, 
+                 task_name="Roads clean task"):
+        
         super().__init__(task_name)
-        self.parent = parent
+        self.signals = TaskSignals()
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.layer_path = layer_path
@@ -62,7 +53,7 @@ class cls_clean_roads(QgsTask):
 
     def run(self):
        
-        self.parent.progressBar.setValue(0)
+        self.signals.progress.emit(0)
         try:
             self.list_layer = []
             units = self.layer.crs().mapUnits()
@@ -84,10 +75,7 @@ class cls_clean_roads(QgsTask):
             # snapping geometries
 
             
-            self.parent.setMessage('Cleaning layer of roads, step 1 of 3, snapping road links’ ends...')
-            #feedback = CustomFeedback()
-
-            QApplication.setOverrideCursor(Qt.WaitCursor)
+            self.signals.set_message.emit('Cleaning layer of roads, step 1 of 3, snapping road links’ ends...')
             
             result0 = processing.run("grass:v.clean", {'input': self.layer_path,
                                                         'type':[0,1,2,3,4,5,6],
@@ -111,13 +99,12 @@ class cls_clean_roads(QgsTask):
             if self.break_on:
                 return 0
             snapped_layer_path = result0['output']
-            self.parent.progressBar.setValue(1)  
-            QApplication.processEvents()   
-                        
+            self.signals.progress.emit(1)  
+                                    
             #######################################################
             # first clean
             
-            self.parent.setMessage('Cleaning layer of roads, step 2 of 3, breaking overlapping links...')
+            self.signals.set_message.emit('Cleaning layer of roads, step 2 of 3, breaking overlapping links...')
             result1 = processing.run("grass:v.clean", {
                 'input': snapped_layer_path,
                 'type': [0, 1, 2, 3, 4, 5, 6],
@@ -133,13 +120,12 @@ class cls_clean_roads(QgsTask):
             })
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(2)
-            QApplication.processEvents()
-
+            self.signals.progress.emit(2)
+            
             cleaned_layer_path1 = result1['output']
             
             # second clean
-            self.parent.setMessage('Cleaning layer of roads, step 3 of 3, deleting duplicated links...')
+            self.signals.set_message.emit('Cleaning layer of roads, step 3 of 3, deleting duplicated links...')
             result2 = processing.run("grass:v.clean", {
                 'input': cleaned_layer_path1,
                 'type': [0, 1, 2, 3, 4, 5, 6],
@@ -153,7 +139,7 @@ class cls_clean_roads(QgsTask):
             })
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(3)
+            self.signals.progress.emit(3)
             cleaned_layer_2_path = result2['output']
             cleaned_layer_2 = QgsVectorLayer(
                 cleaned_layer_2_path, cleaned_layer_name, "ogr")
@@ -161,10 +147,10 @@ class cls_clean_roads(QgsTask):
             errors_layer_2 = QgsVectorLayer(
                 errors_layer_2_path, cleaned_layer_error_name, "ogr")
             error_count = len(list(errors_layer_2.getFeatures()))
-            self.parent.textLog.append(f'<a>Number of errors: {error_count}</a>')
+            self.signals.log.emit(f'<a>Number of errors: {error_count}</a>')
 
             # join errors
-            self.parent.setMessage('Filtering ...')
+            self.signals.set_message.emit('Filtering ...')
             join_info = QgsVectorLayerJoinInfo()
             join_info.setJoinLayer(errors_layer_2)
             join_info.setJoinFieldName("cat")
@@ -184,7 +170,7 @@ class cls_clean_roads(QgsTask):
             filtered_data = filtered_layer.dataProvider()
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(4)
+            self.signals.progress.emit(4)
             # add the necessary fields
             layer_field_names = {field.name() for field in self.layer.fields()}
             fields_to_add = [field for field in cleaned_layer_2.fields(
@@ -212,7 +198,7 @@ class cls_clean_roads(QgsTask):
 
             filtered_data.addFeatures(filtered_features)
             filtered_layer.updateExtents()
-            self.parent.progressBar.setValue(5)
+            self.signals.progress.emit(5)
             #####
             # Список требуемых полей и их характеристик
             required_fields = {
@@ -243,7 +229,10 @@ class cls_clean_roads(QgsTask):
                         filtered_layer.updateFeature(feature)
 
             #####
-            self.parent.setMessage('Saving ...')
+
+            filtered_layer = self.create_and_check_link_id(filtered_layer)
+
+            self.signals.set_message.emit('Saving ...')
             file_dir = self.folder_name
 
             ext = '.shp'
@@ -271,50 +260,106 @@ class cls_clean_roads(QgsTask):
             self.list_layer.append((self.unique_output_path, self.layer_name))
                         
             self.write_finish_info()
-            self.parent.btnBreakOn.setEnabled(False)
-            self.parent.close_button.setEnabled(True)
-            
+
+            self.signals.change_button_status.emit(True)
+                        
             return True
 
         except Exception as e:
             self.exception = e
             print (self.exception)
-            self.parent.textLog.append(f'<a> {self.exception}</a>')
-            #QApplication.setOverrideCursor(Qt.ArrowCursor)
             return False
         
-        finally:
-            QApplication.setOverrideCursor(Qt.ArrowCursor)
-            QApplication.processEvents()
+    def insert_field_first(self, layer, new_field):
+        old_fields = layer.fields()
+        new_fields = QgsFields()
+        new_fields.append(new_field)
+        for field in old_fields:
+            new_fields.append(field)
+
+        crs = layer.crs().authid()
+        geometry_type = QgsWkbTypes.displayString(layer.wkbType())
+        temp_layer = QgsVectorLayer(f"{geometry_type}?crs={crs}", layer.name() + "_tmp", "memory")
+        temp_provider = temp_layer.dataProvider()
+        temp_provider.addAttributes(new_fields)
+        temp_layer.updateFields()
+        
+        next_id = 1
+        for feat in layer.getFeatures():
+            new_feat = QgsFeature(new_fields)
+            attrs = [next_id] + feat.attributes()
+            new_feat.setAttributes(attrs)
+            new_feat.setGeometry(feat.geometry())
+            temp_provider.addFeature(new_feat)
+            next_id += 1
+        return temp_layer
+
+    def create_and_check_link_id (self, filtered_layer):
+
+        if 'link_id' not in filtered_layer.fields().names():
+            filtered_layer = self.insert_field_first(filtered_layer, QgsField('link_id', QVariant.Int))        
+
+        link_id_index = filtered_layer.fields().indexOf('link_id')
+
+        
+        existing_ids = set()
+        for f in filtered_layer.getFeatures():
+            val = f[link_id_index]
+            try:
+                if val is not None:
+                    existing_ids.add(int(val))
+            except:
+                continue
+            
+        filtered_layer.startEditing()
+        next_id = max(existing_ids) + 1 if existing_ids else 1
+        assigned_ids = set()
+        count_modified_link_id = 0
+        for f in filtered_layer.getFeatures():
+            fid = f.id()
+            val = f[link_id_index]
+            if val is None or val in assigned_ids:
+                count_modified_link_id += 1
+                while next_id in existing_ids:
+                    next_id += 1
+                filtered_layer.changeAttributeValue(fid, link_id_index, next_id)
+                assigned_ids.add(next_id)
+                next_id += 1
+            else:
+                assigned_ids.add(val)
+        
+        filtered_layer.commitChanges()
+
+        if count_modified_link_id > 0:
+            self.signals.log.emit(f'<b>{count_modified_link_id} of the link IDs are not unique, updated</b>')
+       
+        return filtered_layer
+        
 
     def write_finish_info(self):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Initial road network contains {self.initial_layer_count} links</a>')
-        self.parent.textLog.append(f'<a>After topological cleaning the road network contains of {self.saved_layer_count} links</a>')
-        self.parent.textLog.append(f'<a>Finished {after_computation_str}</a>')
+        self.signals.log.emit(f'<a>Initial road network contains {self.initial_layer_count} links</a>')
+        self.signals.log.emit(f'<a>After topological cleaning the road network contains of {self.saved_layer_count} links</a>')
+        self.signals.log.emit(f'<a>Finished {after_computation_str}</a>')
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
+       
+        self.signals.save_log.emit(True)
 
-        text = self.parent.textLog.toPlainText()
-        postfix = getDateTime()
+        self.signals.log.emit(f'"{self.layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
 
-        filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.txt'
-        with open(filelog_name, "w") as file:
-            file.write(text)
-
-        self.parent.textLog.append(f'"{self.layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
-
-        self.parent.setMessage(f'Finished')
+        self.signals.set_message.emit(f'Finished')
+        self.signals.add_layers.emit(self.list_layer)
 
 
     def cancel(self):
         try:
-            #self.feedback.cancel()
-            self.parent.progressBar.setValue(0)
-            self.parent.setMessage(f'')
+            
+            self.signals.progress.emit(0)
+            self.signals.set_message.emit('')
             self.break_on = True
             super().cancel()
         except Exception as e:
@@ -336,14 +381,5 @@ class cls_clean_roads(QgsTask):
         index = 1
         while os.path.exists(f"{base}_{index}{ext}"):
             index += 1
-        return f"{base}_{index}{ext}"
-    
-    def finished(self, result):
-        for path_shp, name_layer in self.list_layer:
-            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
-            if saved_layer.isValid():
-                QgsProject.instance().addMapLayer(saved_layer)
-        
-                
-            
+        return f"{base}_{index}{ext}"    
         

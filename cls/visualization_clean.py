@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
-from random import choice
-from matplotlib.colors import CSS4_COLORS
+
 import math
+
+from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from PyQt5.QtCore import QMetaType
 
@@ -14,7 +15,6 @@ from qgis.core import (
     QgsFeature,
     QgsField,
     QgsSpatialIndex,
-    QgsFillSymbol,
     QgsRectangle,
     QgsPointXY,
     QgsGeometry    
@@ -22,11 +22,18 @@ from qgis.core import (
 
 from qgis import processing
 
-from common import getDateTime, convert_meters_to_degrees
+from common import convert_meters_to_degrees
+
+class TaskSignals(QObject):
+    log = pyqtSignal(str)
+    progress = pyqtSignal(int)
+    set_message = pyqtSignal(str)
+    save_log = pyqtSignal(bool)
+    add_layers = pyqtSignal(list) 
+    change_button_status = pyqtSignal(bool) 
 
 class cls_clean_visualization(QgsTask):
     def __init__(self, 
-                 parent, 
                  begin_computation_time, 
                  layer, 
                  folder_name, 
@@ -35,7 +42,7 @@ class cls_clean_visualization(QgsTask):
                  spacing,
                  task_name="Voronoi and Hexagons task"):
         super().__init__(task_name)
-        self.parent = parent
+        self.signals = TaskSignals()
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
@@ -43,12 +50,10 @@ class cls_clean_visualization(QgsTask):
         self.runVoronoi = runVoronoi
         self.exception = None
         self.break_on = False
-        self.parent.progressBar.setMaximum(25)
+        self.signals.progress.emit(25)
         self.spacing = spacing
-        
         self.dist_buffer = 50
-        
-     
+            
         
     def run(self):
        try: 
@@ -59,20 +64,19 @@ class cls_clean_visualization(QgsTask):
         self.name, self.ext = os.path.splitext(self.file_name)
         input_layer = QgsVectorLayer(self.input_layer_path, "Layer Name", "ogr")
         #############################################
-        self.parent.setMessage('Constructing buildings’ centroids ...')
+        self.signals.set_message.emit('Constructing buildings’ centroids ...')
         centroids_layer = self.make_centroids(self.layer)
         
         if self.break_on:
             return 0
-        self.parent.progressBar.setValue(1)
+        self.signals.progress.emit(1)
 
 
         units = input_layer.crs().mapUnits()
         crs_grad = (units == 6)
         first_feature = next(input_layer.getFeatures())
         first_point = first_feature.geometry().centroid().asPoint()
-        
-        self.dist_buffer = 50
+                
         if crs_grad:
             self.dist_buffer = convert_meters_to_degrees(
                 self.dist_buffer, first_point.y())
@@ -87,7 +91,7 @@ class cls_clean_visualization(QgsTask):
         for i, spacing in enumerate(self.spacing):
 
             spacing_info = round (spacing/math.sqrt(3))
-            self.parent.setMessage(f'Constructing hexagons {spacing_info}m ...')
+            self.signals.set_message.emit(f'Constructing hexagons {spacing_info}m ...')
             spacing_current_x = spacing
             spacing_current_y = spacing
             
@@ -125,26 +129,26 @@ class cls_clean_visualization(QgsTask):
                                 
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(6 + i*4)
+            self.signals.progress.emit(6 + i*4)
             #############################################
-            self.parent.setMessage(f'Filtering hexagons {spacing_info}m...')
+            self.signals.set_message.emit(f'Filtering hexagons {spacing_info}m...')
             self.filter_hexagons_by_intersection(hexagones_layer, self.layer)
         
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(7 + i*4)
+            self.signals.progress.emit(7 + i*4)
             
             #############################################
-            self.parent.setMessage(f'Matching between buildings and hexagons {spacing_info}m...')
+            self.signals.set_message.emit(f'Matching between buildings and hexagons {spacing_info}m...')
             self.add_nearest_osm_id(hexagones_layer, centroids_layer)
         
 
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(8 + i*4)
+            self.signals.progress.emit(8 + i*4)
             
             #############################################
-            self.parent.setMessage(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on osm_id...')
+            self.signals.set_message.emit(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on osm_id...')
             dissolve_result = processing.run("native:dissolve", 
                         {
                         'INPUT': hexagones_layer,
@@ -154,13 +158,13 @@ class cls_clean_visualization(QgsTask):
             dissolved_layer = dissolve_result['OUTPUT']
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(9 + i*4)
+            self.signals.progress.emit(9 + i*4)
                            
             #########################
             # Saving result
             #########################
         
-            self.parent.setMessage('Saving ...')
+            self.signals.set_message.emit('Saving ...')
             file_dir = self.folder_name
             self.ext = ".shp"
             self.output_file_name = f"{self.name}_hex_{spacing_info}m{self.ext}"
@@ -184,14 +188,13 @@ class cls_clean_visualization(QgsTask):
             if self.break_on:
                 return 0
             
-            self.parent.progressBar.setValue(10 + i*4)
+            self.signals.progress.emit(10 + i*4)
             ###################################
         
-        self.parent.progressBar.setValue(25)
+        self.signals.progress.emit(25)
 
         self.write_finish_info()
-        self.parent.btnBreakOn.setEnabled(False)
-        self.parent.close_button.setEnabled(True)
+        self.signals.change_button_status.emit(True)
 
        except Exception as e:
             print(f"Error h: {e}") 
@@ -202,28 +205,20 @@ class cls_clean_visualization(QgsTask):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
+        self.signals.log.emit(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
-
-        text = self.parent.textLog.toPlainText()
-        postfix = getDateTime()
-
-        filelog_name = f'{self.folder_name}//log_visualization_database_{postfix}.txt'
-        
-        with open(filelog_name, "w") as file:
-            file.write(text)
-                
+        self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.signals.save_log.emit(True)
         for _, name_layer in self.list_layer:    
-            self.parent.textLog.append(f'"{name_layer}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
-
-        self.parent.setMessage(f'Finished')
+            self.signals.log.emit(f'"{name_layer}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        self.signals.set_message.emit(f'Finished')
+        self.signals.add_layers.emit(self.list_layer)
 
     def cancel(self):
         try:
-            self.parent.progressBar.setValue(0)
-            self.parent.setMessage(f'')
+            self.signals.progress.emit(0)
+            self.signals.set_message.emit(f'')
             self.break_on = True
             super().cancel()
         except:
@@ -267,7 +262,7 @@ class cls_clean_visualization(QgsTask):
             if i%10000 == 0:
                 if self.break_on:
                     return 0
-                self.parent.setMessage(f'Filtering hexagons {i} from {count}...')
+                self.signals.set_message.emit(f'Filtering hexagons {i} from {count}...')
             hex_geom = hex_feature.geometry()
 
             # Get potential intersecting features using the spatial index
@@ -308,7 +303,7 @@ class cls_clean_visualization(QgsTask):
             if i % 1000 == 0:
                 if self.break_on:
                     return 0
-                self.parent.setMessage(f'Matching between buildings and hexagons {i} from {count}...')
+                self.signals.set_message.emit(f'Matching between buildings and hexagons {i} from {count}...')
         
             nearest_id = input_index.nearestNeighbor(hex_centroid.asPoint(), 1)
             if nearest_id:
@@ -339,7 +334,7 @@ class cls_clean_visualization(QgsTask):
     def Voronoi (self, centroids_layer):
       
         extent = centroids_layer.extent()
-        buffer = extent.width() * 0.2  # или фиксированное значение, например, 1000
+        buffer = extent.width() * 0.2  
 
         expanded_extent = QgsRectangle(
             extent.xMinimum() - buffer,
@@ -378,7 +373,7 @@ class cls_clean_visualization(QgsTask):
 
         try: 
         
-            self.parent.setMessage('Constructing Voronoi polygons...')
+            self.signals.set_message.emit('Constructing Voronoi polygons...')
                         
             voronoi_result = processing.run("native:voronoipolygons",
                                         {'INPUT': mem_layer,
@@ -393,12 +388,12 @@ class cls_clean_visualization(QgsTask):
 
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(2)
+            self.signals.progress.emit(2)
             #########################
             # Index for voronoi_layer
             #########################
             
-            self.parent.setMessage('Constructing index ...')
+            self.signals.set_message.emit('Constructing index ...')
             processing.run("native:createspatialindex",
                        {'INPUT': voronoi_layer})
         
@@ -406,7 +401,7 @@ class cls_clean_visualization(QgsTask):
             # Buffer
             #########################
             
-            self.parent.setMessage('Constructing buffers ...')
+            self.signals.set_message.emit('Constructing buffers ...')
             buffer_result = processing.run("native:buffer",
                                        {'INPUT': self.input_layer_path,
                                         'DISTANCE': self.dist_buffer,
@@ -420,21 +415,21 @@ class cls_clean_visualization(QgsTask):
             buffer_layer = buffer_result['OUTPUT']
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(3)
+            self.signals.progress.emit(3)
             #######################
             # Clip - voronoi_layer and buffer_layer
             ########################
-            self.parent.setMessage('Clipping ...')
+            self.signals.set_message.emit('Clipping ...')
             
             clip_layer = self.make_clip(buffer_layer, voronoi_layer)
         
             if self.break_on:
                 return 0
-            self.parent.progressBar.setValue(4)
+            self.signals.progress.emit(4)
             #########################
             # Saving result
             #########################
-            self.parent.setMessage('Saving ...')
+            self.signals.set_message.emit('Saving ...')
             file_dir = self.folder_name
             ext = ".shp"
             output_file_name = f"{self.name}_vor{ext}"
@@ -463,7 +458,7 @@ class cls_clean_visualization(QgsTask):
             if self.break_on:
                 return 0
             QgsProject.instance().removeMapLayer(voronoi_layer.id())
-            self.parent.progressBar.setValue(5)
+            self.signals.progress.emit(5)
         
         except Exception as e:
             print (f"error voronoi: {e}")
@@ -485,8 +480,7 @@ class cls_clean_visualization(QgsTask):
             if i % 10 == 0:
                 if self.break_on:
                     return 0
-                self.parent.setMessage(
-                    f'Clipping buffers {i + 1} to from {count_buffers} ...')
+                self.signals.set_message.emit(f'Clipping buffers {i + 1} to from {count_buffers} ...')
 
             buffer_features.append(buffer_feature)
 
@@ -519,34 +513,3 @@ class cls_clean_visualization(QgsTask):
 
         result_layer.updateExtents()
         return result_layer
-
-    def style_polygon_layer(self, layer):
-        from tempfile import NamedTemporaryFile
-        
-        color_list = [color for color in CSS4_COLORS.values() if color.lower() != '#ffffff']
-        random_color = choice(color_list)
-        
-        if layer.geometryType() == 2:
-
-            symbol = QgsFillSymbol.createSimple({'color': '0,0,0,0', 
-                                                 'outline_color': random_color})
-            layer.renderer().setSymbol(symbol)
-            layer.triggerRepaint()    
-
-            with NamedTemporaryFile(suffix=".qml", delete=False) as tmpfile:
-                style_path = tmpfile.name
-            layer.saveNamedStyle(style_path)
-
-        
-            layer.loadNamedStyle(style_path)
-            layer.triggerRepaint()
-
-
-    def finished(self, result):
-        for path_shp, name_layer in self.list_layer:
-            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
-            if saved_layer.isValid():
-                QgsProject.instance().addMapLayer(saved_layer)
-                self.style_polygon_layer(saved_layer)
-        
-    

@@ -7,7 +7,13 @@ from common import convert_meters_to_degrees
 
 
 class cls_footpath_on_air_b_b:
-    def __init__(self, layer_origins, layer_dest, walk_dist=300, layer_origins_field_id="osm_id", speed = 1):
+    def __init__(self, 
+                 layer_origins, 
+                 layer_dest, 
+                 walk_dist=300, 
+                 layer_origins_field_id="osm_id", 
+                 speed = 1):
+        
         self.layer_origins = layer_origins
         self.layer_dest = layer_dest
         self.layer_origins_field_id = layer_origins_field_id

@@ -8,13 +8,20 @@ from qgis.core import (
     QgsProject,
     edit)
 
+from qgis.PyQt.QtCore import QObject, pyqtSignal
+
 from qgis import processing
 
-from common import getDateTime
+class TaskSignals(QObject):
+    log = pyqtSignal(str)
+    progress = pyqtSignal(int)
+    set_message = pyqtSignal(str)
+    save_log = pyqtSignal(bool)
+    add_layers = pyqtSignal(list) 
+    change_button_status = pyqtSignal(bool) 
 
 class cls_clean_buildings(QgsTask):
     def __init__(self, 
-                 parent, 
                  begin_computation_time, 
                  layer, 
                  folder_name, 
@@ -22,7 +29,7 @@ class cls_clean_buildings(QgsTask):
                  task_name="Buildings clean task"):
         
         super().__init__(task_name)
-        self.parent = parent
+        self.signals = TaskSignals()
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
@@ -30,7 +37,7 @@ class cls_clean_buildings(QgsTask):
 
         self.exception = None
         self.break_on = False
-        self.parent.progressBar.setMaximum(5)
+        self.signals.progress.emit(5)
         self.list_layer = []
 
     def run(self):
@@ -42,7 +49,7 @@ class cls_clean_buildings(QgsTask):
         input_layer = QgsVectorLayer(input_layer_path, "Layer Name", "ogr")
 
         ################################
-        self.parent.setMessage('Deleting holes ...')
+        self.signals.set_message.emit('Deleting holes ...')
         deleteholes_result = processing.run("qgis:deleteholes", {
             'INPUT': input_layer,
             'OUTPUT': 'TEMPORARY_OUTPUT'
@@ -50,10 +57,10 @@ class cls_clean_buildings(QgsTask):
         layer_deleteholes = deleteholes_result['OUTPUT']
         if self.break_on:
             return 0
-        self.parent.progressBar.setValue(1)
+        self.signals.progress.emit(1)
         ###############################
 
-        self.parent.setMessage('Removing null geometries ...')
+        self.signals.set_message.emit('Removing null geometries ...')
         empty_geometry_features = []
 
         for feature in layer_deleteholes.getFeatures():
@@ -67,10 +74,10 @@ class cls_clean_buildings(QgsTask):
 
         if self.break_on:
             return 0
-        self.parent.progressBar.setValue(2)
+        self.signals.progress.emit(2)
         ##############################
 
-        self.parent.setMessage('Converting multipart to singlepart ...')
+        self.signals.set_message.emit('Converting multipart to singlepart ...')
         singlepart_result = processing.run("native:multiparttosingleparts", {
             'INPUT': layer_deleteholes,
             'OUTPUT': 'memory:'
@@ -78,11 +85,11 @@ class cls_clean_buildings(QgsTask):
         layer_singlepart = singlepart_result['OUTPUT']
         if self.break_on:
             return 0
-        self.parent.progressBar.setValue(3)
+        self.signals.progress.emit(3)
 
         ############################################
 
-        self.parent.setMessage('Renumbering duplicated osm_id ...')
+        self.signals.set_message.emit('Renumbering duplicated osm_id ...')
 
         field_name = self.osm_id_field
         used_ids = set()
@@ -135,13 +142,12 @@ class cls_clean_buildings(QgsTask):
         
         if self.break_on:
             return 0
-        self.parent.progressBar.setValue(4)
+        self.signals.progress.emit(4)
         self.layer_name_single_part =  self.save_layer_single_part (layer_singlepart)
         self.write_finish_info()
-        self.parent.btnBreakOn.setEnabled(False)
-        self.parent.close_button.setEnabled(True)
-        self.parent.progressBar.setValue(5)
-        self.parent.setMessage('Finished')
+        self.signals.change_button_status.emit(True)
+        self.signals.progress.emit(5)
+        self.signals.set_message.emit('Finished')
         
         return True
 
@@ -149,27 +155,19 @@ class cls_clean_buildings(QgsTask):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
+        self.signals.log.emit(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
-
-        
-        text = self.parent.textLog.toPlainText()
-        postfix = getDateTime()
-                
-        filelog_name = f'{self.folder_name}//log_{postfix}.txt'
-        
-        with open(filelog_name, "w") as file:
-            file.write(text)
-        
-        self.parent.textLog.append(f'"{self.layer_name_single_part}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
+        self.signals.save_log.emit(True)
+        self.signals.log.emit(f'"{self.layer_name_single_part}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        self.signals.add_layers.emit(self.list_layer)
         
 
     def cancel(self):
         try:
-            self.parent.progressBar.setValue(0)
-            self.parent.setMessage(f'')
+            self.signals.progress.emit(0)
+            self.signals.set_message.emit(f'')
             self.break_on = True
             super().cancel()
         except:
@@ -191,7 +189,7 @@ class cls_clean_buildings(QgsTask):
         return f"{base}_{index}{ext}"
     
     def save_layer_single_part (self, layer_single_part):
-        self.parent.setMessage('Saving layer of buildings...')
+        self.signals.set_message.emit('Saving layer of buildings...')
         file_dir = self.folder_name
         self.ext = ".shp"
         output_file_name = f"{self.name}_cleaned{self.ext}"
@@ -212,13 +210,6 @@ class cls_clean_buildings(QgsTask):
         
         self.list_layer.append((unique_output_path, layer_name))    
         
-        return layer_name
-    
-    def finished(self, result):
-        for path_shp, name_layer in self.list_layer:
-            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
-            if saved_layer.isValid():
-                QgsProject.instance().addMapLayer(saved_layer)
-       
+        return layer_name   
 
                 

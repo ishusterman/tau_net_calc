@@ -4,6 +4,7 @@ import configparser
 from time import sleep
 from datetime import datetime
 import glob
+
 from PyQt5.QtGui import QImage
 
 from qgis.core import QgsProcessingFeedback
@@ -18,6 +19,7 @@ from qgis.core import (QgsApplication,
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
+                          QTimer
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -30,7 +32,7 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
 from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
 
-from common import get_qgis_info, check_file_parameters_accessibility
+from common import get_qgis_info, check_file_parameters_accessibility, getDateTime
 from layer_clean import cls_clean_roads
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -53,7 +55,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.setWindowTitle(title)
 
         self.splitter.setSizes(
-            [int(self.width() * 0.30), int(self.width() * 0.70)])
+            [int(self.width() * 0.75), int(self.width() * 0.25)])
 
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
@@ -183,11 +185,52 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         self.break_on = False
-
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         self.task = cls_clean_roads(
-            self, begin_computation_time, self.layer_road, self.layer_road_path, self.folder_name,self.feedback)
+            begin_computation_time, 
+            self.layer_road, 
+            self.layer_road_path, 
+            self.folder_name, 
+            self.feedback
+            )
+                
+        self.task.signals.log.connect(self.textLog.append)
+        self.task.signals.progress.connect(self.progressBar.setValue)
+        self.task.signals.set_message.connect(self.setMessage)
+        self.task.signals.save_log.connect(self.save_log)
+        self.task.signals.add_layers.connect(self.add_layers)
+        self.task.signals.change_button_status.connect(self.change_button_status)
+                
         QgsApplication.taskManager().addTask(self.task)
         QApplication.processEvents()
+
+    def change_button_status (self, need_change):
+        if need_change:
+            self.btnBreakOn.setEnabled(False)
+            self.close_button.setEnabled(True)
+    
+    def add_layers(self, list_layer):
+        for path_shp, name_layer in list_layer:
+            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
+            if saved_layer.isValid():
+                QgsProject.instance().addMapLayer(saved_layer)
+
+        QTimer.singleShot(500, self.save_project)        
+        
+    def save_log(self, need_save):
+        if need_save:
+            postfix = getDateTime()
+            filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.txt'
+            text = self.textLog.toPlainText()
+            with open(filelog_name, "w") as file:
+                file.write(text)
+            
+
+    def save_project(self):
+        QApplication.setOverrideCursor(Qt.ArrowCursor)
+        QgsProject.instance().write()
+        QgsProject.instance().setDirty(False) 
+
 
     def on_close_button_clicked(self):
         self.reject()
@@ -339,9 +382,5 @@ class form_roads_clean(QDialog, FORM_CLASS):
         #html += f'<img src="{image_path3}"> <br />'
         html += '</span>'
         self.textInfo.setHtml(html)
-        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
-    
-    def closeEvent(self, event):
-        project = QgsProject.instance()
-        project.write()
+        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))   
         

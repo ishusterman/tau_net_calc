@@ -7,18 +7,23 @@ import glob
 import re
 import math
 
+from random import choice
+from matplotlib.colors import CSS4_COLORS
+
 from qgis.PyQt import QtCore
 
 from qgis.core import (QgsApplication,
                        QgsProject,
                        QgsWkbTypes,
-                       QgsVectorLayer
+                       QgsVectorLayer,
+                       QgsFillSymbol
                        )
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
                           QRegExp,
-                          QVariant
+                          QVariant,
+                          QTimer
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -26,7 +31,6 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                              QFileDialog,
                              QApplication,
                              QMessageBox,
-                             QButtonGroup
                              )
 
 from PyQt5.QtGui import (QRegExpValidator,
@@ -34,7 +38,10 @@ from PyQt5.QtGui import (QRegExpValidator,
 
 from PyQt5 import uic
 
-from common import get_qgis_info, check_file_parameters_accessibility
+from common import (get_qgis_info, 
+                   check_file_parameters_accessibility, 
+                   getDateTime
+                    )
 from visualization_clean import cls_clean_visualization
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -77,9 +84,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.progressBar.setValue(0)
 
         self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog ())
-
-        
-        
 
         self.toolButton_protocol.clicked.connect(
             lambda: self.showFoldersDialog(self.txtPathToProtocols))
@@ -344,12 +348,52 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         runVoronoi = self.cbVoronoi.isChecked()
 
              
-
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         self.task = cls_clean_visualization(
-            self, begin_computation_time, self.layer_buildings, self.folder_name, self.layer_field, runVoronoi, spacing)
+            begin_computation_time, 
+            self.layer_buildings, 
+            self.folder_name, 
+            self.layer_field, 
+            runVoronoi, 
+            spacing)
+        
+        self.task.signals.log.connect(self.textLog.append)
+        self.task.signals.progress.connect(self.progressBar.setValue)
+        self.task.signals.set_message.connect(self.setMessage)
+        self.task.signals.save_log.connect(self.save_log)
+        self.task.signals.add_layers.connect(self.add_layers)
+        self.task.signals.change_button_status.connect(self.change_button_status)
         QgsApplication.taskManager().addTask(self.task)
         sleep(1)
         QApplication.processEvents()
+
+    def change_button_status (self, need_change):
+        if need_change:
+            self.btnBreakOn.setEnabled(False)
+            self.close_button.setEnabled(True)
+    
+    def add_layers(self, list_layer):
+        for path_shp, name_layer in list_layer:
+            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
+            if saved_layer.isValid():
+                QgsProject.instance().addMapLayer(saved_layer)
+                self.style_polygon_layer(saved_layer)
+
+        QTimer.singleShot(500, self.save_project)        
+        
+    def save_log(self, need_save):
+        if need_save:
+            postfix = getDateTime()
+            filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.txt'
+            text = self.textLog.toPlainText()
+            with open(filelog_name, "w") as file:
+                file.write(text)
+          
+
+    def save_project(self):
+        QApplication.setOverrideCursor(Qt.ArrowCursor)
+        QgsProject.instance().write()
+        QgsProject.instance().setDirty(False) 
 
     def on_close_button_clicked(self):
         self.reject()
@@ -532,4 +576,25 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         project.write()
         self.task = None
         event.accept()
+
+    def style_polygon_layer(self, layer):
+        from tempfile import NamedTemporaryFile
+        
+        color_list = [color for color in CSS4_COLORS.values() if color.lower() != '#ffffff']
+        random_color = choice(color_list)
+        
+        if layer.geometryType() == 2:
+
+            symbol = QgsFillSymbol.createSimple({'color': '0,0,0,0', 
+                                                 'outline_color': random_color})
+            layer.renderer().setSymbol(symbol)
+            layer.triggerRepaint()    
+
+            with NamedTemporaryFile(suffix=".qml", delete=False) as tmpfile:
+                style_path = tmpfile.name
+            layer.saveNamedStyle(style_path)
+
+        
+            layer.loadNamedStyle(style_path)
+            layer.triggerRepaint()    
 

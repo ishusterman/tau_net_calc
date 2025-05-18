@@ -18,7 +18,8 @@ from qgis.core import (QgsApplication,
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
-                          QVariant
+                          QVariant,
+                          QTimer
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -32,7 +33,7 @@ from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
 
 
-from common import get_qgis_info, check_file_parameters_accessibility
+from common import get_qgis_info, check_file_parameters_accessibility, getDateTime
 from buildings_clean import cls_clean_buildings
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -235,11 +236,50 @@ class form_buildings_clean(QDialog, FORM_CLASS):
 
         osm_id_field = self.config['Settings']['Layer_field_clean-buildings']
         
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         self.task = cls_clean_buildings(
-            self, begin_computation_time, self.layer_road, self.folder_name, osm_id_field)
+            begin_computation_time, 
+            self.layer_road, 
+            self.folder_name, 
+            osm_id_field
+            )
         QgsApplication.taskManager().addTask(self.task)
+        self.task.signals.log.connect(self.textLog.append)
+        self.task.signals.progress.connect(self.progressBar.setValue)
+        self.task.signals.set_message.connect(self.setMessage)
+        self.task.signals.save_log.connect(self.save_log)
+        self.task.signals.add_layers.connect(self.add_layers)
+        self.task.signals.change_button_status.connect(self.change_button_status)
+
         sleep(1)
         QApplication.processEvents()
+
+    def change_button_status (self, need_change):
+        if need_change:
+            self.btnBreakOn.setEnabled(False)
+            self.close_button.setEnabled(True)
+    
+    def add_layers(self, list_layer):
+        for path_shp, name_layer in list_layer:
+            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
+            if saved_layer.isValid():
+                QgsProject.instance().addMapLayer(saved_layer)
+
+        QTimer.singleShot(500, self.save_project)        
+        
+    def save_log(self, need_save):
+        if need_save:
+            postfix = getDateTime()
+            filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.txt'
+            text = self.textLog.toPlainText()
+            with open(filelog_name, "w") as file:
+                file.write(text)
+            
+
+    def save_project(self):
+        QApplication.setOverrideCursor(Qt.ArrowCursor)
+        QgsProject.instance().write()
+        QgsProject.instance().setDirty(False) 
 
     def on_close_button_clicked(self):
         self.reject()
