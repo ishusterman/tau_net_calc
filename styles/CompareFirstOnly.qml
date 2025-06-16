@@ -146,7 +146,7 @@
   </elevation>
   <renderer-v2 enableorderby="0" graduatedMethod="GraduatedColor" symbollevels="0" type="graduatedSymbol" forceraster="0" referencescale="-1" attr="Duration">
     <ranges>
-      <range lower="492.000000000000000" upper="2700.000000000000000" label="Accessible in 2018 only" symbol="0" render="true" uuid="{b0b6e623-69ce-4938-a491-68ca45b5ad3e}"/>
+      <range lower="492.000000000000000" upper="2700.000000000000000" label="Accessible in Result1 only" symbol="0" render="true" uuid="{b0b6e623-69ce-4938-a491-68ca45b5ad3e}"/>
     </ranges>
     <symbols>
       <symbol force_rhr="0" alpha="1" type="fill" name="0" frame_rate="10" clip_to_extent="1" is_animated="0">

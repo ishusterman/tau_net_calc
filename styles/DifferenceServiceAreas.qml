@@ -723,18 +723,18 @@
   </attributeactions>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
     <columns>
-      <column type="field" name="fid" hidden="0" width="50"/>
-      <column type="field" name="cat" hidden="0" width="50"/>
-      <column type="field" name="osm_id" hidden="0" width="100"/>
-      <column type="field" name="code" hidden="0" width="80"/>
-      <column type="field" name="fclass" hidden="0" width="100"/>
-      <column type="field" name="name" hidden="0" width="150"/>
-      <column type="field" name="type" hidden="0" width="100"/>
-      <column type="field" name="machoz" hidden="0" width="80"/>
-      <column type="field" name="Duration_Gesher_2024_to_Schedule_PT_PBS" hidden="0" width="200"/>
-      <column type="field" name="Difference" hidden="0" width="100"/>
-      <column type="field" name="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" hidden="0" width="200"/>
-      <column type="actions" hidden="1" width="50"/>
+      <column type="field" name="fid" hidden="0" width="-1"/>
+      <column type="field" name="cat" hidden="0" width="-1"/>
+      <column type="field" name="osm_id" hidden="0" width="-1"/>
+      <column type="field" name="code" hidden="0" width="-1"/>
+      <column type="field" name="fclass" hidden="0" width="-1"/>
+      <column type="field" name="name" hidden="0" width="-1"/>
+      <column type="field" name="type" hidden="0" width="-1"/>
+      <column type="field" name="machoz" hidden="0" width="-1"/>
+      <column type="field" name="Duration_Gesher_2024_to_Schedule_PT_PBS" hidden="0" width="-1"/>
+      <column type="field" name="Difference" hidden="0" width="-1"/>
+      <column type="field" name="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" hidden="0" width="-1"/>
+      <column type="actions" hidden="1" width="-1"/>
     </columns>
   </attributetableconfig>
   <conditionalstyles>

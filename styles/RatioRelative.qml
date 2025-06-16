@@ -529,7 +529,7 @@
         <Option name="properties"/>
         <Option value="collection" type="QString" name="type"/>
       </Option>
-    </data_defined_properties>
+    </data-defined-properties>
   </renderer-v2>
   <selection mode="Default">
     <selectionColor invalid="1"/>
@@ -819,18 +819,18 @@
   </attributeactions>
   <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
     <columns>
-      <column width="50" type="field" name="fid" hidden="0"/>
-      <column width="50" type="field" name="cat" hidden="0"/>
-      <column width="100" type="field" name="osm_id" hidden="0"/>
-      <column width="80" type="field" name="code" hidden="0"/>
-      <column width="100" type="field" name="fclass" hidden="0"/>
-      <column width="150" type="field" name="name" hidden="0"/>
-      <column width="100" type="field" name="type" hidden="0"/>
-      <column width="80" type="field" name="machoz" hidden="0"/>
-      <column width="150" type="field" name="Relative_difference" hidden="0"/>
-      <column width="200" type="field" name="Duration_SFPTGesher24_45m_tot_265984731" hidden="0"/>
-      <column width="200" type="field" name="Duration_FPTGesher24_45m_tot_265984731" hidden="0"/>
-      <column width="50" type="actions" hidden="1"/>
+      <column width="-1" type="field" name="fid" hidden="0"/>
+      <column width="-1" type="field" name="cat" hidden="0"/>
+      <column width="-1" type="field" name="osm_id" hidden="0"/>
+      <column width="-1" type="field" name="code" hidden="0"/>
+      <column width="-1" type="field" name="fclass" hidden="0"/>
+      <column width="-1" type="field" name="name" hidden="0"/>
+      <column width="-1" type="field" name="type" hidden="0"/>
+      <column width="-1" type="field" name="machoz" hidden="0"/>
+      <column width="-1" type="field" name="Relative_difference" hidden="0"/>
+      <column width="-1" type="field" name="Duration_SFPTGesher24_45m_tot_265984731" hidden="0"/>
+      <column width="-1" type="field" name="Duration_FPTGesher24_45m_tot_265984731" hidden="0"/>
+      <column width="-1" type="actions" hidden="1"/>
     </columns>
   </attributetableconfig>
   <conditionalstyles>

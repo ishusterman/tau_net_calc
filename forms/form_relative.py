@@ -137,6 +137,11 @@ class form_relative(QDialog, FORM_CLASS):
                 self.cbVisLayers_fields.addItem(field_name)
                 if field_name == "osm_id":
                     osm_id_exists = True
+            
+            else:
+                if field_name.lower() == "osm_id":
+                    self.cbVisLayers_fields.addItem(field_name)
+                    osm_id_exists = True
             """
             elif field_type == QVariant.String:
                 # check the first value of the field for digits only

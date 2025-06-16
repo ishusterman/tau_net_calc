@@ -665,16 +665,16 @@
   </attributeactions>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
     <columns>
-      <column type="field" name="id" hidden="0" width="50"/>
-      <column type="field" name="left" hidden="0" width="100"/>
-      <column type="field" name="top" hidden="0" width="100"/>
-      <column type="field" name="right" hidden="0" width="100"/>
-      <column type="field" name="bottom" hidden="0" width="100"/>
-      <column type="field" name="row_index" hidden="0" width="80"/>
-      <column type="field" name="col_index" hidden="0" width="80"/>
-      <column type="field" name="osm_id" hidden="0" width="100"/>
-      <column type="field" name="bldg_total" hidden="0" width="100"/>
-      <column type="actions" hidden="1" width="50"/>
+      <column type="field" name="id" hidden="0" width="-1"/>
+      <column type="field" name="left" hidden="0" width="-1"/>
+      <column type="field" name="top" hidden="0" width="-1"/>
+      <column type="field" name="right" hidden="0" width="-1"/>
+      <column type="field" name="bottom" hidden="0" width="-1"/>
+      <column type="field" name="row_index" hidden="0" width="-1"/>
+      <column type="field" name="col_index" hidden="0" width="-1"/>
+      <column type="field" name="osm_id" hidden="0" width="-1"/>
+      <column type="field" name="bldg_total" hidden="0" width="-1"/>
+      <column type="actions" hidden="1" width="-1"/>
     </columns>
   </attributetableconfig>
   <conditionalstyles>

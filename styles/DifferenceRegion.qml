@@ -146,12 +146,12 @@
   </elevation>
   <renderer-v2 enableorderby="0" graduatedMethod="GraduatedColor" symbollevels="0" type="graduatedSymbol" forceraster="0" referencescale="-1" attr="Difference">
     <ranges>
-      <range lower="-42283.000000000000000" upper="0.000000000000000" label="less in 2024 than in 2018" symbol="0" render="true" uuid="{0a01e2e1-507f-4952-bb42-7c8a8fd76f02}"/>
-      <range lower="0.000000000000000" upper="10000.000000000000000" label="up to 10K more in 2024" symbol="1" render="true" uuid="{af7f27eb-8ab8-4524-a6dc-ef1fbf15c8c0}"/>
-      <range lower="10000.000000000000000" upper="20000.000000000000000" label="10-20K more in 2024" symbol="2" render="true" uuid="{6a53e9be-6024-4a3a-8aff-5444e6f9f18e}"/>
-      <range lower="20000.000000000000000" upper="30000.000000000000000" label="20 - 30K more in 2024" symbol="3" render="true" uuid="{2009528d-3ba9-4ab9-8a95-8f76036a9183}"/>
-      <range lower="30000.000000000000000" upper="40000.000000000000000" label="30 - 40K more in 2024" symbol="4" render="true" uuid="{b4d696d6-7d33-44fe-a508-b737a5605d3a}"/>
-      <range lower="40000.000000000000000" upper="56202.000000000000000" label="40 - 50K more in 2024" symbol="5" render="true" uuid="{e98c06d5-4eee-4797-b319-cd50f0ef06db}"/>
+      <range lower="-42283.000000000000000" upper="0.000000000000000" label="less in Result2 than in Result1" symbol="0" render="true" uuid="{0a01e2e1-507f-4952-bb42-7c8a8fd76f02}"/>
+      <range lower="0.000000000000000" upper="10000.000000000000000" label="up to 10K more in Result2" symbol="1" render="true" uuid="{af7f27eb-8ab8-4524-a6dc-ef1fbf15c8c0}"/>
+      <range lower="10000.000000000000000" upper="20000.000000000000000" label="10-20K more in Result2" symbol="2" render="true" uuid="{6a53e9be-6024-4a3a-8aff-5444e6f9f18e}"/>
+      <range lower="20000.000000000000000" upper="30000.000000000000000" label="20 - 30K more in Result2" symbol="3" render="true" uuid="{2009528d-3ba9-4ab9-8a95-8f76036a9183}"/>
+      <range lower="30000.000000000000000" upper="40000.000000000000000" label="30 - 40K more in Result2" symbol="4" render="true" uuid="{b4d696d6-7d33-44fe-a508-b737a5605d3a}"/>
+      <range lower="40000.000000000000000" upper="56202.000000000000000" label="40 - 50K more in Result2" symbol="5" render="true" uuid="{e98c06d5-4eee-4797-b319-cd50f0ef06db}"/>
     </ranges>
     <symbols>
       <symbol force_rhr="0" alpha="1" type="fill" name="0" frame_rate="10" clip_to_extent="1" is_animated="0">
@@ -627,18 +627,18 @@
   </attributeactions>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
     <columns>
-      <column type="field" name="id" hidden="0" width="50"/>
-      <column type="field" name="left" hidden="0" width="100"/>
-      <column type="field" name="top" hidden="0" width="100"/>
-      <column type="field" name="right" hidden="0" width="100"/>
-      <column type="field" name="bottom" hidden="0" width="100"/>
-      <column type="field" name="row_index" hidden="0" width="80"/>
-      <column type="field" name="col_index" hidden="0" width="80"/>
-      <column type="field" name="osm_id" hidden="0" width="100"/>
-      <column type="field" name="bldg_totalREG_F_PT_RFX_bldg" hidden="0" width="150"/>
-      <column type="field" name="bldg_total28feb_15h15m09s_PT_RFX_bldg" hidden="0" width="150"/>
-      <column type="field" name="Difference" hidden="0" width="100"/>
-      <column type="actions" hidden="1" width="50"/>
+      <column type="field" name="id" hidden="0" width="-1"/>
+      <column type="field" name="left" hidden="0" width="-1"/>
+      <column type="field" name="top" hidden="0" width="-1"/>
+      <column type="field" name="right" hidden="0" width="-1"/>
+      <column type="field" name="bottom" hidden="0" width="-1"/>
+      <column type="field" name="row_index" hidden="0" width="-1"/>
+      <column type="field" name="col_index" hidden="0" width="-1"/>
+      <column type="field" name="osm_id" hidden="0" width="-1"/>
+      <column type="field" name="bldg_totalREG_F_PT_RFX_bldg" hidden="0" width="-1"/>
+      <column type="field" name="bldg_total28feb_15h15m09s_PT_RFX_bldg" hidden="0" width="-1"/>
+      <column type="field" name="Difference" hidden="0" width="-1"/>
+      <column type="actions" hidden="1" width="-1"/>
     </columns>
   </attributetableconfig>
   <conditionalstyles>

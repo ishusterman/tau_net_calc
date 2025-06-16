@@ -285,6 +285,10 @@ class form_pkl_car(QDialog, FORM_CLASS):
                 obj_layer_fields.addItem(field_name)
                 if field_name.lower() == field_name_default:
                     field_name_default_exists = True
+            else:
+                if field_name.lower() == "osm_id":
+                    obj_layer_fields.addItem(field_name)
+                    field_name_default_exists = True
             
         if field_name_default_exists:
             # iterate through all the items in the combobox and compare them with "osm_id", 

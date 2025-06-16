@@ -131,6 +131,10 @@ class form_buildings_clean(QDialog, FORM_CLASS):
                 obj_layer_fields.addItem(field_name)
                 if field_name.lower() == "osm_id":
                     osm_id_exists = True
+            else:
+                if field_name.lower() == "osm_id":
+                    obj_layer_fields.addItem(field_name)
+                    osm_id_exists = True
             """
             elif field_type == QVariant.String:
                 # check the first value of the field for digits only

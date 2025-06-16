@@ -242,6 +242,10 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 obj_layer_fields.addItem(field_name)
                 if field_name.lower() == field_name_default:
                     field_name_default_exists = True
+            else:
+                if field_name.lower() == "osm_id":
+                    obj_layer_fields.addItem(field_name)
+                    field_name_default_exists = True
             """
             elif field_type == QVariant.String:
                 # check the first value of the field for digits only if only_digit = True.
