@@ -1,0 +1,11 @@
+Construct databases, Car routing database:
+
+The car routing database is constructed based on the links’ traffic direction and maximum traffic speed, and the congestion delay coefficient that depends on the hour of a day: 
+
+1. If the source of the road layer is the OSM database, then maximum traffic speed along the link is retrieved, depending on the road link type, from the table of average free speed on the road links. To edit this table, click here. If this table is edited, the new version substitutes the previous one and the user is responsible for storing the latter, if necessary. 
+If the source is different, the maximum traffic speed is used as is. In case the data on the traffic directions on a link or maximum traffic speed are absent or incorrect, the user is asked to fix the problem and repeat the computations.  
+2. The congestion delay coefficients depend on the hour of the trip’s start and are applied during the entire trip. To edit this table, click here. If this table is edited, the new version substitutes the previous one and the user is responsible for storing the latter, if necessary. 
+3. The data on the road network and buildings are translated into a pkl (Pickled Python Objects) binary format that allows fast accessibility computations.
+
+
+  

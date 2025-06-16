@@ -1,0 +1,8 @@
+Transit accessibility, Service area maps: From service locations, scheduled-based departure:
+
+The FROM service area for the scheduled-based departure contains all buildings that a traveler, who knows the transit timetable, can reach with public transport from one or more of the facility buildings. The traveler starts a trip to arrive at the first transit stop just at the moment of a bus arrival.
+
+The trip duration cannot be longer than the given maximum travel time. 
+
+Two possible traveler choices are analyzed and two outputs are constructed – for the travelers who choose the fastest trip and for the travelers who choose the earliest arrival possible. 
+

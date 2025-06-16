@@ -1,0 +1,8 @@
+Transit accessibility, Region maps: From service locations, scheduled-based departure:
+
+The FROM region maps for the schedule-based departure time present the aggregate measures, calculated over all buildings that can be reached by public transport from each of the region’s buildings, starting the trip at a given hour, by a traveler who knows the transit timetable. 
+
+The total trip duration cannot be longer than the given maximum travel time.
+
+The default measure is the total number of buildings that can be reached in a maximum travel time. The sum of buildings’ attribute values, for each of the selected attributes, can be used as an additional measure, like the total number of jobs accessible from each building in the city in a given trip time. 
+

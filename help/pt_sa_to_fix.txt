@@ -1,0 +1,9 @@
+Transit accessibility, Service area maps: To service locations, fixed-time arrival:
+
+The TO service area for the fixed-time arrival contains all buildings from which a traveler, can reach at least one of the facilities buildings with public transport arriving there at a given hour or before. 
+
+The total duration of a trip cannot be longer than the given maximum travel time. 
+
+If more than one of the facilities can be reached, the route to the destination that guarantees the closest to the given arrival time is stored.
+ 
+

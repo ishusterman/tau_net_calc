@@ -1,0 +1,12 @@
+Compare accessibility maps, Regions
+
+The comparison is performed for the outcomes of two scenarios if:
+
+•	Compared maps are both maps of the region accessibility.
+•	The overlap between the two maps is not empty.
+•	Time bins of both outputs are the same.
+
+If all three tests are successfully passed, the comparison is made for the spatially overlapping parts of the output. 
+
+The non-overlapping parts are presented as additional layers.
+

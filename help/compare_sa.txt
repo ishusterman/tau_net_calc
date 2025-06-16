@@ -1,0 +1,12 @@
+Compare accessibility maps, Service area
+
+The comparison is performed for the outcomes of two scenarios if:
+
+•	Compared maps are both maps of the service areas.
+•	The overlap between the two maps is not empty.
+
+If both tests are successfully passed, the comparison is made for the spatially overlapping parts of the output.
+
+The non-overlapping parts are presented as two additional layers.
+
+  
