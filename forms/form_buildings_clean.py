@@ -283,7 +283,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'building_pkl.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://ishusterman.github.io/tutorial/building_pkl.html#topological-cleaning-of-the-road-and-building-layers"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#topological-cleaning-of-the-road-and-building-layers"
         webbrowser.open(url)
 
     def readParameters(self):

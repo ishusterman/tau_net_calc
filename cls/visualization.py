@@ -12,7 +12,8 @@ from qgis.core import (
     QgsGraduatedSymbolRenderer,
     QgsRendererRange,
     QgsLayerTreeLayer,
-    QgsClassificationEqualInterval
+    QgsClassificationEqualInterval,
+    QgsFeatureRequest
     )
 
 from common import insert_layer_ontop
@@ -55,7 +56,7 @@ class visualization:
         self.style_file = os.path.normpath(os.path.join(self.style_directory, style_filename))
         
     def make_join(self):
-
+        
         join_info = QgsVectorLayerJoinInfo()
         join_info.setJoinLayer(self.protocol_layer)
         join_info.setJoinFieldName(self.fieldname_in_protocol)
@@ -141,16 +142,28 @@ class visualization:
             insert_layer_ontop (self.protocol_layer)
                         
             # if variation Origin_ID > 1 thne filter on first value Origin_ID 
-            
+         
             if self.mode == 2 and self.schedule_mode: # AREA
+       
+                #unique_count = len(self.protocol_layer.uniqueValues(self.protocol_layer.fields().indexFromName("Origin_ID")))    
                 
-                unique_count = len(self.protocol_layer.uniqueValues(self.protocol_layer.fields().indexFromName("Origin_ID")))    
+                #if unique_count > 1:
+                #    first_feature = next(self.protocol_layer.getFeatures())
+                #    origin_id_value = first_feature['Origin_ID']
+                #    expression = f'"Origin_ID" = {origin_id_value}'
+                #    self.protocol_layer.setSubsetString(expression)
+                """
+                first_feature = None
+                for feature in self.protocol_layer.getFeatures(QgsFeatureRequest().setLimit(1)):
+                    first_feature = feature
+                    break
                 
-                if unique_count > 1:
-                    first_feature = next(self.protocol_layer.getFeatures())
+                if first_feature and first_feature['Origin_ID'] is not None:
                     origin_id_value = first_feature['Origin_ID']
                     expression = f'"Origin_ID" = {origin_id_value}'
                     self.protocol_layer.setSubsetString(expression)
+                """
+    
 
             self.max_value = 0
             self.max_abs_value = 0
@@ -362,6 +375,3 @@ class visualization:
         order_of_magnitude = 10 ** math.floor(math.log10(x))  # Порядок величины числа
         rounded_value = math.ceil(x / order_of_magnitude) * order_of_magnitude  # Округление вверх
         return rounded_value
-
-
-

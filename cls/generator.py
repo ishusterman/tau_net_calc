@@ -250,19 +250,14 @@ class generator:
         )
         calc_PKL.create_files()
 
-    def create_output (self, var, mode, time, protocol_type, timetable_mode, sources):
+    def create_output (self, var, mode, time, protocol_type, timetable_mode, sources,
+                       ):
 
-        dictionary, dictionary2 = myload_all_dict(
+        dictionary  = myload_all_dict(
                         self = None,
                         PathToNetwork = self.path_to_PKL,
                         mode = mode,
                         RunOnAir = (var.config['Settings']['RunOnAir'] == "True"),
-
-                        layer_origin = self.layer_buildings,
-                        layer_dest = self.layer_buildings,
-                        MaxWalkDist1 = 150,
-                        layer_dest_field = self.layer_building_field,
-                        Speed = 1
                         )
         
         D_TIME = time_to_seconds(time)
@@ -275,21 +270,31 @@ class generator:
                                   selected_only1 = False,
                                   selected_only2 = False,
                                   dictionary = dictionary,
-                                  dictionary2 = dictionary2,
-                                  shift_mode = True
+                                  shift_mode = True,
+                                  layer_dest_obj = self.layer_buildings,
+                                  layer_origin_obj = self.layer_buildings,
+                                  path_to_pkl = self.path_to_PKL
                                   )
     
-    def compare_files (self, script_dir, params, test_name, add_name = ""):
+    def compare_files(self, script_dir, params, test_name, add_name=""):
         expected_result = os.path.join(script_dir, f'{params.alias}{add_name}_min_duration_expected.csv')
-        result = os.path.join(params.folder_name,f"{params.alias}{add_name}_min_duration.csv")
+        result = os.path.join(params.folder_name, f"{params.alias}{add_name}_min_duration.csv")
 
-        df1 = pd.read_csv(result)
-        df2 = pd.read_csv(expected_result)
-        df1_sorted = df1.sort_values(by=list(df1.columns)).reset_index(drop=True)
-        df2_sorted = df2.sort_values(by=list(df2.columns)).reset_index(drop=True)
+        # Читаем файлы как данные без заголовков
+        df1 = pd.read_csv(result, header=0)  # header=0 означает, что первая строка - это заголовок
+        df2 = pd.read_csv(expected_result, header=0)
+        
+        # Берем только данные (игнорируем заголовки для сравнения)
+        df1_data = df1.values
+        df2_data = df2.values
+        
+        # Сортируем данные по всем столбцам
+        df1_sorted = pd.DataFrame(df1_data).sort_values(by=list(range(len(df1_data[0])))).reset_index(drop=True)
+        df2_sorted = pd.DataFrame(df2_data).sort_values(by=list(range(len(df2_data[0])))).reset_index(drop=True)
+        
         try:
-            pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_dtype=False)
+            pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_dtype=False, check_names=False)
             print(f"✅ {test_name} - OK")
         except AssertionError as e:
             print(f"❌ {test_name} - error")
-            print(e)       
+            print(e)

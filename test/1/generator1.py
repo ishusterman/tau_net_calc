@@ -60,10 +60,10 @@ config_dict = {
             'MaxWalkDist1': "150",
             'MaxWalkDist2': "150",
             'MaxWalkDist3': "150",
-            'MaxTimeTravel': "30",
+            'MaxTimeTravel': "10",
             'MaxWaitTime': "10",
             'MaxWaitTimeTransfer': "10",
-            'TimeInterval': "1",
+            'TimeInterval': "5",
             'Layer': "RCity_Buildings",
             'Layer_field': "building_id",
             'LayerDest': "RCity_Buildings",
@@ -76,10 +76,10 @@ config_dict = {
     },
     'folder_name': path_to_result,
     'alias': 'output1'
-    }
+     }
 
 params = config(config_dict)
-sources = [1010]
+sources = [10000010]
     
 mode_raptor = 1
 time_start = "07:59:59"
@@ -110,7 +110,8 @@ gen.create_output(params,
                       time = time_start, 
                       protocol_type = protocol_type, 
                       timetable_mode = timetable_mode, 
-                      sources = sources)
+                      sources = sources
+                          )
     
 gen.create_layer_routes()
 
@@ -129,7 +130,7 @@ gen.create_output(params,
 
 gen.compare_files (script_dir, params, "Test2 (fixed-time)")
 
-sources = [1008]
+sources = [10000008]
 params.alias = "output3"
 gen.create_output(params, 
                       mode = mode_raptor, 
@@ -141,8 +142,8 @@ gen.compare_files (script_dir, params, "Test3 (fixed-time, origin too far from a
 
 
 protocol_type = 1
-sources = [1010]
-params.config['Settings']['TimeInterval'] = 10
+sources = [10000010]
+params.config['Settings']['TimeInterval'] = 5
 params.config['Settings']['Field_ch'] = "building_id"
 params.alias = "output4"
 gen.create_output(params, 
@@ -155,7 +156,7 @@ gen.compare_files (script_dir, params, "Test4 (fixed-time, Region maps, aggregat
 
 protocol_type = 2
 mode_raptor = 2
-sources = [1011]
+sources = [10000011]
 params.alias = "output5"
 time_start = "08:06:00"
 gen.create_output(params, 
@@ -167,7 +168,7 @@ gen.create_output(params,
 gen.compare_files (script_dir, params, "Test5 (fixed-time, TO)")
 
 
-sources = [1010]
+sources = [10000010]
 mode_raptor = 1
 time_start = "07:59:59"
 protocol_type = 2 

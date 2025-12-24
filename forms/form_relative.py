@@ -478,7 +478,7 @@ class form_relative(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'relative_ready-made.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://ishusterman.github.io/tutorial/relative_ready-made.html"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/relative_ready-made.html"
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):

@@ -4,6 +4,8 @@ import pyproj
 import re
 import geopandas as gpd
 import os
+import datetime
+
 from collections import defaultdict
 from scipy.spatial import cKDTree
 from shapely.geometry import Point
@@ -29,13 +31,16 @@ class GTFS ():
                  layer_road,
                  layer_origins_field="",
                  MaxPathRoad = "400",
-                 MaxPathAir = "400"
+                 MaxPathAir = "400",
+                 check_date = "20000101"
                  ):
         self.pkl_path = pkl_path
         self.__path_to_file = path_to_file
         self.__path_to_GTFS = path_to_GTFS
         self.MaxPathRoad = int(MaxPathRoad)
         self.MaxPathAir = int(MaxPathAir)
+        self.check_date = int(check_date)
+        
         self.parent = parent
         self.layer_origins = layer_origins
         self.layer_road = layer_road
@@ -312,20 +317,23 @@ class GTFS ():
             return 0
         self.routes_df = pd.read_csv(
             f'{self.__path_to_GTFS}//routes.txt', sep=',')
+                        
         self.trips_df = pd.read_csv(
-            f'{self.__path_to_GTFS}//trips.txt', sep=',')
+
+            f'{self.__path_to_GTFS}//trips.txt', sep=',', dtype={'trip_id': str})
         QApplication.processEvents()
         if self.verify_break():
             return 0
+        
         self.stop_times_df = pd.read_csv(
-            f'{self.__path_to_GTFS}//stop_times.txt', sep=',', dtype={'stop_id': str})
+            f'{self.__path_to_GTFS}//stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
         
         QApplication.processEvents()
         if self.verify_break():
             return 0
         self.stop_df = pd.read_csv(
             f'{self.__path_to_GTFS}//stops.txt', sep=',', dtype={'stop_id': str})
-
+               
         path_to_calendar = f'{self.__path_to_GTFS}//calendar.txt'
         calendar_exist = os.path.exists(path_to_calendar)
         if calendar_exist:
@@ -333,16 +341,31 @@ class GTFS ():
                 f'{self.__path_to_GTFS}//calendar.txt', sep=',')
 
             ######################################################
-            # Selecting Tuesday trips
+            # Selecting day trips
             ######################################################
 
-            self.parent.setMessage(f'Selecting Tuesday trips ...')
-            self.log_processing.append('Selecting Tuesday trips ...')
+            self.parent.setMessage(f'Selecting day trips ...')
+            self.log_processing.append('Selecting day trips ...')
             QApplication.processEvents()
 
             all_service_ids = set(self.calendar_df["service_id"])
-            included_service_ids = set(
-                self.calendar_df[self.calendar_df["tuesday"] == 1]["service_id"])
+                        
+            check_date = self.check_date
+
+            check_date_str = str(check_date)
+            date_obj = datetime.datetime.strptime(check_date_str, '%Y%m%d')
+            day_of_week = date_obj.strftime('%A').lower()
+
+
+            self.calendar_df = self.calendar_df [
+                    (self.calendar_df['start_date'] <= check_date) &
+                    (self.calendar_df['end_date'] >= check_date) &
+                    (self.calendar_df[day_of_week] == 1)
+                    ]
+            
+            included_service_ids = set(self.calendar_df['service_id'])   
+           
+
             excluded_service_ids = all_service_ids - included_service_ids
             excluded_service_ids_list = list(excluded_service_ids)
             self.log_processing.append(
@@ -351,32 +374,27 @@ class GTFS ():
             calendar_dates_path = f'{self.__path_to_GTFS}//calendar_dates.txt'
             if os.path.isfile(calendar_dates_path):
                 df_calendar_dates = pd.read_csv(calendar_dates_path)
-                df_calendar_dates["date"] = pd.to_datetime(
-                    df_calendar_dates["date"], format="%Y%m%d")
-                df_calendar_dates["weekday"] = df_calendar_dates["date"].dt.weekday
-                # filter only records where `date` is Tuesday (`weekday == 1`)
-                tuesday_dates = df_calendar_dates[df_calendar_dates["weekday"] == 1]
-                first_tuesday_dates = tuesday_dates.sort_values(
-                    "date").drop_duplicates(subset=["service_id"], keep="first")
-                for _, row in first_tuesday_dates.iterrows():
-                    service_id = row["service_id"]
-                    exception_type = row["exception_type"]
-                    if exception_type == 1:
-                        included_service_ids.add(service_id)
-                        self.log_processing.append(
-                            f'Service {service_id} added')
-                    elif exception_type == 2:
-                        included_service_ids.discard(service_id)
-                        self.log_processing.append(
-                            f'Service {service_id} excluded')
+                if check_date:
+                    df_calendar_dates = df_calendar_dates[df_calendar_dates["date"] == check_date]
+
+                services_to_add = set(df_calendar_dates[df_calendar_dates['exception_type'] == 1]['service_id'])
+                services_to_remove = set(df_calendar_dates[df_calendar_dates['exception_type'] == 2]['service_id'])
+
+                
+                included_service_ids.update(services_to_add)
+                included_service_ids.difference_update(services_to_remove)
+
             self.trips_df = self.trips_df[self.trips_df["service_id"].isin(
                 included_service_ids)]
+
             ######################################################
             self.log_processing.append(self.line_break)
 
             # filtering on trip_id
             self.parent.setMessage(f'Filtering data ...')
+
             self.stop_times_df = self.stop_times_df[self.stop_times_df['trip_id'].isin(self.trips_df['trip_id'])]
+
 
             # Преобразуем время в формат HH:MM:SS
             self.parent.setMessage(f'Correcting date ...')
@@ -384,6 +402,7 @@ class GTFS ():
             lambda x: f"{int(x.split(':')[0]):02}:{x.split(':')[1]}:{x.split(':')[2]}"
             )
             self.stop_times_df["departure_time"] = self.stop_times_df["arrival_time"]
+           
 
     def interpolate_times(self):
         
@@ -546,12 +565,13 @@ class GTFS ():
             return 0
         QApplication.processEvents()
         self.save_GTFS()
-
+        
         self.parent.progressBar.setValue(8)
         with open(self.filelog_name, "w", encoding="utf-8") as file:
             for line in self.log_processing:
                 file.write(line + "\n")
         #################################        
+        
         
         self.parent.setMessage(f'Building aerial paths between buildings and stops...')
         QApplication.processEvents()
@@ -564,6 +584,9 @@ class GTFS ():
         # Calc footpath on graph with projections
         ##########################################
         self.create_footpath_on_graph()
+        if self.verify_break():
+            return 0
+            
         return 1
 
     def create_footpath_on_graph(self, need_save_layer_with_projection = False, filename = ""):
@@ -620,14 +643,20 @@ class GTFS ():
         if self.parent is not None:
             self.parent.progressBar.setValue(13)
             QApplication.processEvents()
+        if self.verify_break():
+            return 0
         dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
             self.pkl_path)
+        if self.verify_break():
+            return 0
         dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
             self.pkl_path)
         if self.parent is not None:
             self.parent.progressBar.setValue(14)
             QApplication.processEvents()
 
+        if self.verify_break():
+            return 0
         footpath_on_projection.construct_dict_transfers_projections(graph_projection,
                                                                     dict_osm_vertex,
                                                                     dict_vertex_osm,
@@ -641,7 +670,7 @@ class GTFS ():
             QApplication.processEvents()
 
         self.converter.remove_temp_layer()
-
+    
 
     def found_repeated_in_trips_stops(self):
         stop_times_file = pd.read_csv(

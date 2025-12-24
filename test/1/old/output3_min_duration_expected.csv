@@ -1,0 +1,2 @@
+Origin_ID,Start_time,Walk_time1,BStop_ID1,Wait_time1,Bus_start_time1,Line_ID1,Ride_time1,AStop_ID1,Bus_finish_time1,Walk_time2,BStop_ID2,Wait_time2,Bus_start_time2,Line_ID2,Ride_time2,AStop_ID2,Bus_finish_time2,Walk_time3,BStop_ID3,Wait_time3,Bus_start_time3,Line_ID3,Ride_time3,AStop_ID3,Bus_finish_time3,DestWalk_time,Destination_ID,Destination_time,Legs,Duration
+1008,07:59:59,,,,,,,,,,,,,,,,,,,,,,,,,0,1008,07:59:59,0,0

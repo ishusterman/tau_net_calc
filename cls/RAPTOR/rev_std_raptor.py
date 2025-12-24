@@ -1,6 +1,4 @@
-"""
-Module contains rRAPTOR implementation.
-"""
+
 from PyQt5.QtWidgets import QApplication
 from RAPTOR.raptor_functions import *
 import numpy as np
@@ -35,12 +33,14 @@ def rev_raptor(SOURCE,
         marked_stop_dict,
         label,
         pi_label,
-    ) = initialize_rev_raptor(routes_by_stop_dict, SOURCE, MAX_TRANSFER)
+    ) = initialize_rev_raptor(routes_by_stop_dict, 
+                              SOURCE, 
+                              MAX_TRANSFER
+                              )
 
     change_time_save = change_time
 
     # change for new version timetable mode backward
-    
     if timetable_mode:
         D_TIME = D_TIME + MaxExtraTime
      
@@ -173,12 +173,6 @@ def rev_raptor(SOURCE,
                     # and boarding_time >= arr_by_t_at_pi :
                     if to_process and boarding_point != p_i:
 
-                        #if boarding_point == '13472' and p_i == '25107':
-                        #    print (f'boarding_point={boarding_point} p_i={p_i} boarding_time {boarding_time} arr_by_t_at_pi= {arr_by_t_at_pi} tid= {tid} k={k}')    
-                        
-                        
-
-
                         label[k][p_i] = arr_by_t_at_pi
                         pi_label[k][p_i] = (boarding_time,
                                             boarding_point,
@@ -233,7 +227,7 @@ def rev_raptor(SOURCE,
                               list_stops,
                               )
         """
-        MaxWalkTransfer = MaxWalkDist2_time
+        
         if k < roundsCount and MaxWalkDist2_time != MaxWalkDist3_time:
 
             save_marked_stop = True
@@ -247,7 +241,7 @@ def rev_raptor(SOURCE,
                                   pi_label,
                                   save_marked_stop,
                                   list_stops,
-                                  MaxWalkTransfer
+                                  check_only_buildings = False
                                   )
 
         save_marked_stop = False
@@ -262,7 +256,7 @@ def rev_raptor(SOURCE,
                               pi_label,
                               save_marked_stop,
                               list_stops,
-                              MaxWalkTransfer
+                              check_only_buildings = True
                               )
         # Main code End
         if marked_stop == deque([]):
@@ -271,7 +265,6 @@ def rev_raptor(SOURCE,
     journeys_endtime, journeys_duration = post_processingAll(
         SOURCE,
         D_TIME,
-        label,
         list_stops,
         pi_label,
         MIN_TRANSFER,
@@ -295,11 +288,10 @@ def process_walking_stage(min_time,
                           pi_label,
                           save_marked_stop,
                           list_stops,
-                          MaxWalkTransfer):
+                          check_only_buildings):
 
     marked_stop_copy = marked_stop.copy()
-    #save_marked_stop = True
-
+    
     for p in marked_stop_copy:
 
         if pi_label[k][p][0] == 'walking':
@@ -336,9 +328,10 @@ def process_walking_stage(min_time,
             if pi_label_k_p_dash != -1 and pi_label_k_p_dash[0] == "walking" and new_p_dash_time < pi_label_k_p_dash[4]:
                continue
 
-            # если это остановка, но идти до нее дольше чем MaxWalkTransfer, то пропускаем
-            if (not(p_dash.isdigit()) or int(p_dash) < 100000) and to_pdash_time > MaxWalkTransfer:
-                continue
+            # если это остановка
+            if check_only_buildings:
+                if (not(p_dash.isdigit()) or int(p_dash) < 110000):
+                    continue
 
             label[k][p_dash] = new_p_dash_time
 

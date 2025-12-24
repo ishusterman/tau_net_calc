@@ -380,7 +380,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        url= "https://ishusterman.github.io/tutorial/building_pkl.html#building-layers-for-visualization"
+        url= "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-layers-for-visualization"
         webbrowser.open(url)
 
     def readParameters(self):
@@ -450,28 +450,51 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.lblMessages.setText(message)
 
     def check_type_layer_buildings(self):
-        
-        layer = self.cmbLayers.currentText()
-        
-        if layer == "":
-            self.setMessage(f"There are no open polygon layers")
+
+        selected_item = self.cmbLayers.currentText()
+
+        if selected_item == "":
+            self.setMessage("There are no open polygon layers")
             return 0
 
-        layer = QgsProject.instance().mapLayersByName(layer)[0]
+        # Попытка найти слой в проекте по его имени
+        layers = QgsProject.instance().mapLayersByName(selected_item)
+
+        if layers:
+            # Если список слоёв не пуст, используем первый найденный слой
+            layer = layers[0]
+        else:
+            # Если слой по имени не найден, проверяем, является ли это путём к файлу
+            if os.path.isfile(selected_item):
+                layer = QgsVectorLayer(selected_item, "temp_layer", "ogr")
+                # Дополнительная проверка на валидность загруженного слоя
+                if not layer.isValid():
+                    self.setMessage(f"Could not load file '{selected_item}'")
+                    return 0
+            else:
+                # Если не найдено ни слоя в проекте, ни файла
+                self.setMessage(f"Could not find layer or file '{selected_item}'")
+                return 0
         
+        # Теперь у нас есть валидный объект слоя, можно продолжить проверку
         try:
+            # Более безопасная проверка на наличие объектов в слое
+            if layer.featureCount() == 0:
+                self.setMessage(f"Layer '{selected_item}' is empty")
+                return 0
+                
             features = layer.getFeatures()
-        except:
-            self.setMessage(f"Layer '{self.cmbLayers.currentText()}' is empty")
-            return 0
+            first_feature = next(features)
 
-        for feature in features:
-            feature_geometry = feature.geometry()
-            feature_geometry_type = feature_geometry.type()
-            break
+        except StopIteration:
+            self.setMessage(f"Layer '{selected_item}' is empty")
+            return 0
         
+        feature_geometry = first_feature.geometry()
+        feature_geometry_type = feature_geometry.type()
+            
         if not (feature_geometry_type in {QgsWkbTypes.PolygonGeometry}):
-            self.setMessage(f"Features in the layer '{self.cmbLayers.currentText()}' must be polygones")
+            self.setMessage(f"Features in the layer '{selected_item}' must be polygons")
             return 0
 
         return 1

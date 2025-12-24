@@ -1,8 +1,8 @@
 import csv
 
 # Paths to the input files
-file1_path = r"C:\Users\geosimlab\Documents\Igor\experiments\gesher_5min_wait\gesher_from_fix-time_0_2\29dec_10h01m06s_PT_PFX-1\29dec_10h01m06s_PT_PFX.csv"  # Replace with the actual path of the first file
-file2_path = r"C:\Users\geosimlab\Documents\Igor\experiments\gesher_5min_wait\gesher_from_fix-time_1_1\29dec_09h51m40s_PT_PFX-1\29dec_09h51m40s_PT_PFX.csv"  # Replace with the actual path of the second file
+file1_path = r"C:\Users\geosimlab\Documents\Igor\experiments\gesher_5min_wait\gesher_from_fix-time_0_2\29dec_10h01m06s_PT_PFX-1\29dec_10h01m06s_PT_PFX.csv" 
+file2_path = r"C:\Users\geosimlab\Documents\Igor\experiments\gesher_5min_wait\gesher_from_fix-time_1_1\29dec_09h51m40s_PT_PFX-1\29dec_09h51m40s_PT_PFX.csv" 
 
 # Dictionary to store Destination_ID and Duration from the second file
 destination_duration_map = {}

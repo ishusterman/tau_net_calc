@@ -2,6 +2,7 @@
 Module contains function related to RAPTOR, rRAPTOR
 """
 from collections import deque as deque
+from common import seconds_to_time
 
 def initialize_raptor(routes_by_stop_dict,
                       SOURCE,
@@ -67,7 +68,6 @@ def post_processing(DESTINATION,
 
     pareto_set = []
 
-
     if not rounds_inwhich_desti_reached:
         return None
 
@@ -132,27 +132,29 @@ def post_processing(DESTINATION,
             journey.reverse()
             
             duration, start_time, end_time = get_duration(journey, mode_raptor)
-            
-            
+                        
             append = True
             
-            if not (check_walking_jorney (journey, MaxWalkDist2, MaxWalkDist3)):
+            """
+            if not (check_walking_jorney (DESTINATION, journey, MaxWalkDist2, MaxWalkDist3)):
                 append = False
+            """
+            
                 
             if timetable_mode:  # or mode_raptor == 2:
 
                 if len(journey) > 1 and journey[0][0] == "walking" and journey[1][0] != "walking":
-                                        
+
+                    
                     journey[0] = (journey[0][0],
                               journey[0][1],
                               journey[0][2],
                               journey[0][3],
                               journey[1][0])
-                    
-                
+                                    
                     duration, start_time, end_time = get_duration(
                         journey, mode_raptor)
-                
+               
                 if mode_raptor == 1:
                     if (duration > Maximal_travel_time) or start_time > D_Time + MaxExtraTime:
                         append = False
@@ -160,30 +162,24 @@ def post_processing(DESTINATION,
                 if mode_raptor == 2:
                     if (duration > Maximal_travel_time) or end_time > D_Time: 
                         append = False
-            
+                
+            if  not (journey[-1][0] == 'walking'):
+                append = False
+                
+            if  len(journey) == 1 and  journey[-1][0] == 'walking':
+                append = False
+                
             if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist3) and (transfer_needed >= MIN_TRANSFER):
                 if append:
                     pareto_set.append((transfer_needed, duration, end_time, journey))
 
+                    
+                
+                    
     if len(pareto_set) == 0:
         return None
     
     return pareto_set
-
-def check_walking_jorney (journey, MaxWalkDist2, MaxWalkDist3):
-    result = True
-    walking_indices = [i for i, item in enumerate(journey) if isinstance(item[0], str) and item[0] == 'walking']
-
-    distance_transfers = [journey[i][3] for i in walking_indices[1:-1]]
-    distance_finish = journey[walking_indices[-1]][3] if walking_indices else None
-
-    if any(d > MaxWalkDist2 for d in distance_transfers):
-        result = False
-
-    if distance_finish > MaxWalkDist3:
-        result = False
-
-    return result
 
 def get_duration(journey, mode_raptor):
     duration = 0
@@ -228,11 +224,12 @@ def get_duration(journey, mode_raptor):
                 end_time = journey[0][3]
 
             if journey[-1][0] == "walking":
-                start_time = journey[-1][4]
+                start_time = journey[-1][4] 
             else:
                 start_time = journey[-1][3]
-
+    
     duration = end_time - start_time
+
 
     return duration, start_time, end_time
 
@@ -240,7 +237,6 @@ def get_duration(journey, mode_raptor):
 def post_processingAll(
         SOURCE,
         D_TIME,
-        label,
         list_stops,
         pi_label,
         MIN_TRANSFER,
@@ -250,9 +246,9 @@ def post_processingAll(
         Maximal_travel_time,
         MaxExtraTime,
         mode
-        ) -> tuple:
-    Dict_endtime = dict()
-    Dict_duration = dict()
+        ):
+    
+    Dict_endtime, Dict_duration  = {}, {}
     
     for p_i in list_stops:
 
@@ -271,67 +267,58 @@ def post_processingAll(
                                      )
         
 
+        
+
         if pareto_set == None:
             continue
-
-        total_time_to_dest = -1
-
+        
         if pareto_set != None and len(pareto_set) > 0:
             # Just one journey with minimal end time will be in pareto set
 
-            total_time_to_dest, transfers, optimal_journey, end_time  = get_optimal_journey_endtime(pareto_set)
-            Dict_endtime[p_i] = [SOURCE, total_time_to_dest, optimal_journey, transfers, end_time]
+            optimal_endtime, optimal_duration = get_optimal_journeys(pareto_set)
 
-            total_time_to_dest, transfers, optimal_journey, end_time = get_optimal_journey_duration(pareto_set)
-            Dict_duration[p_i] = [SOURCE, total_time_to_dest, optimal_journey, transfers, end_time]
+            # Заполнение словарей на основе полученных данных
+            
+            duration, transfers, end_time, journey = optimal_endtime
+            Dict_endtime[p_i] = [SOURCE, duration, journey, transfers, end_time ]
+
+            duration, transfers, end_time, journey = optimal_duration
+            Dict_duration[p_i] = [SOURCE, duration, journey, transfers, end_time]
+                    
+    return Dict_endtime, Dict_duration, 
+
+def get_optimal_journeys(pareto_set):
+    """
+    Находит оптимальные маршруты по разным критериям за один проход.
+
+    :param pareto_set: Набор Парето, содержащий кортежи с данными о поездке.
+    :return: Кортеж из четырех кортежей с оптимальными данными для каждого критерия.
+    """
+    
+    first_journey_data = pareto_set[0]
+    
+    count_leg_0, duration_0, end_time_0, journey_0 = first_journey_data
+    
+    
+    # Инициализация оптимальных значений
+    optimal_duration_journey = (duration_0, count_leg_0, end_time_0, journey_0)
+    optimal_end_time_journey = (duration_0, count_leg_0, end_time_0, journey_0)
+    
+
+
+    # Единый проход по набору Парето, начиная со второго элемента
+    for journey_data in pareto_set[1:]:
         
-    return Dict_endtime, Dict_duration
-
-
-def get_optimal_journey_duration(pareto_set):
-
-    # iteration over all elements in the array
-    min_duration = float('inf')
-    min_count_leg = float('inf')
-
-    for (count_leg, duration, end_time, journey) in pareto_set:
-        if duration < min_duration:
-            min_duration = duration
-            min_count_leg = count_leg
-            journey_opt = journey
-            min_end_time = end_time
-
-        # if duration is equal to the minimum, check count_leg
-        elif duration == min_duration:
-            if count_leg < min_count_leg:
-                min_count_leg = count_leg
-                min_end_time = end_time
-                journey_opt = journey
-
-    return min_duration, min_count_leg, journey_opt, min_end_time
-
-def get_optimal_journey_endtime(pareto_set):
-
-    # iteration over all elements in the array
-    min_duration = float('inf')
-    min_count_leg = float('inf')
-    min_end_time = float('inf')
-
-    for (count_leg, duration, end_time, journey) in pareto_set:
-        if end_time < min_end_time:
-            min_end_time = end_time
-            min_duration = duration
-            min_count_leg = count_leg
-            journey_opt = journey
-
-        # if duration is equal to the minimum, check count_leg
-        elif end_time == min_end_time:
-            if count_leg < min_count_leg:
-                min_count_leg = count_leg
-                min_duration = duration
-                journey_opt = journey
-   
-    return min_duration, min_count_leg, journey_opt, min_end_time
+        count_leg, duration, end_time, journey = journey_data
+        
+        # Обновляем оптимальный маршрут по длительности
+        if duration < optimal_duration_journey[0] or (duration == optimal_duration_journey[0] and count_leg < optimal_duration_journey[1]):
+            optimal_duration_journey = (duration, count_leg, end_time, journey)
+        
+        if end_time < optimal_end_time_journey[2] or (end_time == optimal_end_time_journey[2] and count_leg < optimal_end_time_journey[1]):
+            optimal_end_time_journey = (duration, count_leg, end_time, journey)
+        
+    return optimal_end_time_journey, optimal_duration_journey
 
 
 def initialize_rev_raptor(routes_by_stop_dict,
@@ -376,24 +363,4 @@ def get_earliest_trip_new(stoptimes_dict,
 
     return -1, -1  # No trip is found after arrival_time_at_pi
 
-
-def has_consecutive_walking(journey):
-    for i in range(len(journey) - 1):
-        if isinstance(journey[i], tuple) and isinstance(journey[i + 1], tuple):
-            if journey[i][0] == 'walking' and journey[i+1][0] == 'walking':
-                return True
-    return False
-
-"""
-def has_consecutive_walking(journey):
-    count = 0
-    for segment in journey:
-        if segment[0] == 'walking':
-            count += 1
-            if count == 2:
-                return True
-        else:
-            count = 0
-    return False"
-"""
 

@@ -88,7 +88,7 @@ class PKL ():
             self.parent.progressBar.setValue(4)
         if self.verify_break():
             return 0
-
+        
         self.build_footpath_dict(
             self.__transfers_start_file1, "transfers_dict_air.pkl")
         if self.IN_QGIS:
@@ -148,13 +148,16 @@ class PKL ():
             return 0
 
         self.__trips_file = pd.read_csv(
-            f'{self.__path_gtfs}/trips.txt', sep=',')
+            f'{self.__path_gtfs}/trips.txt', sep=',', dtype={'trip_id': str})
+        
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
             return 0
+        
         self.__stop_times_file = pd.read_csv(
-            f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str})
+            f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
+        
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
@@ -331,7 +334,7 @@ class PKL ():
             return 0
 
         stoptimes_txt = pd.read_csv(
-            f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str})
+            f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
 
         stop_times_file = pd.merge(
             stoptimes_txt, self.__trips_file, on='trip_id')
@@ -483,11 +486,6 @@ class PKL ():
         df_result = df.drop(columns='trip_id').groupby(df['trip_id'], group_keys=False).apply(
         lambda group: self.reverse_stop_sequence(group).assign(trip_id=group.name))
 
-
-
-
-
-
         # using StringIO again to write a DataFrame to a String
         output_str = StringIO()
         df_result.to_csv(output_str, index=False, lineterminator='\n')
@@ -509,7 +507,7 @@ class PKL ():
             return 0
 
         reverse_stoptimes_txt = pd.read_csv(
-            f'{self.__path_gtfs}/rev_stop_times.txt', sep=',', dtype={'stop_id': str})
+            f'{self.__path_gtfs}/rev_stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():

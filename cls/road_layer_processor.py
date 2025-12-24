@@ -33,7 +33,7 @@ class RoadLayerProcessor ():
         self.mode = mode
         self.load_car_speed_by_link_type()
 
-        self.link = "https://ishusterman.github.io/tutorial/car_accessibility.html#building-database-for-car-accessibility-computation"            
+        self.link = "https://geosimlab.github.io/accessibility-calculator-tutorial/car_accessibility.html#building-database-for-car-accessibility-computation"            
 
     def set_Message (self, message, progress): 
         self.parent.setMessage (message)    
@@ -188,8 +188,7 @@ class RoadLayerProcessor ():
         has_oneway = any(k.lower() == 'oneway' for k in self.oneway_percent_dict)
         has_maxspeed = any(k.lower() == 'maxspeed' for k in self.maxspeed_percent_dict)
 
-        #print (f'self.oneway_percent_dict {self.oneway_percent_dict}')
-
+        
         # 1. Если одно из полей не найдено
         if not has_oneway or not has_maxspeed:
             missing = []
@@ -466,7 +465,7 @@ class RoadLayerProcessor ():
             self.layer.removeJoin(self.layer_speed_default.id())
 
         self.fclass_fields = result
-        #print (f'self.fclass_fields {self.fclass_fields}')
+        
         self.best_fclass_field = max_field
         self.best_fclass_percentage = round(max_percentage, 2) if result else -1
 
@@ -601,7 +600,7 @@ class RoadLayerProcessor ():
             else:
                 result += "."
 
-            link = "https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-car-accessibility-computation"            
+            link = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-database-for-car-accessibility-computation"            
             result += f' See <a href="{link}"> section</a> of the tutorial for the suggestion on how to do that in the easiest way.'
                 
             

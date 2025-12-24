@@ -91,7 +91,7 @@ class cls_footpath_on_projection:
         for i, feature in enumerate(self.layer_roads.getFeatures()):
             if i % 10000 == 0:
                 if self.parent is not None:
-                    self.parent.setMessage(f'Making a copy of the layer of roads№ {i} of {count}...')
+                    self.parent.setMessage(f'Making a copy of the layer of roads № {i} of {count}...')
                     QApplication.processEvents()
 
                 if self.verify_break():
@@ -359,6 +359,7 @@ class cls_footpath_on_projection:
             self.parent.setMessage(f'Loading road network graph...')
             QApplication.processEvents()
         # read the saved graph.
+        
         graph_path = os.path.join(file_path, 'graph_projection.pkl')
         with open(graph_path, 'rb') as f:
             graph_data = pickle.load(f)

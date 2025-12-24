@@ -1,4 +1,4 @@
 Destination_ID,Start_time,Walk_time1,BStop_ID1,Wait_time1,Bus_start_time1,Line_ID1,Ride_time1,AStop_ID1,Bus_finish_time1,Walk_time2,BStop_ID2,Wait_time2,Bus_start_time2,Line_ID2,Ride_time2,AStop_ID2,Bus_finish_time2,Walk_time3,BStop_ID3,Wait_time3,Bus_start_time3,Line_ID3,Ride_time3,AStop_ID3,Bus_finish_time3,DestWalk_time,Origin_ID,Destination_time,Arrive_before,Legs,Duration
-1011,08:06:00,,,,,,,,,,,,,,,,,,,,,,,,,0,1011,08:06:00,08:06:00,0,0
-1003,08:01:00,94,s:13,0,08:02:34,2_6,102,s:33,08:04:16,,,,,,,,,,,,,,,,,0,1011,08:04:16,08:06:00,1,300
-1001,07:59:46,66,s:0,0,08:00:52,2_6,204,s:33,08:04:16,,,,,,,,,,,,,,,,,0,1011,08:04:16,08:06:00,1,374
+10000011,08:06:00,,,,,,,,,,,,,,,,,,,,,,,,,0,10000011,08:06:00,08:06:00,0,0
+10000003,08:01:00,94,s:13,0,08:02:34,2_6,102,s:33,08:04:16,,,,,,,,,,,,,,,,,0,10000011,08:06:00,08:06:00,1,300
+10000001,07:59:46,66,s:0,0,08:00:52,2_6,204,s:33,08:04:16,,,,,,,,,,,,,,,,,0,10000011,08:06:00,08:06:00,1,374

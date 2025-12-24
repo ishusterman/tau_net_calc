@@ -188,8 +188,8 @@ class DayStat_DestinationID:
             )
 
 if __name__ == "__main__":
-    base_path = r'C:\Users\geosimlab\Documents\Igor\experiments\Gesher-8'
-    output_path = os.path.join(base_path, f"stat_8.csv")
+    base_path = r'c:\doc\Igor\GIS\prj\exp_08_2025\exp_08_2025_output\Government_Complex-112025\251124_150637_PFXA\from'
+    output_path = os.path.join(base_path, f"stat_from.csv")
     processor = DayStat_DestinationID(base_path, output_path)
     processor.process_files()
     print ("ok")

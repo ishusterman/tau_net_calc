@@ -34,7 +34,7 @@ class RaptorSummary(RaptorDetailed):
 
     def on_help_button_clicked(self):
         
-        url = "https://ishusterman.github.io/tutorial/raptor_map.html"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/raptor_map.html"
         
         if self.mode == 1 and not(self.timetable_mode):
             section = "accessibility-from-every-location-in-the-region-fixed-time-departure"

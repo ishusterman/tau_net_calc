@@ -1,20 +1,19 @@
 import os
-import cProfile
-import pstats
-import io
+#import cProfile
+#import pstats
+#import io
 import webbrowser
 import re
 import configparser
-import csv
 from datetime import datetime
+#import pickle
+#import time
+#from collections import Counter
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QGuiApplication
 
-from qgis.core import (QgsProject,
-                       QgsWkbTypes,
-                       QgsVectorLayer
-                       )
+from qgis.core import QgsProject
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
@@ -32,7 +31,7 @@ from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
 from query_file import runRaptorWithProtocol, myload_all_dict
-from tau_net_calc.cls.common import (getDateTime, 
+from tau_net_calc.cls.common import ( 
                     get_qgis_info, 
                     is_valid_folder_name, 
                     get_prefix_alias, 
@@ -40,9 +39,11 @@ from tau_net_calc.cls.common import (getDateTime,
                     time_to_seconds, 
                     check_file_parameters_accessibility
                     )
-from stat_destination import DayStat_DestinationID
-from stat_from_to import StatFromTo
-from TimeMarkGenerator import TimeMarkGenerator
+#from stat_destination import DayStat_DestinationID
+#from stat_from_to import StatFromTo
+#from AnalyzerFromTo2 import TripAnalyzer
+from AnalyzerFromTo_incremental import roundtrip_analyzer
+#from TimeMarkGenerator import TimeMarkGenerator
 
 from common import (showAllLayersInCombo_Point_and_Polygon,
                     showAllLayersInCombo_Polygon,
@@ -53,6 +54,9 @@ FORM_CLASS, _ = uic.loadUiType(
 )
 
 class RaptorDetailed(QDialog, FORM_CLASS):
+
+    
+
     def __init__(self, parent, mode, protocol_type, title, timetable_mode):
         super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -94,6 +98,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
+        self.config_add = configparser.ConfigParser()
 
         self.break_on = False
 
@@ -418,7 +423,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.textLog.append(f"<a> Maximum waiting time at the transfer stop: {self.config['Settings']['maxwaittimetransfer']} min</a>")
 
-        if not self.timetable_mode:
+        if not self.timetable_mode and not self.shift_ctrl_mode:
             if self.mode == 1:
                 self.textLog.append(f"<a> Start at (hh:mm:ss): {self.config['Settings']['time']}</a>")
             else:
@@ -440,15 +445,17 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 print_fields = "NONE"
             self.textLog.append(f'<a> Additional buildings characteristics for accessibility assessment: {print_fields}</a>')
 
-        if self.timetable_mode:
+        if self.timetable_mode :
             self.textLog.append("<a style='font-weight:bold;'>[Time schedule]</a>")
 
             if self.mode == 1:
-                self.textLog.append(f"<a> Earliest start time: {self.config['Settings']['time']}</a>")
+                if not self.shift_ctrl_mode:
+                    self.textLog.append(f"<a> Earliest start time: {self.config['Settings']['time']}</a>")
                 self.textLog.append(f"<a> Latest start time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
                 
             if self.mode == 2:
-                self.textLog.append(f"<a> Earliest arrival time: {self.config['Settings']['time']}</a>")
+                if not self.shift_ctrl_mode:
+                    self.textLog.append(f"<a> Earliest arrival time: {self.config['Settings']['time']}</a>")
                 self.textLog.append(f"<a> Latest arrival time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
                 
         self.textLog.append("<a style='font-weight:bold;'>[Visualization]</a>")
@@ -463,7 +470,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        url = "https://ishusterman.github.io/tutorial/raptor_area.html"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/raptor_area.html"
 
         if self.mode == 1 and not(self.timetable_mode):
             section = "from-service-locations-fixed-time-departure"
@@ -487,9 +494,17 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         else:
             obj.setText(obj.text())
         
-        
+     
 
     def readParameters(self):
+
+        def is_valid_time(t): 
+            try: 
+                datetime.strptime(t, "%H:%M:%S") 
+                return True 
+            except Exception: 
+                return False   
+        
         project_path = QgsProject.instance().fileName()
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
@@ -498,7 +513,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
+        
+        file_path_add = os.path.join(
+            project_directory, 'parameters_accessibility_add.txt')
+        
         self.config.read(file_path)
+
+        
 
         if 'PathToPKL' not in self.config['Settings'] or self.config['Settings']['PathToPKL'] == "С:/":
             self.config['Settings']['PathToPKL'] = self.config['Settings']['PathToProtocols_pkl']
@@ -516,17 +537,33 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if 'RunOnAir' not in self.config['Settings']:
             self.config['Settings']['RunOnAir'] = 'False'
-        
-        if 'Admin_time_delta' not in self.config['Settings']:
-            self.config['Settings']['Admin_time_delta'] = '900'    
-
-
+                
         if 'PathToProtocols' not in self.config['Settings'] or self.config['Settings']['PathToProtocols'] == "C:/":
             self.config['Settings']['PathToProtocols'] = PathToProtocols      
         self.config['Settings']['PathToProtocols'] = os.path.normpath(self.config['Settings']['PathToProtocols'])
 
-        #if 'Admin_iteration' not in self.config['Settings']:
-        #    self.config['Settings']['Admin_iteration'] = '40'        
+        self.config_add.read(file_path_add)
+
+        value = self.config_add['Settings'].get('time_delta')
+        if not value or not str(value).isdigit():
+            self.config_add['Settings']['time_delta'] = '900'
+
+        value = self.config_add['Settings'].get('from_time_start')
+        if not value or not is_valid_time(value): 
+            self.config_add['Settings']['from_time_start'] = '16:00:00'
+
+        value = self.config_add['Settings'].get('from_time_end')
+        if not value or not is_valid_time(value): 
+            self.config_add['Settings']['from_time_end'] = '18:00:00'
+        
+        value = self.config_add['Settings'].get('to_time_start')
+        if not value or not is_valid_time(value): 
+            self.config_add['Settings']['to_time_start'] = '08:00:00'
+
+        value = self.config_add['Settings'].get('to_time_end')
+        if not value or not is_valid_time(value): 
+            self.config_add['Settings']['to_time_end'] = '10:00:00'
+       
 
     # update config file
 
@@ -585,8 +622,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if self.cbSelectedOnly1.isChecked():
             self.count_layer_origins = layer.selectedFeatureCount()
-            
-      
+                  
         
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerDest'])[0]
@@ -603,6 +639,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         layer = QgsProject.instance().mapLayersByName(
             self.config['Settings']['LayerViz'])[0]
         self.layer_visualization_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
+
+        
         
 
     def ParametrsShow(self):
@@ -679,7 +717,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 f"the maximum allowed walking distance used for the database construction.<br>"
                 f"If you want to continue with the new value of the maximum distance,<br>"
                 f"the transit routing database must be rebuilt (see "
-                f"<a href='https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-transit-accessibility'>tutorial</a>).<br><br>"
+                f"<a href='https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-database-for-transit-accessibility'>tutorial</a>).<br><br>"
                 f"Currently trimmed to {self.UpperBoundMaxWalkDist} meters."
                 )
             msgBox.setStandardButtons(QMessageBox.Ok )
@@ -692,10 +730,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
-
-        #if not os.path.exists(self.txtPathToPKL.text()):
-        #    self.setMessage(f"Folder '{self.txtPathToPKL.text()}' does not exist")
-        #    return False
 
         required_files = [  # 'dict_building_vertex.pkl',
             # 'dict_vertex_buildings.pkl',
@@ -756,7 +790,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             layer = self.config['Settings']['LayerDest']
             feature_id_field = self.config['Settings']['LayerDest_field']
             isChecked = self.cbSelectedOnly2.isChecked()
-
+        
         layer = QgsProject.instance().mapLayersByName(layer)[0]
         ids = []
         try:
@@ -795,11 +829,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
     def prepareRaptor(self):
         self.break_on = False
         QApplication.processEvents()
-        mode = self.mode
+        
         protocol_type = self.protocol_type
         timetable_mode = self.timetable_mode
-        
         sources = self.get_feature_from_layer()
+
         if sources == 0:
             self.run_button.setEnabled(True)
             self.textLog.clear()
@@ -807,6 +841,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             return 0
 
         run = True
+        
         if len(sources) > 10:
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
@@ -824,7 +859,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if run:
             PathToNetwork = self.config['Settings']['PathToPKL']
-            raptor_mode = mode
+            raptor_mode = self.mode
             
             RunOnAir = self.config['Settings']['RunOnAir'] == 'True'
 
@@ -837,18 +872,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
             layer_origin = QgsProject.instance().mapLayersByName(Layer)[0]
             layer_dest = QgsProject.instance().mapLayersByName(LayerDest)[0]    
-            MaxWalkDist1 = int(self.config['Settings']['MaxWalkDist1'])
-            layer_dest_field = self.config['Settings']['LayerDest_field']
-
-            if self.mode == 2:
-                layer_dest_field = self.config['Settings']['Layer_field']
-
-            Speed = float(self.config['Settings']['Speed'].replace(',', '.')) * 1000 / 3600  # from km/h to m/sec
-
-            
+                        
             if not os.path.exists(self.folder_name):
-                if not (self.shift_ctrl_mode) and not (self.shift_mode):
-                    os.makedirs(self.folder_name)
+                os.makedirs(self.folder_name)
             else:
                 self.setMessage(f"Folder '{self.folder_name}' already exists")
                 self.run_button.setEnabled(True)
@@ -858,19 +884,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 self.progressBar.setValue(0)
                 return 0
             
-
-            dictionary, dictionary2 = myload_all_dict(self,
+            dictionary  = myload_all_dict(self,
                         PathToNetwork,
                         raptor_mode,
-                        RunOnAir,
-
-                        layer_origin,
-                        layer_dest,
-                        MaxWalkDist1,
-                        layer_dest_field,
-                        Speed
+                        RunOnAir
                         )
             
+            """
             if self.shift_mode:
                 self.folder_name_copy = self.folder_name
                 
@@ -886,28 +906,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 for i, source in enumerate(sources):
                 
                     source = [source]
-                    #if i == 3:
-                    #    break
+                    
                     if i % 10 == 0:
                         self.textLog.append(f"Num {i}")
-                    
-                    #START_TIME = time_to_seconds(self.config['Settings']['TIME'])
-                    #time_delta = int(self.config['Settings']['Admin_time_delta'])
-                    #if 'admin_t_f' in self.config['Settings']:
-                    #    Tf = time_to_seconds(self.config['Settings']['admin_t_f'])
-                    #else:
-                    #    Tf = time_to_seconds("20:00:00")
-                
-                    
-                
-                    #os.makedirs(self.folder_name_copy, exist_ok=True)
-                
-                    i = 0
-                    #while True:
-                    #    D_TIME = START_TIME + i * time_delta 
-                
-                    #    if D_TIME > Tf:
-                    #            break 
+                   
+                  
                     for idx, D_TIME_str in enumerate(times):                    
                         
                         t = datetime.strptime(D_TIME_str, '%H:%M:%S')
@@ -939,8 +942,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
                                   dictionary,
-                                  dictionary2,
-                                  self.shift_mode
+                                  self.shift_mode,
+                                  layer_dest,
+                                  layer_origin,
+                                  PathToNetwork
                                   )
                         i += 1
                     
@@ -956,44 +961,163 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     #processor = DayStat_DestinationID(base_path, output_path)
                     #processor.process_files()
                     #self.textLog.append(f'<a href="file:///{base_path}" target="_blank" >Statistics in folder</a>')
-
+            """
+            #analyzer_time = 0.0
             if self.shift_ctrl_mode:
-                if  os.path.exists(f'{self.folder_name}_from'):  
-                    self.setMessage(f"Folder '{f'{self.folder_name}_from'}' already exists")
-                    self.run_button.setEnabled(True)
-                    self.close_button.setEnabled(True)
-                    self.textLog.clear()
-                    self.tabWidget.setCurrentIndex(0)
-                    self.progressBar.setValue(0)
-                    self.shift_ctrl_mode = False
-                    return 0
+                
+                begin_computation_time = datetime.now()
+                begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
+                self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
+                                
+                time_delta = int(self.config_add['Settings']['time_delta'])
+
+                from_time_start = time_to_seconds(self.config_add['Settings']['from_time_start'])
+                from_time_end = time_to_seconds(self.config_add['Settings']['from_time_end'])
+                to_time_start = time_to_seconds(self.config_add['Settings']['to_time_start'])
+                to_time_end = time_to_seconds(self.config_add['Settings']['to_time_end'])
+
+                self.textLog.append(f'<a>Time step: {self.config_add['Settings']['time_delta']} sec</a>')
+                self.textLog.append(f"<a style='font-weight:bold;'> Calculating roundtrip accessibility</a>")
+
+                raptor_mode = 1    
+                dictionary_from = myload_all_dict(self,
+                        PathToNetwork,
+                        raptor_mode,
+                        RunOnAir,
+                        )
+                
+                raptor_mode = 2    
+                dictionary_to = myload_all_dict(self,
+                        PathToNetwork,
+                        raptor_mode,
+                        RunOnAir,
+                        )
                 
                 
-                sources = [sources[0]]
+                ###########################
+                #  First From + First TO
+                # #########################
+                # #########################
+                # First From
+                # #########################
+                #self.folder_name_from = f'{self.folder_name}_from'
+                self.folder_name_copy = self.folder_name
+                self.folder_name_from = os.path.join(self.folder_name_copy, "from")
+                os.makedirs(self.folder_name_from, exist_ok=True)
+
+                analyzer = roundtrip_analyzer(
+                                        report_path = os.path.dirname(self.folder_name_from), 
+                                        duration_max=3600, 
+                                        alias = self.alias)
+
+                START_TIME = from_time_start
+
+                self.textLog.append(f"<a style='font-weight:bold;'> Calculating first from accessibility</a>")
+                self.mode = 1
+                raptor_mode = 1 
+                D_TIME = START_TIME
+                    
+                D_TIME_str = seconds_to_time(D_TIME)
+                if self.timetable_mode:
+                        self.textLog.append(f"<a style='font-weight:bold;'> Earliest start time: {D_TIME_str}</a>")
+                else:
+                        self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
+                 
+                postfix = 1
+                self.folder_name = os.path.join(self.folder_name_from, str(postfix)) 
+                os.makedirs(self.folder_name, exist_ok=True)
                 
-                self.textLog.append(f"<a style='font-weight:bold;'> Calculating from-to accessibility</a>")
+                short_result = runRaptorWithProtocol(self,
+                                  sources,
+                                  raptor_mode,
+                                  protocol_type,
+                                  timetable_mode,
+                                  D_TIME,
+                                  self.cbSelectedOnly1.isChecked(),
+                                  self.cbSelectedOnly2.isChecked(),
+                                  dictionary_from,
+                                  self.shift_ctrl_mode,
+                                  layer_dest,
+                                  layer_origin,
+                                  PathToNetwork                                  
+                                  )
+                
+                if not(self.break_on):
+                    #begin_analyzer_time = time.perf_counter()
+                    first_from = analyzer.get_data_for_analyzer_from_to(short_result)
+                    #end_analyzer_time = time.perf_counter()
+                    #analyzer_time += end_analyzer_time - begin_analyzer_time  
+
+                # #########################
+                # First to
+                # #########################
+                START_TIME = to_time_start
+                                
+                self.textLog.append(f"<a style='font-weight:bold;'> Calculating first to accessibility</a>")
+                
+                self.mode = 2
+                raptor_mode = 2    
+                
+                self.folder_name_to = os.path.join(self.folder_name_copy, "to")
+                os.makedirs(self.folder_name_to, exist_ok=True)
+
+                D_TIME = START_TIME
+                                 
+                D_TIME_str = seconds_to_time(D_TIME)
+                                           
+                if self.timetable_mode:
+                       self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
+                else:   
+                       self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
+                    
+                postfix = 1
+                self.folder_name = os.path.join(self.folder_name_to, str(postfix)) 
+                os.makedirs(self.folder_name, exist_ok=True)
+                                        
+                short_result = runRaptorWithProtocol(self,
+                                  sources,
+                                  raptor_mode,
+                                  protocol_type,
+                                  timetable_mode,
+                                  D_TIME,
+                                  self.cbSelectedOnly1.isChecked(),
+                                  self.cbSelectedOnly2.isChecked(),
+                                  dictionary_to,
+                                  self.shift_ctrl_mode,
+                                  layer_dest,
+                                  layer_origin,
+                                  PathToNetwork                                  
+                                  )
+
+                if not(self.break_on):
+                    #begin_analyzer_time = time.perf_counter()
+
+                    first_to = analyzer.get_data_for_analyzer_from_to (short_result)
+                    analyzer.init_from_data(first_to, first_from)
+
+                    #end_analyzer_time = time.perf_counter()
+                    #analyzer_time += end_analyzer_time - begin_analyzer_time
+                    #print (f'analyzer_time {analyzer_time}')  
+                
                 ###########################
                 #  From
                 # #########################
-                self.textLog.append(f"<a style='font-weight:bold;'> Calculating from accessibility</a>")
-                START_TIME = time_to_seconds(self.config['Settings']['TIME'])
-                time_delta = int(self.config['Settings']['Admin_time_delta'])
-                                
-                if 'admin_t_f' in self.config['Settings']:
-                    Tf = time_to_seconds(self.config['Settings']['admin_t_f'])
-                else:
-                    Tf = time_to_seconds("20:00:00")
-                
-                self.folder_name_from = f'{self.folder_name}_from'
-                os.makedirs(self.folder_name_from, exist_ok=True)
+                START_TIME = from_time_start
+                Tf = from_time_end
 
-                i = 0
+                self.textLog.append(f"<a style='font-weight:bold;'> Calculating remained from accessibility</a>")
+                self.mode = 1
+                raptor_mode = 1 
                 
+                i = 1
                 while True:
                 
                     D_TIME = START_TIME + i * time_delta 
-                    if D_TIME > Tf:
-                            break 
+                    #if D_TIME > Tf:
+                    #        break 
+                    
+                    if D_TIME > Tf + time_delta / 2: 
+                        break
 
                     D_TIME_str = seconds_to_time(D_TIME)
                     if self.timetable_mode:
@@ -1004,21 +1128,35 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     postfix = i + 1
                     self.folder_name = os.path.join(self.folder_name_from, str(postfix)) 
                     os.makedirs(self.folder_name, exist_ok=True)
-                    runRaptorWithProtocol(self,
+                    short_result = runRaptorWithProtocol(self,
                                   sources,
-                                  mode,
+                                  raptor_mode,
                                   protocol_type,
                                   timetable_mode,
                                   D_TIME,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
-                                  dictionary,
-                                  dictionary2,
-                                  self.shift_ctrl_mode
+                                  dictionary_from,
+                                  self.shift_ctrl_mode,
+                                  layer_dest,
+                                  layer_origin,
+                                  PathToNetwork
                                   )
+                    
+                    if not(self.break_on):
+                        #begin_analyzer_time = time.perf_counter()
+
+                        data_from = analyzer.get_data_for_analyzer_from_to (short_result)
+                        analyzer.add_from_data(data_from)
+         
+                        #end_analyzer_time = time.perf_counter()
+                        #analyzer_time += end_analyzer_time - begin_analyzer_time  
+
+                        #print (f'analyzer_time {analyzer_time}')
+
                     if self.break_on:
-                        self.setMessage("From-to accessibility computations are interrupted by user")
-                        self.textLog.append(f'<a><b><font color="red">From-to accessibility computations are interrupted by user</font> </b></a>')
+                        self.setMessage("Roundtrip accessibility computations are interrupted by user")
+                        self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
                         self.progressBar.setValue(0)
                         return 0
                     i += 1
@@ -1026,34 +1164,25 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 ###########################
                 #  TO
                 # #########################
+                START_TIME = to_time_start
+                Tf = to_time_end
+                
                 self.textLog.append(f"<a style='font-weight:bold;'> Calculating to accessibility</a>")
                 
                 self.mode = 2
                 raptor_mode = 2    
                 
-                dictionary, dictionary2 = myload_all_dict(self,
-                        PathToNetwork,
-                        raptor_mode,
-                        RunOnAir,
 
-                        layer_origin,
-                        layer_dest,
-                        MaxWalkDist1,
-                        layer_dest_field,
-                        Speed
-                        )
-                                
-                self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAliase.text()}'
-
-                self.folder_name_to = f'{self.folder_name}_to'
-                os.makedirs(self.folder_name_to, exist_ok=True)
-
-                i = 0
+                i = 1
 
                 while True:
                     D_TIME = START_TIME + i * time_delta 
-                    if D_TIME > Tf:
-                            break
+                    
+                    #if D_TIME > Tf:
+                    #        break
+                                        
+                    if D_TIME > Tf + time_delta / 2: 
+                        break
                    
                     D_TIME_str = seconds_to_time(D_TIME)
                                            
@@ -1066,7 +1195,88 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     self.folder_name = os.path.join(self.folder_name_to, str(postfix)) 
                     os.makedirs(self.folder_name, exist_ok=True)
                                         
-                    runRaptorWithProtocol(self,
+                    short_result= runRaptorWithProtocol(self,
+                                  sources,
+                                  raptor_mode,
+                                  protocol_type,
+                                  timetable_mode,
+                                  D_TIME,
+                                  self.cbSelectedOnly1.isChecked(),
+                                  self.cbSelectedOnly2.isChecked(),
+                                  dictionary_to,
+                                  self.shift_ctrl_mode,
+                                  layer_dest,
+                                  layer_origin,
+                                  PathToNetwork
+                                  )
+                    if not(self.break_on):
+                        #begin_analyzer_time = time.perf_counter()
+
+                        data_to = analyzer.get_data_for_analyzer_from_to (short_result)
+                        analyzer.add_to_data(data_to)
+
+                        #end_analyzer_time = time.perf_counter()
+                        #analyzer_time += end_analyzer_time - begin_analyzer_time  
+
+                        #print (f'analyzer_time {analyzer_time}')
+
+                        i += 1
+                    if self.break_on:
+                        self.setMessage("Roundtrip accessibility computations are interrupted by user")
+                        self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
+                        self.progressBar.setValue(0)
+                        return 0
+                
+                
+                if not(self.break_on):
+                    
+                    """
+                    processor = StatFromTo(self,
+                                           self.folder_name_from, 
+                                           self.folder_name_to, 
+                                           os.path.dirname(self.folder_name_from), 
+                                           ""
+                                           )
+                    processor.process_files()
+                    
+                    analyzer = TripAnalyzer(self,
+                                    path_from = self.folder_name_from,
+                                    path_to = self.folder_name_to,
+                                    duration_max = 60*60,  # 60 минут
+                                    )
+                    result_path1 = os.path.join(os.path.dirname(self.folder_name_from),"result_bin.csv")
+                    result_path2 = os.path.join(os.path.dirname(self.folder_name_from),"result_round_trip.csv")
+                    result = analyzer.run(result_path1, result_path2, mode = "duration")
+                    """
+
+                    #begin_analyzer_time = time.perf_counter()
+
+                    analyzer.run_finalize_all()
+
+                    #end_analyzer_time = time.perf_counter()
+                    #analyzer_time += end_analyzer_time - begin_analyzer_time  
+
+                    #print (f'analyzer_time {analyzer_time}')
+
+                    self.textLog.append(f'<a href="file:///{os.path.dirname(self.folder_name_from)}" target="_blank" >Statistics in folder</a>')
+
+                    after_computation_time = datetime.now()
+                    after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
+                    self.textLog.append(f'<a>Finished {after_computation_str}</a>')
+                    duration_computation = after_computation_time - begin_computation_time
+                    duration_without_microseconds = str(duration_computation).split('.')[0]
+                    self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
+                
+
+            if not(self.shift_mode) and not (self.shift_ctrl_mode):
+                
+                self.run_button.setEnabled(False)
+                D_TIME = time_to_seconds(self.config['Settings']['TIME'])
+                
+                #pr = cProfile.Profile()
+                #pr.enable()
+
+                runRaptorWithProtocol(self,
                                   sources,
                                   raptor_mode,
                                   protocol_type,
@@ -1075,50 +1285,22 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
                                   dictionary,
-                                  dictionary2,
-                                  self.shift_ctrl_mode
+                                  False,
+                                  layer_dest,
+                                  layer_origin,
+                                  PathToNetwork
                                   )
-                    i += 1
-                    if self.break_on:
-                        self.setMessage("From-to accessibility computations are interrupted by user")
-                        self.textLog.append(f'<a><b><font color="red">From-to accessibility computations are interrupted by user</font> </b></a>')
-                        self.progressBar.setValue(0)
-                        return 0
-                if not(self.break_on):
-
-                    processor = StatFromTo(self,
-                                           self.folder_name_from, 
-                                           self.folder_name_to, 
-                                           self.txtPathToProtocols.text(), 
-                                           self.alias,                                    
-                                           timetable_mode
-                                           )
-                    processor.process_files()
-                    self.textLog.append(f'<a href="file:///{self.txtPathToProtocols.text()}" target="_blank" >Statistics in folder</a>')
-
-            if not(self.shift_mode) and not (self.shift_ctrl_mode):
                 
-                self.run_button.setEnabled(False)
-                D_TIME = time_to_seconds(self.config['Settings']['TIME'])
-                runRaptorWithProtocol(self,
-                                  sources,
-                                  mode,
-                                  protocol_type,
-                                  timetable_mode,
-                                  D_TIME,
-                                  self.cbSelectedOnly1.isChecked(),
-                                  self.cbSelectedOnly2.isChecked(),
-                                  dictionary,
-                                  dictionary2
-                                  )
-            """
-         _, self.folder_name = self.profile_runRaptorWithProtocol( 
-                                                  sources, 
-                                                  mode, 
-                                                  protocol_type, 
-                                                  timetable_mode,                                                   
-                                                  )
-         """
+                #pr.disable()
+                #s = io.StringIO()
+                #sortby = 'cumulative'
+                #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                #ps.print_stats()
+                
+                #with open(r"c:\temp\profile_output.txt", "w") as f:
+                #    f.write(s.getvalue())
+
+            
             return 1
 
         if not (run):
@@ -1128,28 +1310,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.tabWidget.setCurrentIndex(0)
             self.setMessage("")
             return 0
-    """
-    def profile_runRaptorWithProtocol(self,
-                                      sources,
-                                      mode,
-                                      protocol_type,
-                                      timetable_mode):
-        pr = cProfile.Profile()
-        pr.enable()
 
-        result = runRaptorWithProtocol(self, sources, mode, protocol_type, timetable_mode,
-                                       self.cbSelectedOnly1.isChecked(), self.cbSelectedOnly2.isChecked())
-
-        pr.disable()
-
-        s = io.StringIO()
-        sortby = 'cumulative'
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.dump_stats(
-            r"C:/temp/plugin_profile.txt")
-
-        return result
-    """
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Wheel:

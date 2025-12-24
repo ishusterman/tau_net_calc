@@ -397,7 +397,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        url = "https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-car-routing"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-database-for-car-routing"
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj, mode_road=False):

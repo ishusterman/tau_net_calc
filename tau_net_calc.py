@@ -1,17 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import py_compile
 import shutil
 import configparser
-# import cProfile
 
-from qgis.PyQt.QtCore import (QSettings,
-                              QTranslator,
-                              QCoreApplication,
-                              Qt
-                              )
+from qgis.PyQt.QtCore import QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from PyQt5.QtWidgets import QDockWidget,  QAction
 from qgis.core import QgsProject
@@ -138,34 +132,35 @@ class TAUNetCalc():
                 self.tr(u'&Accessibility calculator'),
                 action)
             self.iface.removeToolBarIcon(action)
-
-    # self.profile_runRaptorWithProtocol(sources, mode, protocol_type)
-    #  def profile_runRaptorWithProtocol(self, sources, mode, protocol_type):
-    #    cProfile.runctx(
-    #    "runRaptorWithProtocol(self,self.settings, sources, mode, protocol_type)",
-    #    globals(),
-    #    locals(),
-    #    filename=r"C:/Users/geosimlab/Documents/Igor/Protocols/plugin_profile.txt"
-    #  )
-
+    
     def runAccessibility_tools(self):
         if self.dock_widget and self.dock_widget.isVisible():
             self.dock_widget.hide()
             self.widget_visible = False
         else:
             if not self.dock_widget:
-                project_directory = os.path.dirname(
-                    QgsProject.instance().fileName())
+                project_path = QgsProject.instance().fileName()
+                if project_path:
+                    project_directory = os.path.dirname(project_path)
+                else:
+                    project_directory = os.path.expanduser('~')
+
                 parameters_path = os.path.join(
                     project_directory, 'parameters_accessibility.txt')
                 source_path = os.path.join(
                     config_path, 'parameters_accessibility_shablon.txt')
 
-                if not os.path.exists(parameters_path):
-                    shutil.copy(source_path, parameters_path)
+                try:
+                    if not os.path.exists(parameters_path):
+                        shutil.copy(source_path, parameters_path)
+                except Exception as e:
+                    self.iface.messageBar().pushWarning(
+                        "Accessibility calculator",
+                        f"Failed to create settings file: {e}"
+                    )
 
                 my_widget = AccessibilityTools()
-                self.dock_widget = QDockWidget("Accessiblity calculator")
+                self.dock_widget = QDockWidget("Accessibility calculator")
                 self.dock_widget.setWidget(my_widget)
                 self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
 

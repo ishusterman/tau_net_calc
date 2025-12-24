@@ -38,9 +38,8 @@ class car_accessibility:
         self.max_time_minutes = max_time_minutes
         
         self.number_bins = time_step_minutes
-        self.time_step_minutes = round(self.max_time_minutes/self.number_bins)
-
-        self.time_step_last = round((self.max_time_minutes) % self.number_bins)
+        self.time_step_minutes = self.max_time_minutes//self.number_bins
+        self.time_step_last = self.max_time_minutes%self.number_bins
 
         self.layer_dest = layer_dest
         self.layer_orig = parent.layer_origin
@@ -202,8 +201,6 @@ class car_accessibility:
         # iterate through all edgeId in the tree
 
         for edgeId in self.tree:
-
-            
 
             count += 1
             if count % 10000 == 0:

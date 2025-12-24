@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import subprocess
 from PyQt5.QtWidgets import (QApplication,
                              QTreeWidget,
                              QTreeWidgetItem,
@@ -160,7 +161,17 @@ class AccessibilityTools(QWidget):
                        "Compare accessibility. Service areas",
                        "Compare accessibility. Regions",                        
                        ]
+        
+        
+    def start_worker_process(self):
+    
 
+        worker_script_path =r'C:\Users\user\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\tau_net_calc\cls\test_multiprocessing1.py'
+        
+        
+        subprocess.Popen(["python",worker_script_path], creationflags=subprocess.CREATE_NO_WINDOW)
+
+        
     """ Проверяет, есть ли уже открытое окно с указанным заголовком. """
     def get_existing_window(self, titles):
         
@@ -178,9 +189,11 @@ class AccessibilityTools(QWidget):
 
         if item == self.item1:
             
-            url = "https://ishusterman.github.io/tutorial/introduction.html"
+            url = "https://geosimlab.github.io/accessibility-calculator-tutorial/introduction.html"
             
             webbrowser.open(url)
+            #self.start_worker_process()
+            
 
         if item == self.item2:
             title="Data preprocessing. Clean road network"

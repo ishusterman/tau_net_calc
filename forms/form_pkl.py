@@ -2,20 +2,19 @@ import os
 import webbrowser
 import re
 import configparser
-from pathlib import Path
+import csv
 
-from qgis.PyQt import QtCore
 
 from qgis.core import (QgsProject,
                        QgsWkbTypes,
                        QgsVectorLayer,
-                       QgsMapLayerProxyModel
                        )
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
                           QVariant,
-                          QRegExp
+                          QRegExp,
+                          QDate
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -39,9 +38,6 @@ from common import (get_qgis_info,
                     get_documents_path,
                     showAllLayersInCombo_Line,
                     showAllLayersInCombo_Point_and_Polygon)
-
-#FORM_CLASS, _ = uic.loadUiType(os.path.join(
-#    os.path.dirname(__file__), 'pkl.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl.ui')
@@ -67,7 +63,8 @@ class form_pkl(QDialog, FORM_CLASS):
         self.txtMaxPathAir.setFixedWidth(fix_size)
 
         # [1-600]
-        regex = QRegExp(r"^(?:[1-9]|[1-9][0-9]|[1-5][0-9]{2}|600)$")
+        #regex = QRegExp(r"^(?:[1-9]|[1-9][0-9]|[1-5][0-9]{2}|600)$")
+        regex = QRegExp(r"\d*")
 
 
         int_validator = QRegExpValidator(regex)
@@ -128,10 +125,81 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.ParametrsShow()
         self.show_info()
+        
+        min_date_string, max_date_string  = self.get_gtfs_date_range()
+        min_qdate = QDate.fromString(min_date_string, "yyyyMMdd")
+        max_qdate = QDate.fromString(max_date_string, "yyyyMMdd")
+        self.calendar.setMinimumDate(min_qdate)
+        self.calendar.setMaximumDate(max_qdate)
 
-        #path = r'c:\doc\QGIS_prj\RCity\test\buffer11.shp'
-        #saved_layer = QgsVectorLayer(path, "test1", "ogr")
-        #QgsProject.instance().addMapLayer(saved_layer)
+    def get_gtfs_date_range(self):
+        """
+        Проверяет файлы GTFS на наличие calendar.txt и calendar_dates.txt,
+        находит минимальную и максимальную даты, обновляет их, если
+        в calendar_dates.txt есть даты вне этого диапазона, и возвращает
+        их в формате 'YYYYMMDD'.
+
+        Args:
+            gtfs_path_widget (QLineEdit): Виджет, содержащий путь к папке GTFS.
+
+        Returns:
+            tuple: Кортеж (min_date_str, max_date_str) в формате 'YYYYMMDD' или
+                (None, None), если файлы не найдены.
+        """
+
+        gtfs_path = self.txtPathToGTFS.text()
+        if not os.path.isdir(gtfs_path):
+            return None, None
+
+        calendar_path = os.path.join(gtfs_path, 'calendar.txt')
+        calendar_dates_path = os.path.join(gtfs_path, 'calendar_dates.txt')
+        
+        min_date_qdate = QDate(9999, 12, 31) 
+        max_date_qdate = QDate(1, 1, 1)      
+
+        
+        if os.path.exists(calendar_path):
+                with open(calendar_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        start_date_str = row.get('start_date')
+                        end_date_str = row.get('end_date')
+
+                        if start_date_str:
+                            current_start_date = QDate.fromString(start_date_str, "yyyyMMdd")
+                            if current_start_date.isValid() and current_start_date < min_date_qdate:
+                                min_date_qdate = current_start_date
+
+                        if end_date_str:
+                            current_end_date = QDate.fromString(end_date_str, "yyyyMMdd")
+                            if current_end_date.isValid() and current_end_date > max_date_qdate:
+                                max_date_qdate = current_end_date
+            
+
+        
+        if not min_date_qdate.isValid() or not max_date_qdate.isValid() or min_date_qdate > max_date_qdate:
+            current_date = QDate.currentDate()
+            min_date_qdate = current_date
+            max_date_qdate = current_date
+
+        
+        if os.path.exists(calendar_dates_path):
+            with open(calendar_dates_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        date_str = row.get('date')
+                        if date_str:
+                            current_date_qdate = QDate.fromString(date_str, "yyyyMMdd")
+                            if current_date_qdate.isValid():
+                                if current_date_qdate < min_date_qdate:
+                                    min_date_qdate = current_date_qdate
+                                if current_date_qdate > max_date_qdate:
+                                    max_date_qdate = current_date_qdate
+                
+        min_date_str = min_date_qdate.toString("yyyyMMdd")
+        max_date_str = max_date_qdate.toString("yyyyMMdd")
+
+        return min_date_str, max_date_str
 
     def get_layer_road(self):
         selected_item = self.cbRoads.currentText()
@@ -196,8 +264,6 @@ class form_pkl(QDialog, FORM_CLASS):
         fields = layer.fields()
         osm_id_exists = False
 
-        # regular expression to check for the presence of only digit
-        digit_pattern = re.compile(r'^\d+$')
 
         # field type and value validation
         for field in fields:
@@ -214,20 +280,7 @@ class form_pkl(QDialog, FORM_CLASS):
                 if field_name.lower() == "osm_id":
                     obj_layer_fields.addItem(field_name)
                     osm_id_exists = True
-            """
-            elif field_type == QVariant.String:
-                # check the first value of the field for digits only
-                first_value = None
-                for feature in layer.getFeatures():
-                    first_value = feature[field_name]
-                    break  # stop after the first value
-
-                if first_value is not None and digit_pattern.match(str(first_value)):
-                    obj_layer_fields.addItem(field_name)
-                    if field_name.lower() == "osm_id":
-                        osm_id_exists = True
-            """
-
+            
         if osm_id_exists:
             # iterate through all the items in the combobox and compare them with "osm_id", 
             # ignoring the case
@@ -293,6 +346,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.textLog.append(f"<a> Maximal walking path on road: {self.config['Settings']['MaxPathRoad_pkl']}</a>")
         self.textLog.append(f"<a> Maximal walking path on air: {self.config['Settings']['MaxPathAir_pkl']}</a>")
         self.textLog.append(f"<a> GTFS folder: {self.config['Settings']['PathToGTFS_pkl']}</a>")
+        self.textLog.append(f"<a> Date: {QDate.fromString(self.config['Settings']['Date_pkl'], 'yyyyMMdd').toString('dd.MM.yyyy')}</a>")
         self.textLog.append(f"<a> Folder to store transit database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
 
         self.prepare()
@@ -308,7 +362,7 @@ class form_pkl(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'building_pkl.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://ishusterman.github.io/tutorial/building_pkl.html#building-database-for-transit-accessibility"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-database-for-transit-accessibility"
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):
@@ -318,6 +372,13 @@ class form_pkl(QDialog, FORM_CLASS):
             obj.setText(os.path.normpath(folder_path))
         else:
             obj.setText(obj.text())
+        
+        if obj == self.txtPathToGTFS:
+            min_date_string, max_date_string  = self.get_gtfs_date_range()
+            min_qdate = QDate.fromString(min_date_string, "yyyyMMdd")
+            max_qdate = QDate.fromString(max_date_string, "yyyyMMdd")
+            self.calendar.setMinimumDate(min_qdate)
+            self.calendar.setMaximumDate(max_qdate)
 
     def readParameters(self):
         project_path = QgsProject.instance().fileName()
@@ -352,6 +413,9 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'MaxPathAir_pkl' not in self.config['Settings']:
             self.config['Settings']['MaxPathAir_pkl'] = '400'        
 
+        if 'Date_pkl' not in self.config['Settings']:
+            self.config['Settings']['Date_pkl'] = '20000101'  
+
 
     def saveParameters(self):
 
@@ -365,6 +429,8 @@ class form_pkl(QDialog, FORM_CLASS):
         self.config['Settings']['Layer_field_pkl'] = self.cmbLayers_fields.currentText()
         self.config['Settings']['MaxPathRoad_pkl'] = self.txtMaxPathRoad.text()
         self.config['Settings']['MaxPathAir_pkl'] = self.txtMaxPathAir.text()
+        selected_date = self.calendar.date()
+        self.config['Settings']['Date_pkl'] = selected_date.toString("yyyyMMdd")
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
@@ -391,6 +457,11 @@ class form_pkl(QDialog, FORM_CLASS):
         self.cmbLayers.setCurrentText(self.config['Settings']['Layer_pkl'])
 
         self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_pkl'])
+
+
+        date_string = self.config['Settings']['Date_pkl']
+        qdate_object = QDate.fromString(date_string, "yyyyMMdd")
+        self.calendar.setDate(qdate_object)
 
     def check_folder_and_file(self):
 
@@ -420,9 +491,6 @@ class form_pkl(QDialog, FORM_CLASS):
 
         os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
 
-        #if not os.path.exists(self.txtPathToProtocols.text()):
-        #    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-        #    return False
         
         file_path = os.path.join(self.txtPathToProtocols.text(), "stoptimes_dict_pkl.pkl")
         if  os.path.isfile(file_path):
@@ -514,6 +582,8 @@ class form_pkl(QDialog, FORM_CLASS):
         path_to_file = self.config['Settings']['PathToProtocols_pkl']+'/GTFS//'
         path_to_GTFS = self.config['Settings']['PathToGTFS_pkl']+'//'
 
+        check_date = self.config['Settings']['Date_pkl']
+
         run = True
 
         if True:
@@ -535,6 +605,7 @@ class form_pkl(QDialog, FORM_CLASS):
                                  layer_origins_field,
                                  MaxPathRoad,
                                  MaxPathAir,
+                                 check_date
                                  )
                 res = calc_GTFS.correcting_files()
 

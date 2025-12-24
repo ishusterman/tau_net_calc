@@ -8,7 +8,6 @@ from zipfile import ZipFile
 from datetime import datetime
 import shutil
 
-
 from pathlib import Path
 
 try:
@@ -137,7 +136,8 @@ def time_to_seconds(t):
     return h * 3600 + m * 60 + s
 
 # Convert seconds to time string (e.g., total seconds -> HH:MM:SS)
-def seconds_to_time(seconds):
+def seconds_to_time(total_seconds):
+    """
     if not pd.notnull(seconds):  # Проверяем, что значение не None и не NaN
         return ""
     total_seconds = round(seconds)
@@ -145,16 +145,29 @@ def seconds_to_time(seconds):
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
     return "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+    """
+    #if not pd.notnull(seconds):
+    #    return ""
+    
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 def check_file_parameters_accessibility ():
     project_directory = os.path.dirname(QgsProject.instance().fileName())
     parameters_path = os.path.join(project_directory, 'parameters_accessibility.txt')
+    parameters_add_path = os.path.join(project_directory, 'parameters_accessibility_add.txt')
 
     current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(current_dir, 'config')
     source_path = os.path.join(config_path, 'parameters_accessibility_shablon.txt')
+    source_add_path = os.path.join(config_path, 'parameters_accessibility_add_shablon.txt')
     if not os.path.exists(parameters_path):
         shutil.copy(source_path, parameters_path)
+
+    if not os.path.exists(parameters_add_path):
+        shutil.copy(source_add_path, parameters_add_path)
 
 def get_documents_path():
     if sys.platform == "win32":
@@ -208,7 +221,7 @@ def get_initial_directory(input_path: str) -> str:
     return str(Path.home())
 
 
-def find_pkl_subfolder(base_dir: Path) -> Path | None:
+def find_pkl_subfolder(base_dir: Path):
     """Ищет первую подпапку, содержащую 'pkl' или 'PKL' в имени."""
     for subdir in base_dir.iterdir():
         if subdir.is_dir() and 'pkl' in subdir.name.lower():
@@ -361,3 +374,80 @@ def showAllLayersInCombo_Polygon(cmb):
             if isinstance(layer, QgsVectorLayer) and \
                 (layer.geometryType() == QgsWkbTypes.PolygonGeometry):
                 cmb.addItem(layer.name(), [])
+
+"""
+def extract_time_pattern_from_txt(txt_path):
+    
+    # Define the regex pattern
+    time_pattern = re.compile(
+        r"Start at \(hh:mm:ss\):\s+(\d{1,2}:\d{2}:\d{2})|"
+        r"Earliest start time:\s+(\d{1,2}:\d{2}:\d{2})|"
+        r"Arrive before \(hh:mm:ss\):\s+(\d{1,2}:\d{2}:\d{2})|"
+        r"Earliest arrival time:\s+(\d{1,2}:\d{2}:\d{2})"
+    )
+
+    # If the provided path is a directory, look for .txt files in it
+    if os.path.isdir(txt_path):
+        txt_files = [f for f in os.listdir(txt_path) if f.endswith('.txt')]
+        if not txt_files:
+            return None
+        # Use the first found .txt file
+        txt_path = os.path.join(txt_path, txt_files[0])
+
+    # Read the .txt file
+    try:
+        with open(txt_path, "r", encoding="utf-8") as file:
+            content = file.read()
+    except (PermissionError, FileNotFoundError, UnicodeDecodeError) as e:
+        print(f"Error reading file {txt_path}: {e}")
+        return None
+
+    # Find all matches
+    matches = time_pattern.findall(content)
+
+    # If there are matches, return the last non-empty match
+    if matches:
+        for match in reversed(matches):
+            for time in match:
+                if time:
+                    return time
+    return None
+"""
+def extract_time_pattern_from_txt(txt_path):
+
+    # Define the regex patterns with types
+    time_patterns = [
+        (re.compile(r"Start at \(hh:mm:ss\):\s+(\d{1,2}:\d{2}:\d{2})"), "start"),
+        (re.compile(r"Earliest start time:\s+(\d{1,2}:\d{2}:\d{2})"), "start"),
+        (re.compile(r"Arrive before \(hh:mm:ss\):\s+(\d{1,2}:\d{2}:\d{2})"), "end"),
+        (re.compile(r"Earliest arrival time:\s+(\d{1,2}:\d{2}:\d{2})"), "end")
+    ]
+
+    # If the provided path is a directory, look for .txt files in it
+    if os.path.isdir(txt_path):
+        txt_files = [f for f in os.listdir(txt_path) if f.endswith('.txt')]
+        if not txt_files:
+            return None, None
+        txt_path = os.path.join(txt_path, txt_files[0])
+
+    # Read the .txt file
+    try:
+        with open(txt_path, "r", encoding="utf-8") as file:
+            content = file.read()
+    except (PermissionError, FileNotFoundError, UnicodeDecodeError) as e:
+        print(f"Error reading file {txt_path}: {e}")
+        return None, None
+
+    # Search for the last match by scanning from the end
+    last_match = None
+    
+    # Reverse search by checking patterns at decreasing positions
+    for i in range(len(content) - 1, -1, -1):
+        substring = content[i:]
+        for pattern, time_type in time_patterns:
+            match = pattern.search(substring)
+            if match:
+                # Found the last match in the file
+                return match.group(1), time_type
+    
+    return None, None

@@ -1,18 +1,19 @@
 import os
 import zipfile
-import shutil
+
 import pickle
-from datetime import datetime, date
+from datetime import datetime
 from numbers import Real
 import tempfile
 import pandas as pd
-import glob
+import cProfile
+import pstats
+#from collections import Counter
+from report import make_protocol_detailed, make_protocol_summary, make_service_area_report
 
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from qgis.core import (QgsProject,
                        QgsVectorFileWriter,
-                       QgsVectorLayer,
-                       QgsWkbTypes
                        )
 
 from footpath_on_projection import cls_footpath_on_projection
@@ -25,25 +26,12 @@ from visualization import visualization
 from common import seconds_to_time
 
 # # Get the current directory
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-def get_route_desc__route_id(path):
-    route_desc__route_id = {}
-    if os.path.exists(path + '/route_desc__route_id.pkl'):
-        with open(path + '/route_desc__route_id.pkl', 'rb') as file:
-            route_desc__route_id = pickle.load(file)
-    return route_desc__route_id
+#current_dir = os.path.dirname(os.path.abspath(__file__))
 
 def myload_all_dict(self,
                     PathToNetwork,
                     mode,
                     RunOnAir,
-
-                    layer_origin,
-                    layer_dest,
-                    MaxWalkDist1,
-                    layer_dest_field,
-                    Speed
                     ):
 
     path = PathToNetwork
@@ -126,26 +114,7 @@ def myload_all_dict(self,
         if self is not None:
             self.progressBar.setValue(6)
 
-    footpath_on_air_b_b = None
-    footpath_on_projection = None
-    graph_projection = None
-    dict_osm_vertex = None
-    dict_vertex_osm = None
-
-    if RunOnAir:
-        footpath_on_air_b_b = cls_footpath_on_air_b_b(layer_origin,
-                                                      layer_dest,
-                                                      MaxWalkDist1,
-                                                      layer_dest_field,
-                                                      Speed
-                                                      )
-    else:
-        footpath_on_projection = cls_footpath_on_projection(self, MaxPath = MaxWalkDist1)
-        graph_projection = footpath_on_projection.load_graph(PathToNetwork)
-        dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
-            PathToNetwork)
-        dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
-            PathToNetwork)
+    
             
     return (
             stops_dict,
@@ -154,12 +123,6 @@ def myload_all_dict(self,
             routes_by_stop_dict,
             idx_by_route_stop_dict,
             stop_ids_set
-            ),(
-            footpath_on_air_b_b,
-            footpath_on_projection,
-            graph_projection,
-            dict_osm_vertex,
-            dict_vertex_osm
             )
 
 def verify_break(self,
@@ -169,6 +132,7 @@ def verify_break(self,
                  fields_ok="",
                  f="",
                  protocol_type="",
+                 shift_mode = True
                  ):
 
     if getattr(self, 'break_on', False):
@@ -188,6 +152,7 @@ def verify_break(self,
                        fields_ok,
                        f,
                        protocol_type,
+                       shift_mode
 
                        )
             self.progressBar.setValue(0)
@@ -204,9 +169,12 @@ def runRaptorWithProtocol(self,
                           selected_only1,
                           selected_only2,
                           dictionary,
-                          dictionary2,
-                          shift_mode = False) -> tuple:
+                          shift_mode,
+                          layer_dest_obj,
+                          layer_origin_obj,
+                          path_to_pkl) -> tuple:
 
+    short_result = {}
     
     count = len(sources)
     if hasattr(self, 'progressBar'):
@@ -231,7 +199,7 @@ def runRaptorWithProtocol(self,
     MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60           # to sec
     
     MaxWaitTime = float(self.config['Settings']['MaxWaitTime'].replace(',', '.'))*60               # to sec
-    MaxWaitTime_copy = MaxWaitTime
+    #MaxWaitTime_copy = MaxWaitTime
     MaxWaitTimeTransfer = float(self.config['Settings']['MaxWaitTimeTransfer'].replace(',', '.'))*60
 
     
@@ -239,8 +207,8 @@ def runRaptorWithProtocol(self,
     # time_step = int (self.config['Settings']['TimeInterval'])
 
     number_bins = int(self.config['Settings']['TimeInterval'])
-    time_step = round(MaxTimeTravel/(number_bins*60))  # to min
-    time_step_last = round((MaxTimeTravel/60) % number_bins)
+    time_step = MaxTimeTravel//(number_bins*60)  # to min
+    time_step_last = (MaxTimeTravel/60) % number_bins
 
     Layer = self.config['Settings']['Layer']
     
@@ -249,7 +217,9 @@ def runRaptorWithProtocol(self,
 
     LayerViz = self.config['Settings']['LayerViz']
     layer_vis_field = self.config['Settings']['LayerViz_field']
-    layer_dest = QgsProject.instance().mapLayersByName(LayerDest)[0]
+    #layer_dest = QgsProject.instance().mapLayersByName(LayerDest)[0]
+    layer_dest = layer_dest_obj
+    layer_origin = layer_origin_obj
 
     if 'Field_ch' in self.config['Settings']:
         list_fields_aggregate = self.config['Settings']['Field_ch']
@@ -277,30 +247,41 @@ def runRaptorWithProtocol(self,
         set_stops
     ) = dictionary
 
-    (
-        footpath_on_air_b_b,
-        footpath_on_projection,
-        graph_projection,
-        dict_osm_vertex,
-        dict_vertex_osm
-
-    ) = dictionary2
+    footpath_on_air_b_b = None
+    footpath_on_projection = None
+    graph_projection = None
+    dict_osm_vertex = None
+    dict_vertex_osm = None
 
     
+    Dist1 = int(self.config['Settings']['MaxWalkDist1'])
+    if RunOnAir:
+        footpath_on_air_b_b = cls_footpath_on_air_b_b(layer_origin,
+                                                      layer_dest,
+                                                      Dist1,
+                                                      layer_dest_field,
+                                                      Speed
+                                                      )
+    else:
+        footpath_on_projection = cls_footpath_on_projection(None, MaxPath = Dist1)
+        graph_projection = footpath_on_projection.load_graph(path_to_pkl)
+        dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
+            path_to_pkl)
+        dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
+            path_to_pkl)
+        
+
     
     if verify_break(self):
         return 0, 0
    
-
-    reachedLabels = dict()
-
     features_dest = layer_dest.getFeatures()
 
     if selected_only2:
         features_dest = layer_dest.selectedFeatures()
 
     fields_ok = []
-    f_list = []
+    
     f = ""
     if protocol_type == 2:
 
@@ -321,13 +302,9 @@ def runRaptorWithProtocol(self,
         protocol_header = ss + "\n"
 
     if protocol_type == 1:
-        #     with open(f, 'w') as filetowrite:
-        #           filetowrite.write(protocol_header)
-
-        ###
-
+        
         aggregate_dict_all = {}
-        # aggregate_this_fields = {}
+        
         f = {}
 
         intervals_number = number_bins
@@ -345,7 +322,7 @@ def runRaptorWithProtocol(self,
                 grades.append([low_bound_min, top_bound_min])
                 low_bound_min = low_bound_min + time_step_min
                 top_bound_min = top_bound_min + time_step_min
-
+            
             if time_step_last != 0:
                 intervals_number += 1
                 top_bound_add = low_bound_min + time_step_last
@@ -366,6 +343,7 @@ def runRaptorWithProtocol(self,
             f_curr = f["bldg"].replace(".csv", "_min_endtime.csv")
             with open(f_curr, 'w') as filetowrite:
                 filetowrite.write(protocol_header)
+                       
 
         if list_fields_aggregate != "":
 
@@ -388,15 +366,13 @@ def runRaptorWithProtocol(self,
 
                 for feature in features_dest:
                     if isinstance(feature[field], Real) or str(feature[field]).isdigit():
-                        attribute_dict[int(feature[field_name_id])] = int(
-                            feature[field])
+                        attribute_dict[int(feature[field_name_id])] = int(feature[field])
                     else:
                         self.textLog.append(f'<a><b><font color="red"> WARNING: The field "{field}" is not numeric, excluded from aggregation</font> </b></a>')
-                        # aggregate_this_fields[field] = False
-
+                        
                         break
 
-                # if aggregate_this_fields[field]:
+                
 
                 fields_ok.extend([field])
                 aggregate_dict_all[field] = attribute_dict
@@ -404,14 +380,13 @@ def runRaptorWithProtocol(self,
                 """Prepare header and time grades  
                     statistics_by_accessibility_time_header="Stop_ID,10m,20 m,30 m,40 m,50 m,60 m"+"\n"+"\n"
                     """
-                # if aggregate_this_fields[field]:
-
+                
                 protocol_header = "Origin_ID"
                 time_step_min = time_step
                 low_bound_min = 0
                 top_bound_min = time_step_min
                 grades = []
-                intervals_number = number_bins
+                intervals_number = number_bins 
 
                 for i in range(0, intervals_number):
                     protocol_header += f',{top_bound_min}m'
@@ -420,13 +395,14 @@ def runRaptorWithProtocol(self,
                     low_bound_min = low_bound_min + time_step_min
                     top_bound_min = top_bound_min + time_step_min
 
+                
                 if time_step_last != 0:
                     intervals_number += 1
                     top_bound_add = low_bound_min + time_step_last
                     grades.append([low_bound_min, top_bound_add])
                     protocol_header += f',{top_bound_add}m'
                     protocol_header += f',sum({field}[{top_bound_add}m])'
-
+                
                 protocol_header += f',{field}_total\n'
                 
                 f[field] = f'{self.folder_name}//{self.alias}_{field}.csv'
@@ -438,8 +414,9 @@ def runRaptorWithProtocol(self,
                 f_curr = f[field].replace(".csv", "_min_endtime.csv")
                 with open(f_curr, 'w') as filetowrite:
                     filetowrite.write(protocol_header)
-        f_copy = f
 
+        f_copy = f
+    
     if not (shift_mode):
         vis = visualization(self, LayerViz, mode=protocol_type,
                         fieldname_layer=layer_vis_field, schedule_mode = timetable_mode)
@@ -447,11 +424,16 @@ def runRaptorWithProtocol(self,
         vis = None 
     
     
+    #pr_child = cProfile.Profile()
+    #pr_child.enable()
+    
+    if timetable_mode:
+        stop_times_index = preprocess_stop_times(stoptimes_dict)
 
     for i in range(0, count):
 
-        #if i == 3:
-        #   break
+        #if i == 100:
+        #    break
         if hasattr(self, 'progressBar'):
             self.progressBar.setValue(i + 6)
             self.setMessage(f'Calculating №{i+1} of {count}')
@@ -464,14 +446,14 @@ def runRaptorWithProtocol(self,
                         vis,
                         fields_ok,
                         f,
-                        protocol_type                        
+                        protocol_type,
+                        shift_mode                        
                         ):
             return 0, 0
 
         if RunOnAir:
             nearby_buildings_from_start = footpath_on_air_b_b.get_nearby_buildings(SOURCE)
-            #list_buildings_from_start = [
-            #    str(osm_id) for osm_id, _ in nearby_buildings_from_start]
+            
             list_buildings_from_start = [
                 str(osm_id) for osm_id, _ in nearby_buildings_from_start]
             
@@ -484,7 +466,6 @@ def runRaptorWithProtocol(self,
         SOURCE = str(SOURCE)
         D_TIME_copy = D_TIME
         if not (timetable_mode):
-
 
             if raptor_mode == 1:
             
@@ -533,6 +514,8 @@ def runRaptorWithProtocol(self,
                                 )
             
             
+
+            
             #keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
             #for key in keys_to_remove:
             #    del output[key]
@@ -542,25 +525,143 @@ def runRaptorWithProtocol(self,
             
             final_output_endtime = {}  
             final_output_duration = {}  
+            
+            
+            time_curr = D_TIME
+            time_delta = 5 * 60 
+            #MaxExtraTime = time_delta # !!!!!!!!!!!!!!!!!!! test
+            count_steps =  MaxExtraTime // time_delta
+            step = 0
+
+            MaxWaitTime = 10*60
+            MaxTimeTravel_copy = MaxTimeTravel
+            MaxTimeTravel = MaxTimeTravel + MaxExtraTime 
+                                                            
+            while step < count_steps:
+                
+                step += 1
+
+                
+
+                if raptor_mode == 1:
+                    time_curr = D_TIME + (step-1) * time_delta
+                else:
+                    time_curr = D_TIME - (step-1) * time_delta
+
+                
+                if verify_break(self,
+                        Layer,
+                        LayerDest,
+                        vis,
+                        fields_ok,
+                        f,
+                        protocol_type,
+                        shift_mode                        
+                        ):
+                    return 0, 0
+                                    
+                
+                if hasattr(self, 'setMessage'):
+                        if raptor_mode == 1:
+                            self.setMessage(f'Calculating №{i+1} of {count} (checking time {seconds_to_time(time_curr)})')
+                        else:
+                            self.setMessage(f'Calculating №{i+1} of {count} (checking time {seconds_to_time(time_curr+MaxExtraTime)})')
+                        QApplication.processEvents()
+
+                if raptor_mode == 1:
+                                            
+                    output_endtime, output_duration = raptor(SOURCE,
+                            time_curr,
+                            MAX_TRANSFER,
+                            MIN_TRANSFER,
+                            CHANGE_TIME_SEC,
+                            routes_by_stop_dict,
+                            stops_dict,
+                            stoptimes_dict,
+                            footpath_dict,
+
+                            idx_by_route_stop_dict,
+                            MaxTimeTravel,
+                            MaxWalkDist1,
+                            MaxWalkDist2,
+                            MaxWalkDist3,
+                            MaxWaitTime,
+                            MaxWaitTimeTransfer,
+                            timetable_mode,
+                            MaxExtraTime                            
+                            )
+                    
+                else:
+                    
+                    output_endtime, output_duration = rev_raptor(SOURCE,
+                                time_curr,
+                                MAX_TRANSFER,
+                                MIN_TRANSFER,
+                                CHANGE_TIME_SEC,
+                                routes_by_stop_dict,
+                                stops_dict,
+                                stoptimes_dict,
+                                footpath_dict,
+
+                                idx_by_route_stop_dict,
+                                MaxTimeTravel,
+                                MaxWalkDist1,
+                                MaxWalkDist2,
+                                MaxWalkDist3,
+                                MaxWaitTime,
+                                MaxWaitTimeTransfer,
+                                timetable_mode,
+                                MaxExtraTime                                
+                                )
+                
+                for p_i in output_endtime.keys():
+                   
+                    # Обновляем словарь endtime
+                    data_endtime = output_endtime[p_i]
+                    end_time = data_endtime[4]
+                    duration = data_endtime[1]
+                    if duration < MaxTimeTravel_copy:
+                        if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4] :
+                            final_output_endtime[p_i] = data_endtime
+    
+                    # Обновляем словарь duration
+                    data_duration = output_duration[p_i]
+                    duration = data_duration[1]
+                    end_time = data_duration[4]
+                    
+                    if duration < MaxTimeTravel_copy:
+                        if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
+                            final_output_duration[p_i] = data_duration
+                                    
+                    
+            output_endtime = final_output_endtime
+            output_duration = final_output_duration
+        """
+        
+        if  timetable_mode:
+            
+            final_output_endtime = {}  
+            final_output_duration = {}  
+            
             MaxWaitTime_copy = MaxWaitTime
             
             trans_info = footpath_dict.get(SOURCE, [])
+            trans_info = [(stop_id, walk_time) for stop_id, walk_time in trans_info if walk_time <= MaxWalkDist1]
             if raptor_mode == 2: 
-                time_start = D_TIME - MaxExtraTime
+                time_start = D_TIME #- MaxExtraTime
             else: 
                 time_start = D_TIME
+            
             available_boardings = get_available_boardings(time_start, 
                                                           MaxExtraTime, 
                                                           trans_info, 
-                                                          stoptimes_dict,
-                                                          raptor_mode)
-            
-            #for step in available_boardings:
-            #    (stop_id, time_departure, dist) = step
-            #    print (stop_id, seconds_to_time(time_departure), dist)
-            #continue
-                        
-                        
+                                                          stop_times_index,
+                                                          raptor_mode,
+                                                          express_mode=True 
+                                                          )
+
+            #print (available_boardings)
+
             for step in available_boardings:
                 (stop_id, time_departure, dist) = step
 
@@ -570,12 +671,12 @@ def runRaptorWithProtocol(self,
                         vis,
                         fields_ok,
                         f,
-                        protocol_type                        
+                        protocol_type,
+                        shift_mode                        
                         ):
                     return 0, 0
                                     
-                #if not (stop_id == '13472' and seconds_to_time(time_departure) == '07:56:20'):
-                #    continue
+                
                 if hasattr(self, 'setMessage'):
                     if stop_id == "xxx":
                         self.setMessage(f'Calculating №{i+1} of {count}')
@@ -625,6 +726,7 @@ def runRaptorWithProtocol(self,
                         time_departure += 1
                         D_TIME = time_departure + dist
                         firts_step = (stop_id, time_departure, dist)
+                    
                     output_endtime, output_duration = rev_raptor(SOURCE,
                                 D_TIME,
                                 MAX_TRANSFER,
@@ -644,116 +746,27 @@ def runRaptorWithProtocol(self,
                                 MaxWaitTimeTransfer,
                                 timetable_mode,
                                 MaxExtraTime,
-                                first_step= firts_step #None#(stop_id, time_departure, dist) 
+                                first_step= firts_step
                                 )
                 
-                for p_i, data in output_endtime.items():
-                                       
-                    end_time = data[4]  # end_time
-                    # Если p_i нет в final_output или найден меньший end_time, обновляем
+                for p_i in output_endtime.keys():
+                   
+                    # Обновляем словарь endtime
+                    data_endtime = output_endtime[p_i]
+                    end_time = data_endtime[4]
                     if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4]:
-                        final_output_endtime[p_i] = data
-                                        
-                for p_i, data in output_duration.items():
-                    
-                    duration = data[1]  # duration
-                                        
-                    # Если p_i нет в final_output или найден меньший end_time, обновляем
+                        final_output_endtime[p_i] = data_endtime
+    
+                    # Обновляем словарь duration
+                    data_duration = output_duration[p_i]
+                    duration = data_duration[1]
                     if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
-                        final_output_duration[p_i] = data
+                        final_output_duration[p_i] = data_duration
+
+                    
                     
             output_endtime = final_output_endtime
             output_duration = final_output_duration
-
-        
-        """
-        if  timetable_mode:
-            MaxExtraTime_copy = MaxExtraTime
-            final_output_endtime = {}  
-            final_output_duration = {}  
-            cycle = 1
-            while cycle <=2:
-                QApplication.processEvents()
-                if cycle == 1:
-                    MaxExtraTime = MaxWaitTime
-                    timetable_mode = True
-                    timetable_mode_sim = True
-                    
-                else: 
-                    MaxExtraTime = MaxExtraTime_copy
-                    timetable_mode = True
-                    timetable_mode_sim = False
-                
-                if raptor_mode == 1:
-                    output_endtime, output_duration = raptor(SOURCE,
-                            D_TIME,
-                            MAX_TRANSFER,
-                            MIN_TRANSFER,
-                            CHANGE_TIME_SEC,
-                            routes_by_stop_dict,
-                            stops_dict,
-                            stoptimes_dict,
-                            footpath_dict,
-
-                            idx_by_route_stop_dict,
-                            MaxTimeTravel,
-                            MaxWalkDist1,
-                            MaxWalkDist2,
-                            MaxWalkDist3,
-                            MaxWaitTime,
-                            MaxWaitTimeTransfer,
-                            timetable_mode,
-                            MaxExtraTime,
-                            timetable_mode_sim                            
-                            )
-                else:
-                    output_endtime, output_duration = rev_raptor(SOURCE,
-                            D_TIME,
-                            MAX_TRANSFER,
-                            MIN_TRANSFER,
-                            CHANGE_TIME_SEC,
-                            routes_by_stop_dict,
-                            stops_dict,
-                            stoptimes_dict,
-                            footpath_dict,
-
-                            idx_by_route_stop_dict,
-                            MaxTimeTravel,
-                            MaxWalkDist1,
-                            MaxWalkDist2,
-                            MaxWalkDist3,
-                            MaxWaitTime,
-                            MaxWaitTimeTransfer,
-                            timetable_mode,
-                            MaxExtraTime,
-                            timetable_mode_sim
-                            )
-
-                #keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
-
-                #for key in keys_to_remove:
-                #    del output[key]
-
-                for p_i, data in output_endtime.items():
-
-                                        
-                    end_time = data[4]  # end_time
-                    
-                    # Если p_i нет в final_output или найден меньший end_time, обновляем
-                    if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4]:
-                        final_output_endtime[p_i] = data
-                                        
-                for p_i, data in output_duration.items():
-                    
-                    duration = data[1]  # duartion
-                                        
-                    # Если p_i нет в final_output или найден меньший end_time, обновляем
-                    if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
-                        final_output_duration[p_i] = data
-                    
-                output_endtime = final_output_endtime
-                output_duration = final_output_duration
-                cycle += 1
         """
         if protocol_type == 1:
             f_new = []
@@ -788,19 +801,18 @@ def runRaptorWithProtocol(self,
                                           list_buildings_from_start,
                                           set_stops,
                                           field)
-            
+                    
+                
             f = f_new
             
-            
-             
-
-
         if protocol_type == 2:
             
             f_curr = f'{self.folder_name}//{self.alias}.csv'
             f_min_duration = f_curr.replace(".csv", "_min_duration.csv")
             f_min_endtime = f_curr.replace(".csv", "_min_endtime.csv")
-            f = (f_min_endtime, f_min_duration) 
+
+            f = (f_min_endtime, f_min_duration)
+            
 
             if i == 0:
                 with open(f_min_duration, 'w') as filetowrite:
@@ -808,7 +820,9 @@ def runRaptorWithProtocol(self,
 
                 with open(f_min_endtime, 'w') as filetowrite:
                     filetowrite.write(protocol_header)
-                        
+
+                
+                
             make_protocol_detailed(raptor_mode,
                                    D_TIME_copy,
                                    output_endtime,
@@ -820,6 +834,7 @@ def runRaptorWithProtocol(self,
                                    SOURCE
                                    )
             QApplication.processEvents()
+                        
             make_protocol_detailed(raptor_mode,
                                    D_TIME_copy,
                                    output_duration,
@@ -828,30 +843,38 @@ def runRaptorWithProtocol(self,
                                    nearby_buildings_from_start,
                                    list_buildings_from_start,
                                    set_stops,
-                                   SOURCE
+                                   SOURCE,
+                                   short_result
                                    )
+            
+            
+            QApplication.processEvents()
+            
+            
 
     if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
         f_min_endtime = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime')
         f_min_duration = make_service_area_report(f_min_duration, f'{self.alias}_min_duration')
         
-        f = (f_min_endtime, f_min_duration) 
-    
+        f = [f_min_endtime,f_min_duration]
+        
     if protocol_type == 1:
         f = f_new
 
     QApplication.processEvents()
     if not (shift_mode):
         after_computation_time = datetime.now()
-        after_computation_str = after_computation_time.strftime(
-        '%Y-%m-%d %H:%M:%S')
+        after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
         self.textLog.append(f'<a>Finished {after_computation_str}</a>')
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
     
         self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
-    
+    add_thematic_map = True
+    if timetable_mode and len(sources) > 1 and  protocol_type == 2 :
+        add_thematic_map = False
+
     write_info(self,
                Layer,
                LayerDest,
@@ -861,49 +884,89 @@ def runRaptorWithProtocol(self,
                fields_ok,
                f,
                protocol_type,
-               shift_mode,               
+               shift_mode,
+               add_thematic_map               
                )
     
     if hasattr(self, 'progressBar'):   
         self.setMessage(f'Finished')
         self.progressBar.setValue(self.progressBar.maximum())
-    return 1, self.folder_name
+    
+    
+    #pr_child.disable()
+    
+    #output_filename_txt = r"c:\temp\profile_raptor.txt"
+    #output_filename_prof = r"c:\temp\profile_raptor.prof"
+    
+    #with open(output_filename_txt, "w") as f:
+    #    ps = pstats.Stats(pr_child, stream=f).sort_stats('cumulative')
+    #    ps.print_stats()
+    #pr_child.dump_stats(output_filename_prof)
+    
+
+    return short_result
 
 
-def get_available_boardings(start_time_seconds, max_delta_seconds, trans_info, stop_times, mode):
+
+def preprocess_stop_times(stop_times):
+   
+    stop_index = {}
+    for route_id, trips in stop_times.items():
+        for trip_id, stops in trips.items():
+            for stop_seq, stop_seconds in stops:
+                stop_id_str = str(stop_seq)
+                if stop_id_str not in stop_index:
+                    stop_index[stop_id_str] = []
+                stop_index[stop_id_str].append((route_id, trip_id, stop_seconds))
+    
+    # Сортируем по времени для каждого stop_id для бинарного поиска
+    for stop_id in stop_index:
+        stop_index[stop_id].sort(key=lambda x: x[2])
+    
+    return stop_index
+
+def get_available_boardings(start_time_seconds, 
+                            max_delta_seconds, 
+                            trans_info, 
+                            stop_times_index, 
+                            mode, 
+                            express_mode = True):
+    
     available_departures = []
     
+    used_routes = set()
+    
     for stop_id, walk_time in trans_info:
-        if mode == 1:
-            arrival_time_seconds = start_time_seconds + walk_time
-            max_time_seconds = start_time_seconds + max_delta_seconds + walk_time
-        else:
-            arrival_time_seconds = start_time_seconds - walk_time
-            max_time_seconds = start_time_seconds + max_delta_seconds - walk_time
         
-        if arrival_time_seconds > max_time_seconds:
+        if mode == 1:
+            arrival_time = start_time_seconds + walk_time
+            max_time = start_time_seconds + max_delta_seconds + walk_time
+        else:
+            arrival_time = start_time_seconds - walk_time
+            max_time = start_time_seconds + max_delta_seconds - walk_time
+        
+        if arrival_time > max_time:
             continue
         
-        for route_id, trips in stop_times.items():
-            for trip_id, stops in trips.items():
-                for stop_seq, stop_seconds in stops:
-                    if str(stop_seq) == stop_id:
-                        if arrival_time_seconds <= stop_seconds <= max_time_seconds:
-                            available_departures.append((stop_id, stop_seconds, walk_time))
         
-        available_departures.append(("xxx", "xxx", "xxx"))
         
+        if stop_id in stop_times_index:
+            
+            
+            for route_id, trip_id, stop_seconds in stop_times_index[stop_id]:
+            
+                route_key = (stop_id, route_id)  # Создаем ключ из сочетания
+            
+                if route_key in used_routes:
+                   continue
+            
+                if arrival_time <= stop_seconds <= max_time:
+            
+                    available_departures.append((stop_id, stop_seconds, walk_time))
+                    used_routes.add(route_key)
+    
+    available_departures.append(("xxx", "xxx", "xxx"))
     return sorted(available_departures, key=lambda x: (x[0], x[1]))
-
-def make_service_area_report(file_path, alias):
-    df = pd.read_csv(file_path)
-
-    result = df.loc[df.groupby('Destination_ID')['Duration'].idxmin()]
-    folder_name = os.path.dirname(file_path)
-    filename = os.path.join(folder_name, f"{alias}_service_area.csv")
-
-    result.to_csv(filename, index=False)
-    return filename
 
 
 def write_info(self,
@@ -916,6 +979,7 @@ def write_info(self,
                f,
                protocol_type,
                shift_mode = False,
+               add_thematic_map = True
                ):
 
     if hasattr(self, 'textLog'):        
@@ -923,29 +987,29 @@ def write_info(self,
         filelog_name = f'{self.folder_name}//log_{self.alias}.txt'
         with open(filelog_name, "w") as file:
             file.write(text)
-
+    
     if shift_mode:
         return 0
     
     self.textLog.append(f'<a>Output:</a>')
 
+    
     if protocol_type == 1:
         if len(fields_ok) > 0:
             for item in f:
                 item = os.path.normpath (item)
                 self.textLog.append(f'<a>{item}</a>')
-                
-                alias = os.path.splitext(os.path.basename(item))[0]
                 if not (shift_mode):
+                    alias = os.path.splitext(os.path.basename(item))[0]
                     vis.add_thematic_map(item, alias, set_min_value=0)
-                
+
+    
 
     if protocol_type == 2:
         for item in f:
             item = os.path.normpath (item)
             self.textLog.append(f'<a>{item}</a>')
-        if not (shift_mode):
-            for item in f:
+            if not (shift_mode) and add_thematic_map:
                 alias = os.path.splitext(os.path.basename(item))[0]
                 vis.add_thematic_map(item, alias, set_min_value=0)
 
@@ -982,523 +1046,6 @@ def write_info(self,
 
     self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Output in folder</a>')
 
-
-# for type_protokol = 1
-def make_protocol_summary(SOURCE,
-                          dictInput,
-                          f,
-                          grades,
-                          attribute_dict,
-                          nearby_buildings_from_start,
-                          list_buildings_from_start,
-                          set_stops,
-                          field
-                          ):
-
-    
-    time_grad = grades
-    # [[-1,0], [0,10],[10,20],[20,30],[30,40],[40,50],[50,61] ]
-    counts = {x: 0 for x in range(0, len(time_grad))}  # counters for grades
-    # counters for agrregates
-    agrregates = {x: 0 for x in range(0, len(time_grad))}
-
-    # f2 = r"c:\temp\rep2.csv"
-    with open(f, 'a') as filetowrite:
-        # with open(f2, 'w') as file2:
-
-        for dest, info in dictInput.items():
-
-            if str(dest) in set_stops:
-                continue
-
-            if str(dest) in list_buildings_from_start:
-                continue
-
-            time_to_dest = round(int(info[1]))
-            
-            for i in range(0, len(time_grad)):
-                grad = time_grad[i]
-
-                if time_to_dest <= grad[1]*60:
-                    counts[i] = counts[i] + 1
-                    # file2.write(f'{str(dest)}\n')
-
-                    if field != "bldg":
-                        agrregates[i] = agrregates[i] + \
-                            attribute_dict.get(int(dest), 0)
-
-                        
-
-        # counts[0] = counts[0] + 1 # for case time_item = 0 (from source to source)
-
-        # add build to build to var counts
-        for build_item, time_item in nearby_buildings_from_start:
-            for i in range(0, len(time_grad)):
-                grad = time_grad[i]
-
-                if time_item <= grad[1]*60:
-                    counts[i] = counts[i] + 1
-                    # file2.write(f'{str(build_item)}\n')
-                    if field != "bldg":
-                        agrregates[i] = agrregates[i] + \
-                            attribute_dict.get(int(build_item), 0)
-
-        row = str(SOURCE)
-        if field == "bldg":
-            Total = counts[len(time_grad)-1]
-        if field != "bldg":
-            Total = agrregates[len(time_grad)-1]
-
-        for i in range(0, len(time_grad)):
-            row = f'{row},{counts[i]}'
-            if field != "bldg":
-                row = f'{row},{agrregates[i]}'
-
-        filetowrite.write(f'{row},{Total}\n')
-
-
-# for type_protokol =2
-def make_protocol_detailed(raptor_mode,
-                           D_TIME,
-                           dictInput,
-                           protocol_full_path,
-                           timetable_mode,
-                           nearby_buildings_from_start,
-                           list_buildings_from_start,
-                           set_stops,
-                           SOURCE
-                           ):
-
-    sep = ","
-    stop_symbol = "s:"
-    f = protocol_full_path
-
-    
-    
-    
-    with open(f, 'a') as filetowrite:
-
-
-        start_time = seconds_to_time(D_TIME)
-                
-
-        if raptor_mode == 1:
-                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}0{sep}0'
-        else:
-                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}0'
-
-        filetowrite.write(row + "\n")
-
-        for build, dist in nearby_buildings_from_start:
-
-            if raptor_mode == 1:
-                        finish_time = seconds_to_time(D_TIME+dist)
-                        row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{build}{sep}{finish_time}{sep}0{sep}{dist}'
-            else:
-                        finish_time = seconds_to_time(D_TIME-dist)
-                        row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}{dist}'
-
-            if str(build) != str(SOURCE):
-                filetowrite.write(row + "\n")
-
-        # dictInput - dict from testRaptor
-        # every item dictInput : dest - key, info - value
-
-        for dest, info in dictInput.items():
-
-            SOURCE = info[0]
-            duration = info[1]
-            pareto_set = info[2]
-            transfers = info[3]
-            legs = transfers + 1
-
-
-            '''
-    Examle pareto_set =
-    [(0, [('walking', 2003, 24206.0, Timedelta('0 days 00:02:47'),Timestamp('2023-06-30 08:37:13')), 
-    (Timestamp('2023-06-30 08:36:59'), 24206, 14603, Timestamp('2023-06-30 08:33:36'), '3150_67'), 
-    ('walking', 14603, 1976.0, Timedelta('0 days 00:02:03.300000'), Timestamp('2023-06-30 08:31:32.700000'))])]    
-    '''     
-
-            if pareto_set is None or dest is None:
-                continue
-
-            '''
-    Examle jorney
-    [('walking', 2003, 24206.0, Timedelta('0 days 00:02:47'), Timestamp('2023-06-30 08:37:13')), 
-    (Timestamp('2023-06-30 08:36:59'), 24206, 14603, Timestamp('2023-06-30 08:33:36'), '3150_67'), 
-    ('walking', 14603, 1976.0, Timedelta('0 days 00:02:03.300000'), Timestamp('2023-06-30 08:31:32.700000'))]
-    '''
-
-            # for journey in pareto_set: #each journey is array, legs are its elements
-            if True:
-
-                journey = pareto_set
-
-                # run inversion jorney also raptor_mode = 1
-
-                if raptor_mode == 2:
-                    # inversion row
-                    journey = journey[::-1]
-                    # inversion inside every row
-
-                    journey = [(tup[0], tup[2], tup[1], tup[3], tup[4]) if not isinstance(tup[0], int) else
-                               tup[:4][::-1] +
-                               (tup[4],) if isinstance(tup[0], int) else tup
-                               for tup in journey
-                               ]
-
-                if raptor_mode == 1:
-
-                    journey = [(tup[0], tup[1], tup[2], tup[3], tup[4] - tup[3])
-                               if tup[0] == 'walking' else tup for tup in journey]
-
-                last_bus_leg = None
-                last_leg = None
-                first_boarding_stop = ""  # BStop1_ID
-                first_boarding_time = ""
-                first_bus_arrive_stop = ""  # AStop1_ID
-                first_bus_arrival_time = ""
-
-                second_boarding_stop = ""  # BStop2_ID
-                second_boarding_time = ""
-                second_bus_arrive_stop = ""  # AStop2_ID
-                second_bus_arrival_time = ""
-
-                third_boarding_stop = ""  # BStop3_ID
-                third_boarding_time = ""
-                third_bus_arrive_stop = ""  # AStop3_ID
-                third_bus_arrival_time = ""
-
-                sfirst_boarding_time = " "
-                sfirst_arrive_time = " "
-                ssecond_boarding_time = ""
-                ssecond_bus_arrival_time = ""
-                sthird_boarding_time = ""
-                sthird_bus_arrival_time = ""
-
-                first_bus_leg_found = False
-                second_bus_leg_found = False
-                third_bus_leg_found = False
-
-                walk1_time = ""  # walk time from orgin to first bus stop or to destination if no buses
-                walk1_arriving_time = ""  # I need it to compute wait1_time
-                wait1_time = 0
-                line1_id = ""  # number of first route (or trip)
-                ride1_time = ""
-
-                walk2_time = ""  # from 1 bus alightning to second bus boarding
-
-                wait2_time = ""  # time between arriving to second bus stop and boarding to the bus
-                line2_id = ""  # number of second route (or trip)
-                ride2_time = ""
-
-                walk3_time = ""  # from 2 bus alightning to 3 bus boarding
-
-                wait3_time = ""  # time between arriving to 3 bus stop and boarding to the bus
-                line3_id = ""  # number of 3 route (or trip)
-                ride3_time = ""
-
-                walk4_time = ""
-                dest_walk_time = ""  # walking time  to destination
-
-                legs_counter = 0
-                last_leg_type = ""
-                ride_counter = 0
-                walking_time_sec = 0
-
-                '''
-         Examlpe leg
-          ('walking', 2003, 24206.0, Timedelta('0 days 00:02:47'), Timestamp('2023-06-30 08:37:13'))
-          or
-          (Timestamp('2023-06-30 08:36:59'), 24206, 14603, Timestamp('2023-06-30 08:33:36'), '3150_67')
-
-
-         '''
-                start_time = None
-
-                for leg in journey:
-
-                    legs_counter = legs_counter+1
-                    last_leg = leg
-                    #  here counting walk(n)_time if leg[0] == 'walking
-                    #  !!!!! why can walk1_time != "" !!!!!!!!!!!! why verify?
-                    if leg[0] == 'walking':
-
-                        walking_time_sec = round(leg[3], 1)
-                        if ride_counter == 0:
-                            SOURCE_REV = leg[1]  # for backward algo
-                            if walk1_time == "":
-                                walk1_time = walking_time_sec
-                            else:
-                                walk1_time = walk1_time + walking_time_sec
-
-                            walk1_arriving_time = leg[4] + leg[3]
-                        elif ride_counter == 1:
-                            if walk2_time == "":
-                                walk2_time = walking_time_sec
-                            else:
-                                walk2_time = walk2_time + walking_time_sec
-
-                            walk2_arriving_time = leg[4]
-
-                        elif ride_counter == 2:
-                            if walk3_time == "":
-                                walk3_time = walking_time_sec
-                            else:
-                                walk3_time = walk3_time + walking_time_sec
-
-                            walk3_arriving_time = leg[4] - leg[3]
-
-                        elif ride_counter == 3:
-                            if walk4_time == "":
-                                walk4_time = walking_time_sec
-                            else:
-                                walk4_time = walk4_time + walking_time_sec
-
-                            walk4_arriving_time = leg[4] + leg[3]
-
-                        if start_time is None:
-                            start_time = leg[4]
-
-                        # here finish counting walk1_time if leg[0] == 'walking
-                    else:
-                        if not first_bus_leg_found:
-                            # in this leg - first leg is bus, saving params for report
-
-                            if start_time is None:
-                                start_time = leg[0]
-                                SOURCE_REV = leg[1]  # for backward algo
-
-                            first_bus_leg_found = True
-                            ride_counter = 1
-                            first_bus_leg = leg
-
-                            first_boarding_time = leg[0]
-                            first_boarding_stop = leg[1]
-                            first_bus_arrive_stop = leg[2]
-                            first_bus_arrival_time = leg[3]
-
-                            ride1_time = round(
-                                (first_bus_arrival_time - first_boarding_time), 1)
-
-                            if last_leg_type == "walking":
-
-                                wait1_time = round(
-                                    (first_boarding_time - walk1_arriving_time), 1)
-                            else:
-
-                                if raptor_mode == 1:
-
-                                    wait1_time = round(
-                                        (first_boarding_time - D_TIME), 1)
-                                else:
-
-                                    wait1_time = round(
-                                        (first_boarding_time - start_time), 1)
-
-                            line1_id = leg[4]
-
-                        elif not second_bus_leg_found:
-                            # in this leg - second leg is bus, saving params for report
-                            if start_time is None:
-                                start_time = leg[0]
-                            second_bus_leg_found = True
-                            ride_counter = 2
-                            second_boarding_time = leg[0]
-                            ssecond_boarding_time = seconds_to_time(
-                                second_boarding_time)
-                            second_boarding_stop = leg[1]
-
-                            second_bus_arrive_stop = leg[2]
-                            second_bus_arrival_time = leg[3]
-                            ssecond_bus_arrival_time = seconds_to_time(
-                                second_bus_arrival_time)
-
-                            if last_leg_type == "walking":
-
-                                wait2_time = round(
-                                    (second_boarding_time - first_bus_arrival_time - walk2_time), 1)
-                            else:
-
-                                wait2_time = round(
-                                    (second_boarding_time - first_bus_arrival_time), 1)
-
-                            line2_id = leg[4]
-
-                            ride2_time = round(
-                                (second_bus_arrival_time - second_boarding_time), 1)
-
-                        else:  # 3-rd bus found
-                            third_bus_leg_found = True
-                            # in this leg - third leg is bus, saving params for report
-                            if start_time is None:
-                                start_time = leg[0]
-                            ride_counter = 3
-                            third_boarding_time = leg[0]
-                            sthird_boarding_time = seconds_to_time(
-                                third_boarding_time)
-                            third_boarding_stop = leg[1]
-                            third_bus_arrive_stop = leg[2]
-                            third_bus_arrival_time = leg[3]
-                            sthird_bus_arrival_time = seconds_to_time(
-                                third_bus_arrival_time)
-
-                            if last_leg_type == "walking":
-
-                                wait3_time = round(
-                                    (third_boarding_time - second_bus_arrival_time - walk3_time), 1)
-                            else:
-
-                                wait3_time = round(
-                                    (third_boarding_time - second_bus_arrival_time), 1)
-
-                            line3_id = leg[4]
-
-                            ride3_time = round(
-                                (third_bus_arrival_time - third_boarding_time), 1)
-
-                        last_bus_leg = leg
-
-                    last_leg_type = leg[0]  # in current journey
-
-                    # this legs finish, postprocessing this journey
-                if last_leg_type == "walking":
-                    if walk4_time != "":
-                        dest_walk_time = walk4_time
-                        walk4_time = ""
-                    elif walk3_time != "":
-                        dest_walk_time = walk3_time
-                        walk3_time = ""
-                    elif walk2_time != "":
-                        dest_walk_time = walk2_time
-                        walk2_time = ""
-                    elif walk1_time != "":
-                        dest_walk_time = walk1_time
-                        walk1_time = ""
-
-                    # end of cycle by legs
-                    # Calculate waiting time before boarding
-
-                    # If first_bus_leg and last_bus_leg are found
-                    # they may be the same leg
-                    # get boarding_time from first_bus_leg
-                sfirst_boarding_stop = ""
-                sfirst_arrive_stop = ""
-                sline1_id = ""
-                sride1_time = ""
-
-                ssecond_boarding_stop = ""
-                ssecond_arrive_stop = ""
-                sline2_id = ""
-                sride2_time = ""
-
-                sthird_boarding_stop = ""
-                sthird_arrive_stop = ""
-                sline3_id = ""
-                sride3_time = ""
-
-                # last_bus_leg - last leg of current jorney
-                if not last_bus_leg is None:  # work forever?
-                    first_boarding_stop_orig = first_boarding_stop
-                    first_bus_arrive_stop_orig = first_bus_arrive_stop
-                    sfirst_boarding_stop = f'{stop_symbol}{first_boarding_stop_orig}'
-                    sfirst_arrive_stop = f'{stop_symbol}{first_bus_arrive_stop_orig}'
-
-                    sfirst_boarding_time = seconds_to_time(first_boarding_time)
-                    sfirst_arrive_time = seconds_to_time(
-                        first_bus_arrival_time)
-
-                    if second_bus_leg_found:
-                        second_boarding_stop_orig = second_boarding_stop
-                        second_bus_arrive_stop_orig = second_bus_arrive_stop
-                        ssecond_boarding_stop = f'{stop_symbol}{second_boarding_stop_orig}'
-                        ssecond_arrive_stop = f'{stop_symbol}{second_bus_arrive_stop_orig}'
-
-                    if third_bus_leg_found:
-                        third_boarding_stop_orig = third_boarding_stop
-                        third_bus_arrive_stop_orig = third_bus_arrive_stop
-                        sthird_boarding_stop = f'{stop_symbol}{third_boarding_stop_orig}'
-                        sthird_arrive_stop = f'{stop_symbol}{third_bus_arrive_stop_orig}'
-
-                # Define what was mode of the last leg:
-                # here leg is the last leg that was in previous cycle
-                Destination = leg[2]
-
-                if last_leg[0] == 'walking':
-
-                    arrival_time = last_leg[4] + last_leg[3]
-                else:
-
-                    arrival_time = last_leg[3]
-
-                sarrival_time = seconds_to_time(arrival_time)
-
-                orig_dest = Destination
-
-                if walk1_time == "":
-                    walk1_time = 0
-
-                if walk2_time == "" and ssecond_boarding_stop != "":
-                    walk2_time = 0
-
-                if walk3_time == "" and sthird_boarding_stop != "":
-                    walk3_time = 0
-
-                if dest_walk_time == "":
-                    dest_walk_time = 0
-
-                # if timetable_mode and len(journey) > 1:
-                #  D_TIME = journey[0][4]
-                if timetable_mode and raptor_mode == 1:
-                    D_TIME = journey[0][4]
-
-                # if timetable_mode and raptor_mode == 2:
-                
-                if raptor_mode == 2:
-                    if len(journey) > 1:
-                        sarrival_time = seconds_to_time(
-                            journey[-2][3] + journey[-1][3])
-                    else:
-
-                        if journey[0][0] == "walking":
-                            sarrival_time = seconds_to_time(
-                                journey[0][3] + journey[0][4])
-                        else:
-                            sarrival_time = seconds_to_time(journey[0][3])
-                
-                if raptor_mode == 1:
-                    # if orig_dest in list_stops or orig_dest in list_buildings_from_start:
-                    #    continue
-                    if orig_dest in list_buildings_from_start:
-                        continue
-                    if str(orig_dest) in set_stops:
-                        continue
-
-                    row = f'{SOURCE}{sep}{seconds_to_time(D_TIME)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
-{sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
-{sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
-{sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
-{sep}{dest_walk_time}{sep}{orig_dest}{sep}{sarrival_time}{sep}{legs}{sep}{duration}'
-
-                else:
-                    # if SOURCE_REV in list_stops or  SOURCE_REV in list_buildings_from_start:
-                    #  continue
-                    if SOURCE_REV in list_buildings_from_start:
-                        continue
-                    if str(SOURCE_REV) in set_stops:
-                        continue
-                    row = f'{SOURCE_REV}{sep}{seconds_to_time(start_time)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
-{sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
-{sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
-{sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
-{sep}{dest_walk_time}{sep}{SOURCE}{sep}{sarrival_time}{sep}{seconds_to_time(D_TIME)}{sep}{legs}{sep}{duration}'
-
-                filetowrite.write(row + "\n")
 
 
 def int1(s):

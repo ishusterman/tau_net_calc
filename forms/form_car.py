@@ -387,7 +387,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
     def on_help_button_clicked(self):
         
-        url = "https://ishusterman.github.io/tutorial/car_accessibility.html"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/car_accessibility.html"
         
         if self.mode == 1 and self.protocol_type == 2:
             section = "from-service-locations-fixed-time-departure"

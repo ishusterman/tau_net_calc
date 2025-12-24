@@ -1,0 +1,1 @@
+"C:\Program Files\QGIS 3.40.2\bin\python-qgis.bat" c:\Users\user\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\tau_net_calc\cls\raptor_multiprocessing_shared_memory.py

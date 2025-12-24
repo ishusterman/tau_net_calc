@@ -6,7 +6,8 @@
 name=Accessibility calculator
 qgisMinimumVersion=3.1.1
 description=Transport accessibility maps
-version=5.34.39.6
+version=6.3
+
 author=Igor Shusterman, Aleksey Ogulenko, Itzhak Benenson
 email=ishusterman2011@gmail.com
 license=MIT
@@ -21,7 +22,21 @@ repository=https://github.com/ishusterman/tau_net_calc
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=The changelog lists the plugin versions
+  6.3 - Roundtrip recurrent analysis
+  6.2 - Fixed minor bags
+  6.1 - Fixed minor bags
+	6.0
+  # General
+  - UI and dialogs are improved and clarified
+  - The transit routing database construction is combined with the transit accessibility calculations block, while the car routing database construction is combined with the car accessibility calculations. The database construction section of the menu is cancelled.
+  - The explanation of the menu option is added to the option dialog’s right panel
+  - The software is tested with several GTFS datasets representing cities in different countries and continents
+  - The performance of many procedures is essentially improved
+  # Database construction
+  - The test of the availability and completeness of the road layer attributes before constructing the database is added
+  # Schedule-based accessibility
+  - Two different outputs are built, the first reflecting the earliest/latest arrival (the earliest for the FROM-accessibility and latest in the case of the TO-accessibility), and the second the latest arrival
 
 # Tags are comma separated with spaces allowed
 tags="Transport accessibility","Transit accessibility","Car accessibility","Accessibility map","Transportation planning","Service area","Dijkstra algorithm","Raptor algorithm",GTFS,"Public transport","Voronoi polygon",Hexagon

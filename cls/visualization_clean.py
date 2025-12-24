@@ -54,151 +54,158 @@ class cls_clean_visualization(QgsTask):
         self.dist_buffer = 50
         
     def run(self):
-       try: 
+        try: 
+     
         
-        self.list_layer = []
-        uri = self.layer.dataProvider().dataSourceUri()
-        self.input_layer_path = uri.split("|")[0] if "|" in uri else uri
-        self.file_name = os.path.basename(self.input_layer_path)
-        self.name, self.ext = os.path.splitext(self.file_name)
-        input_layer = QgsVectorLayer(self.input_layer_path, "Layer Name", "ogr")
-        #############################################
-        self.signals.set_message.emit('Constructing buildings’ centroids ...')
-        centroids_layer = self.make_centroids(self.layer)
-        
-        if self.break_on:
-            return 0
-        self.signals.progress.emit(1)
-
-
-        units = input_layer.crs().mapUnits()
-        crs_grad = (units == 6)
-        first_feature = next(input_layer.getFeatures())
-        first_point = first_feature.geometry().centroid().asPoint()
-                
-        if crs_grad:
-            self.dist_buffer = convert_meters_to_degrees(
-                self.dist_buffer, first_point.y())
-
-        #############################################
-        if self.runVoronoi:
-            self.Voronoi(centroids_layer)
-        #############################################
-        if self.break_on:
+            self.list_layer = []
+            input_layer = self.layer
+            
+            if input_layer.providerType() == "memory":
+                input_layer = self.layer
+                self.file_name = input_layer.name()
+                self.name = self.file_name
+                self.ext = ".shp" 
+            else:
+                self.input_layer_path = input_layer.source()
+                input_layer = QgsVectorLayer(self.input_layer_path, "Layer Name", "ogr")
+                self.file_name = os.path.basename(self.input_layer_path)
+                self.name, self.ext = os.path.splitext(self.file_name)
+            #############################################
+            self.signals.set_message.emit('Constructing buildings’ centroids ...')
+            centroids_layer = self.make_centroids(self.layer)
+            
+            
+            if self.break_on:
                 return 0
-        
-        for i, spacing in enumerate(self.spacing):
-
-            spacing_info = round (spacing/math.sqrt(3))
-            self.signals.set_message.emit(f'Constructing hexagons {spacing_info}m ...')
-            spacing_current_x = spacing
-            spacing_current_y = spacing
+            self.signals.progress.emit(1)
+            units = input_layer.crs().mapUnits()
+            crs_grad = (units == 6)
+            first_feature = next(input_layer.getFeatures())
+            first_point = first_feature.geometry().centroid().asPoint()
             
             if crs_grad:
-                spacing_current_x = convert_meters_to_degrees(
-                spacing_current_x, first_point.x())
+                self.dist_buffer = convert_meters_to_degrees(
+                    self.dist_buffer, first_point.y())
 
-                spacing_current_y = convert_meters_to_degrees(
-                spacing_current_y, first_point.y())
-
-            buffer_x = spacing_current_x / 2
-            buffer_y = spacing_current_y / 2
-            
-            extent = input_layer.extent()
-            extent = QgsRectangle(extent.xMinimum() - buffer_x,
-                      extent.yMinimum() - buffer_y,
-                      extent.xMaximum() + buffer_x,
-                      extent.yMaximum() + buffer_y)
-            width = extent.width()
-            height = extent.height()
-            if width < spacing_current_x or height < spacing_current_y:
-                continue
-            
-            hexagones_result = processing.run("native:creategrid", 
-                       {'TYPE':4,
-                        'EXTENT':extent,
-                        'HSPACING':spacing_current_x,
-                        'VSPACING':spacing_current_y,
-                        'HOVERLAY':0,
-                        'VOVERLAY':0,
-                        'CRS':input_layer.crs(),
-                        'OUTPUT':'TEMPORARY_OUTPUT'}
-                        )
-            hexagones_layer = hexagones_result['OUTPUT']
-                                
-            if self.break_on:
-                return 0
-            self.signals.progress.emit(6 + i*4)
             #############################################
-            self.signals.set_message.emit(f'Filtering hexagons {spacing_info}m...')
-            self.filter_hexagons_by_intersection(hexagones_layer, self.layer)
-        
-            if self.break_on:
-                return 0
-            self.signals.progress.emit(7 + i*4)
-            
+            if self.runVoronoi:
+                self.Voronoi(centroids_layer)
             #############################################
-            self.signals.set_message.emit(f'Matching between buildings and hexagons {spacing_info}m...')
-            self.add_nearest_osm_id(hexagones_layer, centroids_layer)
-        
-
             if self.break_on:
-                return 0
-            self.signals.progress.emit(8 + i*4)
+                    return 0
             
-            #############################################
-            self.signals.set_message.emit(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on osm_id...')
-            dissolve_result = processing.run("native:dissolve", 
-                        {
-                        'INPUT': hexagones_layer,
-                        'FIELD': [self.layer_field],
-                        'OUTPUT': 'memory:'
-                        })
-            dissolved_layer = dissolve_result['OUTPUT']
-            if self.break_on:
-                return 0
-            self.signals.progress.emit(9 + i*4)
-                           
-            #########################
-            # Saving result
-            #########################
-        
-            self.signals.set_message.emit('Saving ...')
-            file_dir = self.folder_name
-            self.ext = ".shp"
-            self.output_file_name = f"{self.name}_hex_{spacing_info}m{self.ext}"
-            output_path = os.path.join(file_dir, self.output_file_name)
-            unique_output_path = get_unique_path(output_path)
-        
-            self.layer_name = os.path.splitext(os.path.basename(unique_output_path))[0]
+            for i, spacing in enumerate(self.spacing):
 
-            options = QgsVectorFileWriter.SaveVectorOptions()
-            options.driverName = "ESRI Shapefile"
-            options.fileEncoding = "UTF-8"
+                spacing_info = round (spacing/math.sqrt(3))
+                self.signals.set_message.emit(f'Constructing hexagons {spacing_info}m ...')
+                spacing_current_x = spacing
+                spacing_current_y = spacing
+                
+                if crs_grad:
+                    spacing_current_x = convert_meters_to_degrees(
+                    spacing_current_x, first_point.x())
 
-            QgsVectorFileWriter.writeAsVectorFormatV3(
-                dissolved_layer, 
-                unique_output_path, 
-                QgsProject.instance().transformContext(), 
-                options)
-                        
-            self.list_layer.append((unique_output_path, self.layer_name))
+                    spacing_current_y = convert_meters_to_degrees(
+                    spacing_current_y, first_point.y())
+
+                buffer_x = spacing_current_x / 2
+                buffer_y = spacing_current_y / 2
+                
+                extent = input_layer.extent()
+                extent = QgsRectangle(extent.xMinimum() - buffer_x,
+                        extent.yMinimum() - buffer_y,
+                        extent.xMaximum() + buffer_x,
+                        extent.yMaximum() + buffer_y)
+                width = extent.width()
+                height = extent.height()
+                if width < spacing_current_x or height < spacing_current_y:
+                    continue
+                
+                hexagones_result = processing.run("native:creategrid", 
+                        {'TYPE':4,
+                            'EXTENT':extent,
+                            'HSPACING':spacing_current_x,
+                            'VSPACING':spacing_current_y,
+                            'HOVERLAY':0,
+                            'VOVERLAY':0,
+                            'CRS':input_layer.crs(),
+                            'OUTPUT':'TEMPORARY_OUTPUT'}
+                            )
+                hexagones_layer = hexagones_result['OUTPUT']
+                                    
+                if self.break_on:
+                    return 0
+                self.signals.progress.emit(6 + i*4)
+                #############################################
+                self.signals.set_message.emit(f'Filtering hexagons {spacing_info}m...')
+                self.filter_hexagons_by_intersection(hexagones_layer, self.layer)
             
-            if self.break_on:
-                return 0
+                if self.break_on:
+                    return 0
+                self.signals.progress.emit(7 + i*4)
+                
+                #############################################
+                self.signals.set_message.emit(f'Matching between buildings and hexagons {spacing_info}m...')
+                self.add_nearest_osm_id(hexagones_layer, centroids_layer)
             
-            self.signals.progress.emit(10 + i*4)
-            ###################################
-        
-        self.signals.progress.emit(25)
 
-        self.write_finish_info()
-        self.signals.change_button_status.emit(True)
+                if self.break_on:
+                    return 0
+                self.signals.progress.emit(8 + i*4)
+                
+                #############################################
+                self.signals.set_message.emit(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on osm_id...')
+                dissolve_result = processing.run("native:dissolve", 
+                            {
+                            'INPUT': hexagones_layer,
+                            'FIELD': [self.layer_field],
+                            'OUTPUT': 'memory:'
+                            })
+                dissolved_layer = dissolve_result['OUTPUT']
+                if self.break_on:
+                    return 0
+                self.signals.progress.emit(9 + i*4)
+                            
+                #########################
+                # Saving result
+                #########################
+            
+                self.signals.set_message.emit('Saving ...')
+                file_dir = self.folder_name
+                self.ext = ".shp"
+                self.output_file_name = f"{self.name}_hex_{spacing_info}m{self.ext}"
+                output_path = os.path.join(file_dir, self.output_file_name)
+                unique_output_path = get_unique_path(output_path)
+            
+                self.layer_name = os.path.splitext(os.path.basename(unique_output_path))[0]
 
-       except Exception as e:
+                options = QgsVectorFileWriter.SaveVectorOptions()
+                options.driverName = "ESRI Shapefile"
+                options.fileEncoding = "UTF-8"
+
+                QgsVectorFileWriter.writeAsVectorFormatV3(
+                    dissolved_layer, 
+                    unique_output_path, 
+                    QgsProject.instance().transformContext(), 
+                    options)
+                            
+                self.list_layer.append((unique_output_path, self.layer_name))
+                
+                if self.break_on:
+                    return 0
+                
+                self.signals.progress.emit(10 + i*4)
+                ###################################
+            
+            self.signals.progress.emit(25)
+
+            self.write_finish_info()
+            self.signals.change_button_status.emit(True)
+
+        except Exception as e:
             print(f"Error h: {e}") 
         
-       return True
+        return True
     
     def write_finish_info(self):
         after_computation_time = datetime.now()

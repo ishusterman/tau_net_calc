@@ -1,2 +1,2 @@
-Origin_ID,3m,sum(building_id[3m]),6m,sum(building_id[6m]),9m,sum(building_id[9m]),12m,sum(building_id[12m]),15m,sum(building_id[15m]),18m,sum(building_id[18m]),21m,sum(building_id[21m]),24m,sum(building_id[24m]),27m,sum(building_id[27m]),30m,sum(building_id[30m]),building_id_total
-1010,2,2019,3,3020,5,5034,5,5034,5,5034,5,5034,5,5034,5,5034,5,5034,5,5034,5034
+Origin_ID,2.0m,sum(building_id[2.0m]),4.0m,sum(building_id[4.0m]),6.0m,sum(building_id[6.0m]),8.0m,sum(building_id[8.0m]),10.0m,sum(building_id[10.0m]),building_id_total
+10000010,2,20000019,2,20000019,3,30000020,5,50000034,5,50000034,50000034

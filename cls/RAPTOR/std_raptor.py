@@ -1,10 +1,7 @@
-"""
-Module contains RAPTOR implementation.
-"""
-
 from RAPTOR.raptor_functions import *
 from PyQt5.QtWidgets import QApplication
 import numpy as np
+from common import seconds_to_time
 
 
 def raptor(SOURCE,
@@ -29,6 +26,8 @@ def raptor(SOURCE,
            first_step = None
            ) -> list:
     
+    
+
     list_stops = set()
 
     (marked_stop,
@@ -58,19 +57,17 @@ def raptor(SOURCE,
         pass
         #MaxWaitTime = MaxExtraTime
         #max_time = np.int64(D_TIME + Maximal_travel_time + MaxExtraTime)
+
+    
             
     if first_step is None:
                 if trans_info == -1:
-
                     trans_info = footpath_dict.get(SOURCE, [])
 
                 for i in trans_info:
-
                     (p_dash, to_pdash_time) = i
-
                     if not (label[0].get(p_dash)):
                         continue
-
                     if to_pdash_time > MaxWalkDist1_time:
                         continue
 
@@ -82,8 +79,6 @@ def raptor(SOURCE,
                                        to_pdash_time,
                                        new_p_dash_time 
                                        )
-                    
-                    
                     
                     list_stops.add(p_dash)
                     if marked_stop_dict[p_dash] == 0:
@@ -121,8 +116,11 @@ def raptor(SOURCE,
     
         Q.clear()
 
+
         while marked_stop:
             p = marked_stop.pop()
+
+        
             marked_stop_dict[p] = 0
 
             # may by stop exist in layer but not exist in PKL
@@ -130,19 +128,20 @@ def raptor(SOURCE,
                 routes_serving_p = routes_by_stop_dict[p]
             except:
                 continue
-
+            
             for route in routes_serving_p:
                 stp_idx = idx_by_route_stop_dict[(route, p)]
                 try:
                     Q[route] = min(stp_idx, Q[route])
                 except KeyError as e:
                     Q[route] = stp_idx
-
+        
         # Main code part 2
 
         boarding_time, boarding_point = -1, -1
 
         for route, current_stopindex_by_route in Q.items():
+            
             QApplication.processEvents()
             boarding_time, boarding_point = -1, -1
             current_trip_t = -1
@@ -151,28 +150,29 @@ def raptor(SOURCE,
                 continue
 
             for p_i in stops_dict[route][current_stopindex_by_route-1:]:
+
+                
            
                 to_process = True
 
                 if current_trip_t != -1:
-
+                 
                     try:
                         arr_by_t_at_pi = current_trip_t[current_stopindex_by_route - 1][1]
                     except:
 
                         continue
-                                       
-
+                    
                     if max_time < arr_by_t_at_pi:
-
                         to_process = False
-
+                                        
                     # no rewrite if exist best solve!!!
                     if not isinstance(pi_label[k][p_i], int):
                         if pi_label[k][p_i][3] < arr_by_t_at_pi:
+
+                            
                             to_process = False
 
-                    # and boarding_time <= arr_by_t_at_pi:
                     if to_process and boarding_point != p_i:
 
                         label[k][p_i] = arr_by_t_at_pi
@@ -182,11 +182,11 @@ def raptor(SOURCE,
                                             arr_by_t_at_pi,
                                             tid)
                         
-                        
-                        
+                                                                    
                         if marked_stop_dict[p_i] == 0:
                             marked_stop.append(p_i)
                             marked_stop_dict[p_i] = 1
+                                                
                         list_stops.add(p_i)
 
                 if (current_trip_t == -1 or (label[k - 1][p_i] + change_time < current_trip_t[current_stopindex_by_route-1][1])):
@@ -223,7 +223,7 @@ def raptor(SOURCE,
                               list_stops
                               )
         """
-        MaxWalkTransfer = MaxWalkDist2_time
+        
         if k < roundsCount and MaxWalkDist2_time != MaxWalkDist3_time:
 
             save_marked_stop = True
@@ -238,7 +238,7 @@ def raptor(SOURCE,
                                   pi_label,
                                   save_marked_stop,
                                   list_stops,
-                                  MaxWalkTransfer
+                                  check_only_buildings = False
                                   )
 
         save_marked_stop = False
@@ -253,7 +253,7 @@ def raptor(SOURCE,
                               pi_label,
                               save_marked_stop,
                               list_stops,
-                              MaxWalkTransfer
+                              check_only_buildings = True
                               )
 
         # Main code End
@@ -263,7 +263,6 @@ def raptor(SOURCE,
     journeys_endtime, journeys_duration = post_processingAll(
         SOURCE,
         D_TIME,
-        label,
         list_stops,
         pi_label,
         MIN_TRANSFER,
@@ -274,6 +273,8 @@ def raptor(SOURCE,
         MaxExtraTime,
         mode = 1       
     )
+
+    
 
     return journeys_endtime, journeys_duration
 
@@ -287,7 +288,8 @@ def process_walking_stage(max_time,
                           pi_label,
                           save_marked_stop,
                           list_stops,
-                          MaxWalkTransfer
+                          check_only_buildings
+
                           ):
 
     marked_stop_copy = marked_stop.copy()
@@ -299,6 +301,7 @@ def process_walking_stage(max_time,
 
         trans_info = footpath_dict.get(p, 0)
 
+
         if not trans_info:
             continue
 
@@ -306,8 +309,11 @@ def process_walking_stage(max_time,
 
         for p_dash, to_pdash_time in trans_info:
 
+            
             if to_pdash_time > WALKING_LIMIT:
                 continue
+
+           
 
             try:
                 pi_label_k_p_dash = pi_label[k][p_dash]
@@ -316,34 +322,33 @@ def process_walking_stage(max_time,
 
             # this line is "don't rewrite founded bus trip to footleg"
 
-            #experiment
-            #if pi_label_k_p_dash != - 1 and pi_label_k_p_dash[0] != 'walking':
-            #    new_p_dash_time = label_k_p + to_pdash_time
-            #    if max_time > new_p_dash_time:
-            #        count_rewrite += 1
-
-            #!!!!!!!!!!!!!!!!!!experiment!!!!!!!!!!!!!!
+           
+                        
             if pi_label_k_p_dash != - 1 and pi_label_k_p_dash[0] != 'walking':
                 continue
 
+                            
             new_p_dash_time = label_k_p + to_pdash_time
 
             if max_time < new_p_dash_time:
                 continue
-                 
 
+            
             # veryfy cause if exist solve for this p_dash (not was better?)
             if pi_label_k_p_dash != -1 and pi_label_k_p_dash[0] == "walking" and new_p_dash_time > pi_label_k_p_dash[4]:
                 continue
+
             
-            # если это остановка, но идти до нее дольше чем MaxWalkTransfer, то пропускаем
-            if (not(p_dash.isdigit()) or int(p_dash) < 100000) and to_pdash_time > MaxWalkTransfer:
-                continue
+            # если это остановка
+            if check_only_buildings:
+                if (not(p_dash.isdigit()) or int(p_dash) < 110000):
+                    continue
 
             label[k][p_dash] = new_p_dash_time
             
             pi_label[k][p_dash] = ('walking', p, p_dash,
                                    to_pdash_time, new_p_dash_time)
+
             list_stops.add(p_dash)
 
             if save_marked_stop:
