@@ -413,7 +413,7 @@ class form_relative(QDialog, FORM_CLASS):
         columns_to_keep.append(last_column)
         df1 = df1[[col for col in columns_to_keep if col in df1.columns]]
 
-        self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name1}_only'
+        self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name1}_only.csv'
         df1.to_csv(self.path_output, index=False, na_rep='NaN')
         aliase_res = f'{self.alias}_{self.file_name1}_only'
         vis2.add_thematic_map(self.path_output,
@@ -432,7 +432,7 @@ class form_relative(QDialog, FORM_CLASS):
 
         df2 = df2[~df2[field_name].isin(self.result_merge[field_name])]
         df2[field_name] = df2[field_name].astype(str)
-        self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name2}_only'
+        self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name2}_only.csv'
 
         columns_to_keep = ['Origin_ID', 'Destination_ID']
         last_column = df2.columns[-1]

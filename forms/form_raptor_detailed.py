@@ -1167,7 +1167,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 START_TIME = to_time_start
                 Tf = to_time_end
                 
-                self.textLog.append(f"<a style='font-weight:bold;'> Calculating to accessibility</a>")
+                self.textLog.append(f"<a style='font-weight:bold;'> Calculating remained to accessibility</a>")
                 
                 self.mode = 2
                 raptor_mode = 2    
