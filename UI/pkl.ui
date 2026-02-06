@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>737</width>
-    <height>429</height>
+    <height>710</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -82,9 +82,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-166</y>
              <width>404</width>
-             <height>427</height>
+             <height>569</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -235,7 +235,7 @@
               <item row="14" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
-                 <string>GTFS folder</string>
+                 <string>The folder of the initial GTFS dataset</string>
                 </property>
                </widget>
               </item>
@@ -269,14 +269,56 @@
                 </item>
                </layout>
               </item>
-              <item row="20" column="0">
+              <item row="21" column="0" colspan="2">
+               <widget class="QLabel" name="label_10">
+                <property name="text">
+                 <string>Select lines to delete from the GTFS dataset</string>
+                </property>
+               </widget>
+              </item>
+              <item row="22" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_10">
+                <item>
+                 <widget class="QLineEdit" name="txtExcludeRoutes"/>
+                </item>
+                <item>
+                 <widget class="QToolButton" name="toolButtonExcludeRoutes">
+                  <property name="text">
+                   <string>...</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="23" column="0">
+               <widget class="QLabel" name="label_11">
+                <property name="text">
+                 <string>The folder of the GTFS dataset of the additional lines</string>
+                </property>
+               </widget>
+              </item>
+              <item row="25" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_11">
+                <item>
+                 <widget class="QLineEdit" name="txtAddRoutes"/>
+                </item>
+                <item>
+                 <widget class="QToolButton" name="toolButtonAddRoutes">
+                  <property name="text">
+                   <string>...</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="26" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Folder to store transit database</string>
                 </property>
                </widget>
               </item>
-              <item row="21" column="0" colspan="2">
+              <item row="27" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols">
@@ -307,14 +349,32 @@
                </layout>
               </item>
               <item row="18" column="0" colspan="2">
+               <widget class="QLabel" name="label_9">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>TextLabel</string>
+                </property>
+                <property name="textFormat">
+                 <enum>Qt::PlainText</enum>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+                </property>
+               </widget>
+              </item>
+              <item row="20" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_9">
-                <item>
-                 <widget class="QLabel" name="label_9">
-                  <property name="text">
-                   <string>Date</string>
-                  </property>
-                 </widget>
-                </item>
                 <item>
                  <widget class="QDateEdit" name="calendar">
                   <property name="minimumSize">

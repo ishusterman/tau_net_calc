@@ -417,7 +417,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.file_path_factor_speed_by_hour = os.path.join(
             config_path, "cdi_index.csv")
-
+        
         self.factor_speed_by_hour = {}
 
         with open(self.file_path_factor_speed_by_hour, mode='r', newline='', encoding='utf-8') as file:
@@ -542,15 +542,19 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
     def check_folder_and_file(self):
 
-        os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
+        path = self.txtPathToProtocols.text()
+
+        os.makedirs(path, exist_ok=True)
         
-        file_path = os.path.join(self.txtPathToProtocols.text(), "graph.pkl")
-        if  os.path.isfile(file_path):
+        file_path = os.path.join(path, "graph.pkl")
+        prefix = os.path.basename(path)
+        file_path_prefix = os.path.join(path, f"{prefix}_graph.pkl")
+        if  os.path.isfile(file_path) or os.path.isfile(file_path_prefix):
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
             msgBox.setWindowTitle("Confirm")
             msgBox.setText(
-                f"The folder '{self.txtPathToProtocols.text()}' already contains a database. Overwrite?")
+                f"The folder '{path}' already contains a database. Overwrite?")
             msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
 
             result = msgBox.exec_()
@@ -559,12 +563,12 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         try:
             tmp_prefix = "write_tester"
-            filename = f'{self.txtPathToProtocols.text()}//{tmp_prefix}'
+            filename = f'{path}//{tmp_prefix}'
             with open(filename, 'w') as f:
                 f.write("test")
             os.remove(filename)
         except Exception as e:
-            self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
+            self.setMessage(f"Access to the folder '{path}' is denied")
             return False
 
         return True

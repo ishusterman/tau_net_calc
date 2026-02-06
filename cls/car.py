@@ -19,7 +19,7 @@ from qgis.core import (QgsProject,
 
 from pkl_car import pkl_car
 from visualization import visualization
-from common import get_prefix_alias
+from common import get_prefix_alias, get_existing_path
 
 
 class car_accessibility:
@@ -68,9 +68,8 @@ class car_accessibility:
         self.factor_speed = self.factor_speed_by_hour[self.parent.hour]
 
     def read_factor_speed_by_hour(self):
-
-        self.file_path_factor_speed_by_hour = os.path.join(
-            self.parent.path_to_pkl, "cdi_index.csv")
+             
+        self.file_path_factor_speed_by_hour = get_existing_path (self.parent.path_to_pkl, "cdi_index.csv")
         self.factor_speed_by_hour = {}
 
         with open(self.file_path_factor_speed_by_hour, mode='r', newline='', encoding='utf-8') as file:

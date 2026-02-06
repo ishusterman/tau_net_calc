@@ -72,7 +72,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.InitialNameWalk1 = "Maximum walk distance to the initial PT stop, m"
         self.InitialNameWalk2 = "Maximum walk distance at the transfer, m"
-        self.InitialNameWalk3 = "Maximum walk distance from the  last PT stop, m"
+        self.InitialNameWalk3 = "Maximum walk distance from the last PT stop, m"
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
@@ -340,7 +340,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if (modifiers & Qt.ShiftModifier) and not (modifiers & Qt.ControlModifier) and self.protocol_type == 2:
             self.shift_mode = True
 
-        if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.protocol_type == 2 and self.mode == 1 :
+        #if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.protocol_type == 2 and self.mode == 1 :
+        #    self.shift_ctrl_mode = True    
+
+        if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.mode == 1 :
             self.shift_ctrl_mode = True    
 
         self.run_button.setEnabled(False)
@@ -731,6 +734,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
 
+        path_to_pkl = self.txtPathToPKL.text().rstrip('\\/') # Убираем слеши в конце, если они есть
+        prefix = os.path.basename(path_to_pkl)
+
         required_files = [  # 'dict_building_vertex.pkl',
             # 'dict_vertex_buildings.pkl',
             # 'graph_footpath.pkl',
@@ -753,13 +759,19 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             'dict_vertex_osm.pkl',
             'stop_ids.pkl'
         ]
-        missing_files = [file for file in required_files if not os.path.isfile(
-            os.path.join(self.txtPathToPKL.text(), file))]
+        
+        missing_files = []
+        for file in required_files:
+            
+            file_with_prefix = os.path.join(path_to_pkl, f"{prefix}_{file}")
+            file_without_prefix = os.path.join(path_to_pkl, file)
+            if not (os.path.isfile(file_with_prefix) or os.path.isfile(file_without_prefix)):
+                missing_files.append(file)
 
         if missing_files:
             limited_files = missing_files[:2]
             missing_files_message = ", ".join(limited_files)
-            self.setMessage(f"Files are missing in the '{self.txtPathToPKL.text()}' forlder: {missing_files_message}")
+            self.setMessage(f"Files are missing in the '{self.txtPathToPKL.text()}' folder: {missing_files_message}")
             return False
         
         if not os.path.exists(self.txtPathToProtocols.text()):
@@ -1088,7 +1100,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   layer_origin,
                                   PathToNetwork                                  
                                   )
-
+                
                 if not(self.break_on):
                     #begin_analyzer_time = time.perf_counter()
 
@@ -1209,6 +1221,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   layer_origin,
                                   PathToNetwork
                                   )
+                    
                     if not(self.break_on):
                         #begin_analyzer_time = time.perf_counter()
 

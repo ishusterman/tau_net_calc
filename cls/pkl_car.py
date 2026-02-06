@@ -25,13 +25,14 @@ from qgis.analysis import (
 
 
 from converter_layer import MultiLineStringToLineStringConverter
-from common import getDateTime, convert_distance_to_meters
+from common import getDateTime, convert_distance_to_meters, get_existing_path
 
 class pkl_car ():
 
     def __init__(self, parent=""):
         self.parent = parent
         self.already_display_break = False
+        
 
     def create_files(self):
 
@@ -67,19 +68,21 @@ class pkl_car ():
         self.parent.progressBar.setValue(1)
         QApplication.processEvents()
 
+        prefix = os.path.basename(self.parent.path_to_protocol)
+
         current_dir = os.path.dirname(
             os.path.dirname(os.path.abspath(__file__)))
         config_path = os.path.join(current_dir, 'config')
         source_path_road = os.path.join(
             config_path, "car_speed_by_link_type.csv")
         dest_path_road = os.path.join(
-            self.parent.path_to_protocol, "car_speed_by_link_type.csv")
+            self.parent.path_to_protocol, f"{prefix}_car_speed_by_link_type.csv")
 
         shutil.copy(source_path_road, dest_path_road)
 
         source_path_factor_speed = os.path.join(config_path, "cdi_index.csv")
         dest_path_factor_speed = os.path.join(
-            self.parent.path_to_protocol, "cdi_index.csv")
+            self.parent.path_to_protocol, f"{prefix}_cdi_index.csv")
         shutil.copy(source_path_factor_speed, dest_path_factor_speed)
 
         if self.verify_break():
@@ -258,10 +261,12 @@ class pkl_car ():
 
         self.parent.setMessage(f'Saving {comment}network graph...')
         QApplication.processEvents()
-        file_path = os.path.join(self.parent.path_to_protocol, 'graph.pkl')
+        self.prefix = os.path.basename(self.parent.path_to_protocol)
+        file_path = os.path.join(self.parent.path_to_protocol, f'{self.prefix}_graph.pkl')
+        
         if self.mode == 2:
             file_path = os.path.join(
-                self.parent.path_to_protocol, 'graph_rev.pkl')
+                self.parent.path_to_protocol, f'{self.prefix}_graph_rev.pkl')
         self.save_graph(self.graph, file_path)
 
         return self.graph
@@ -296,10 +301,10 @@ class pkl_car ():
         QApplication.processEvents()
 
         if mode == 1:
-            graph_path = os.path.join(pathtopkl, 'graph.pkl')
+            graph_path = get_existing_path(pathtopkl, 'graph.pkl')
         else:
-            graph_path = os.path.join(pathtopkl, 'graph_rev.pkl')
-
+            graph_path = get_existing_path(pathtopkl, 'graph_rev.pkl')
+            
         with open(graph_path, 'rb') as f:
             graph_data = pickle.load(f)
 
@@ -410,15 +415,17 @@ class pkl_car ():
 
         QApplication.processEvents()
         # load dict_building_vertex
-        dict_building_vertex_path = os.path.join(
-            pathtopkl, 'dict_building_vertex.pkl')
+                
+        dict_building_vertex_path = get_existing_path(pathtopkl, 'dict_building_vertex.pkl')
+
         with open(dict_building_vertex_path, 'rb') as f:
             dict_building_vertex = pickle.load(f)
 
         QApplication.processEvents()
         # load dict_vertex_buildings
-        dict_vertex_buildings_path = os.path.join(
-            pathtopkl, 'dict_vertex_buildings.pkl')
+
+        dict_vertex_buildings_path = get_existing_path(pathtopkl, 'dict_vertex_buildings.pkl')
+        
         with open(dict_vertex_buildings_path, 'rb') as f:
             dict_vertex_buildings = pickle.load(f)
         QApplication.processEvents()
@@ -475,9 +482,9 @@ class pkl_car ():
                         # initialize the element as a list
                         dict_vertex_nearest_buildings[nearest_vertex_id] = [
                             (building_id, round(distance))]
-
+        self.prefix = os.path.basename(self.parent.path_to_protocol)
         file_path = os.path.join(
-            self.parent.path_to_protocol, 'dict_vertex_buildings.pkl')
+            self.parent.path_to_protocol, f'{self.prefix}_dict_vertex_buildings.pkl')
         with open(file_path, 'wb') as f:
             pickle.dump(dict_vertex_nearest_buildings, f)
 
@@ -525,9 +532,10 @@ class pkl_car ():
                 distance = convert_distance_to_meters(distance, latitude)
             point_to_vertex_dict[int(id)] = (
                 (nearest_vertex_index, round(distance)))
-
+        
+        self.prefix = os.path.basename(self.parent.path_to_protocol)
         file_path = os.path.join(
-            self.parent.path_to_protocol, 'dict_building_vertex.pkl')
+            self.parent.path_to_protocol, f'{self.prefix}_dict_building_vertex.pkl')
         with open(file_path, 'wb') as f:
             pickle.dump(point_to_vertex_dict, f)
 

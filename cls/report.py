@@ -11,17 +11,21 @@ def make_protocol_summary(SOURCE,
                           nearby_buildings_from_start,
                           list_buildings_from_start,
                           set_stops,
-                          field
+                          field,
+                          short_result = None
                           ):
 
     
     time_grad = grades
     # [[-1,0], [0,10],[10,20],[20,30],[30,40],[40,50],[50,61] ]
-    counts = {x: 0 for x in range(0, len(time_grad))}  # counters for grades
-    # counters for agrregates
-    agrregates = {x: 0 for x in range(0, len(time_grad))}
 
-    
+    counts = {x: 1 for x in range(0, len(time_grad))}  # counters for grades
+    agrregates = {x: attribute_dict.get(int(SOURCE), 0) for x in range(0, len(time_grad))}
+
+    if short_result is not None: 
+        if field == "bldg":
+            short_result[(SOURCE, SOURCE)] = 0
+
     with open(f, 'a') as filetowrite:
         for dest, info in dictInput.items():
 
@@ -43,22 +47,32 @@ def make_protocol_summary(SOURCE,
                     if field != "bldg":
                         agrregates[i] = agrregates[i] + \
                             attribute_dict.get(int(dest), 0)
+            
+            if short_result is not None: 
+                if field == "bldg":
+                    short_result[(SOURCE, dest)] = time_to_dest
 
                         
 
-        # counts[0] = counts[0] + 1 # for case time_item = 0 (from source to source)
+        #counts[0] = counts[0] + 1 # for case time_item = 0 (from source to source)
 
         # add build to build to var counts
         for build_item, time_item in nearby_buildings_from_start:
             for i in range(0, len(time_grad)):
                 grad = time_grad[i]
-
+                
                 if time_item <= grad[1]*60:
-                    counts[i] = counts[i] + 1
+                    if SOURCE != build_item:
+                        counts[i] = counts[i] + 1
                     
-                    if field != "bldg":
-                        agrregates[i] = agrregates[i] + \
-                            attribute_dict.get(int(build_item), 0)
+                        if field != "bldg":
+                            agrregates[i] = agrregates[i] + \
+                                attribute_dict.get(int(build_item), 0)
+                    
+            if short_result is not None: 
+                if SOURCE != build_item:
+                    if field == "bldg":
+                        short_result[(SOURCE, build_item)] = time_item
 
         row = str(SOURCE)
         if field == "bldg":
@@ -96,6 +110,7 @@ def make_protocol_detailed(raptor_mode,
 
         start_time = seconds_to_time(D_TIME)
 
+        
         if raptor_mode == 1:
                     row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}0{sep}0'
@@ -108,7 +123,7 @@ def make_protocol_detailed(raptor_mode,
         rows_to_write.append(row)
         if short_result is not None:
             short_result[(SOURCE, SOURCE)] = 0
-
+        
         for build, dist in nearby_buildings_from_start:
 
             if raptor_mode == 1:
@@ -524,6 +539,11 @@ def make_service_area_report(file_path, alias):
     folder_name = os.path.dirname(file_path)
     filename = os.path.join(folder_name, f"{alias}_service_area.csv")
 
+    short_result = {
+        (int(row['Origin_ID']), int(row['Destination_ID'])): int(row['Duration']) 
+        for _, row in result.iterrows()
+    }
+
     result.to_csv(filename, index=False)
-    return filename
+    return filename, short_result
 

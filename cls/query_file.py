@@ -1,5 +1,6 @@
 import os
 import zipfile
+from pathlib import Path
 
 import pickle
 from datetime import datetime
@@ -23,51 +24,58 @@ from RAPTOR.rev_std_raptor import rev_raptor
 
 from footpath_on_air_b_to_b import cls_footpath_on_air_b_b
 from visualization import visualization
-from common import seconds_to_time
+from common import seconds_to_time, get_existing_path
 
 # # Get the current directory
 #current_dir = os.path.dirname(os.path.abspath(__file__))
 
-def myload_all_dict(self,
-                    PathToNetwork,
-                    mode,
-                    RunOnAir,
-                    ):
+def myload_all_dict(self, PathToNetwork, mode, RunOnAir):
+        path = PathToNetwork
+        
+        if self is not None:
+            self.setMessage("Loading walking paths ...")
+            QApplication.processEvents()
 
-    path = PathToNetwork
-    
-    if self is not None:
-        self.setMessage("Loading walking paths ...")
-        QApplication.processEvents()
-
-    if RunOnAir:
-        filename_transfer = 'transfers_dict_air.pkl'
-    else:
-        filename_transfer = 'transfers_dict_projection.pkl'
-    filename_transfer = os.path.join(path, filename_transfer)
-   
-    with open(filename_transfer, 'rb') as file:
+        
+        base_transfer = 'transfers_dict_air.pkl' if RunOnAir else 'transfers_dict_projection.pkl'
+        filename_transfer = get_existing_path(path, base_transfer)
+       
+        with open(filename_transfer, 'rb') as file:
             footpath_dict = pickle.load(file)
-    
-    stop_ids = pd.read_pickle(path + '/stop_ids.pkl')
-    stop_ids_set = set(stop_ids)
+                
+        stop_ids_path = get_existing_path(path, 'stop_ids.pkl')
+        stop_ids = pd.read_pickle(stop_ids_path)
+        stop_ids_set = set(stop_ids)
 
-    if self is not None:
-        self.progressBar.setValue(2)
-        self.setMessage("Loading transit routes ...")
-        QApplication.processEvents()
+        if self is not None:
+            self.progressBar.setValue(2)
+            self.setMessage("Loading transit routes ...")
+            QApplication.processEvents()
 
-    with open(path + '/routes_by_stop.pkl', 'rb') as file:
-        routes_by_stop_dict = pickle.load(file)
+        # 3. Загрузка routes_by_stop_dict
+        routes_path = get_existing_path(path, 'routes_by_stop.pkl')
+        with open(routes_path, 'rb') as file:
+            routes_by_stop_dict = pickle.load(file)
 
-    if self is not None:
-        self.progressBar.setValue(3)
+        if self is not None:
+            self.progressBar.setValue(3)
 
-    if mode == 1:
+        # Выбор имен файлов в зависимости от режима (прямой или обратный)
+        if mode == 1:
+            stops_file = 'stops_dict_pkl.pkl'
+            stoptimes_file = 'stoptimes_dict_pkl.pkl'
+            idx_file = 'idx_by_route_stop.pkl'
+        else:
+            stops_file = 'stops_dict_reversed_pkl.pkl'
+            stoptimes_file = 'stoptimes_dict_reversed_pkl.pkl'
+            idx_file = 'rev_idx_by_route_stop.pkl'
+
+
         if self is not None:
             self.setMessage("Loading transit stops ...")
             QApplication.processEvents()
-        with open(path + '/stops_dict_pkl.pkl', 'rb') as file:
+        
+        with open(get_existing_path(path, stops_file), 'rb') as file:
             stops_dict = pickle.load(file)
 
         if self is not None:
@@ -75,7 +83,8 @@ def myload_all_dict(self,
             self.setMessage("Loading transit time schedule ...")
             QApplication.processEvents()
 
-        with open(path + '/stoptimes_dict_pkl.pkl', 'rb') as file:
+
+        with open(get_existing_path(path, stoptimes_file), 'rb') as file:
             stoptimes_dict = pickle.load(file)
 
         if self is not None:
@@ -83,47 +92,21 @@ def myload_all_dict(self,
             self.setMessage("Loading index ...")
             QApplication.processEvents()
 
-        with open(path + '/idx_by_route_stop.pkl', 'rb') as file:
+        
+        with open(get_existing_path(path, idx_file), 'rb') as file:
             idx_by_route_stop_dict = pickle.load(file)
 
         if self is not None:
             self.progressBar.setValue(6)
 
-    else:
-        if self is not None:
-            self.setMessage("Loading transit stops ...")
-            QApplication.processEvents()
-        with open(path + '/stops_dict_reversed_pkl.pkl', 'rb') as file:  # reversed
-            stops_dict = pickle.load(file)
-
-        if self is not None:
-            self.progressBar.setValue(4)
-            self.setMessage("Loading transit time schedule ...")
-            QApplication.processEvents()
-        with open(path + '/stoptimes_dict_reversed_pkl.pkl', 'rb') as file:  # reversed
-            stoptimes_dict = pickle.load(file)
-
-        if self is not None:
-            self.progressBar.setValue(5)
-            self.setMessage("Loading index ...")
-            QApplication.processEvents()
-
-        with open(path + '/rev_idx_by_route_stop.pkl', 'rb') as file:
-            idx_by_route_stop_dict = pickle.load(file)
-
-        if self is not None:
-            self.progressBar.setValue(6)
-
-    
-            
-    return (
+        return (
             stops_dict,
             stoptimes_dict,
             footpath_dict,
             routes_by_stop_dict,
             idx_by_route_stop_dict,
             stop_ids_set
-            )
+        )
 
 def verify_break(self,
                  Layer="",
@@ -159,6 +142,32 @@ def verify_break(self,
             self.setMessage("Raptor Algorithm is interrupted by user")
             return True
     return False
+
+def prepare_protocol_region(field, number_bins, time_step, time_step_last, is_aggregate=False):
+        
+        header_parts = ["Origin_ID"]
+        grades = []
+        
+        curr_low = 0
+        
+        for _ in range(number_bins):
+            curr_top = curr_low + time_step
+            header_parts.append(f"{curr_top}m")
+            if is_aggregate:
+                header_parts.append(f"sum({field}[{curr_top}m])")
+            grades.append([curr_low, curr_top])
+            curr_low = curr_top
+
+        
+        if time_step_last != 0:
+            curr_top = curr_low + time_step_last
+            header_parts.append(f"{curr_top}m")
+            if is_aggregate:
+                header_parts.append(f"sum({field}[{curr_top}m])")
+            grades.append([curr_low, curr_top])
+
+        header_parts.append(f"{field}_total\n")
+        return ",".join(header_parts), grades
 
 def runRaptorWithProtocol(self,
                           sources,
@@ -275,11 +284,6 @@ def runRaptorWithProtocol(self,
     if verify_break(self):
         return 0, 0
    
-    features_dest = layer_dest.getFeatures()
-
-    if selected_only2:
-        features_dest = layer_dest.selectedFeatures()
-
     fields_ok = []
     
     f = ""
@@ -300,122 +304,68 @@ def runRaptorWithProtocol(self,
                 ss += ",Arrive_before"
         ss += ",Legs,Duration"
         protocol_header = ss + "\n"
-
+    
+    files_path = {}
+    suffixes = ["_min_duration.csv", "_min_endtime.csv"]
     if protocol_type == 1:
-        
         aggregate_dict_all = {}
         
-        f = {}
+        base_path = Path(self.folder_name)
 
-        intervals_number = number_bins
+        # 1. Обработка базового поля "bldg"
+        field_bldg = "bldg"
+        header, grades = prepare_protocol_region(field_bldg, number_bins, time_step, time_step_last)
+        
+        fields_ok.append(field_bldg)
+        aggregate_dict_all[field_bldg] = {}
+        
+        # Записываем файлы для bldg
+        for suffix in suffixes:
+            file_path = str(base_path / f"{self.alias}_{field_bldg}{suffix}")
+            files_path[field_bldg, suffix] = file_path
+            with open(file_path, 'w') as f_out:
+                f_out.write(header)
 
-        if True:  # list_fields_aggregate == "":
-
-            protocol_header = "Origin_ID"
-            time_step_min = time_step
-            low_bound_min = 0
-            top_bound_min = time_step_min
-            grades = []
-
-            for i in range(0, intervals_number):
-                protocol_header += f',{top_bound_min}m'
-                grades.append([low_bound_min, top_bound_min])
-                low_bound_min = low_bound_min + time_step_min
-                top_bound_min = top_bound_min + time_step_min
+        # 2. Обработка агрегируемых полей
+        if list_fields_aggregate:
+            fields_to_process = [v.strip() for v in list_fields_aggregate.split(',')]
             
-            if time_step_last != 0:
-                intervals_number += 1
-                top_bound_add = low_bound_min + time_step_last
-                grades.append([low_bound_min, top_bound_add])
-                protocol_header += f',{top_bound_add}m'
-
-            protocol_header += ',bldg_total\n'
-            field = "bldg"
-            
-            f[field] = f'{self.folder_name}//{self.alias}_bldg.csv'
-            fields_ok.extend([field])
-            # aggregate_this_fields[field] = False
-            aggregate_dict_all[field] = {}
-
-            f_curr = f["bldg"].replace(".csv", "_min_duration.csv")
-            with open(f_curr, 'w') as filetowrite:
-                filetowrite.write(protocol_header)
-            f_curr = f["bldg"].replace(".csv", "_min_endtime.csv")
-            with open(f_curr, 'w') as filetowrite:
-                filetowrite.write(protocol_header)
-                       
-
-        if list_fields_aggregate != "":
-
-            field_name_id = layer_dest_field
-            fields_aggregate = [value.strip()
-                                for value in list_fields_aggregate.split(',')]
-
-            for field in fields_aggregate:
-
-                attribute_dict = {}
+            for field in fields_to_process:
                 if hasattr(self, 'setMessage'):
                     self.setMessage(f"Building dictionary for '{field}' ...")
                     QApplication.processEvents()
 
-                # aggregate_this_fields[field] = True
+                # Собираем данные из слоя (только если числовые)
+                features = layer_dest.getFeatures()
+                try:
+                    # Быстрая проверка и сборка словаря
+                    attribute_dict = {
+                        int(feat[layer_dest_field]): int(feat[field]) 
+                        for feat in features 
+                        if isinstance(feat[field], (int, float)) or str(feat[field]).isdigit()
+                    }
+                except (ValueError, KeyError):
+                    self.textLog.append(f'<a><b><font color="red"> WARNING: The field "{field}" is not numeric, excluded from aggregation</font> </b></a>')
+                    continue
 
-                features_dest = layer_dest.getFeatures()
-                #if selected_only2:
-                #    features_dest = layer_dest.selectedFeatures()
+                # Если поле пустое или не числовое (проверка по первому элементу или через исключение выше)
+                if not attribute_dict:
+                    continue
 
-                for feature in features_dest:
-                    if isinstance(feature[field], Real) or str(feature[field]).isdigit():
-                        attribute_dict[int(feature[field_name_id])] = int(feature[field])
-                    else:
-                        self.textLog.append(f'<a><b><font color="red"> WARNING: The field "{field}" is not numeric, excluded from aggregation</font> </b></a>')
-                        
-                        break
-
-                
-
-                fields_ok.extend([field])
                 aggregate_dict_all[field] = attribute_dict
+                fields_ok.append(field)
 
-                """Prepare header and time grades  
-                    statistics_by_accessibility_time_header="Stop_ID,10m,20 m,30 m,40 m,50 m,60 m"+"\n"+"\n"
-                    """
+                # Генерируем заголовки с суммами
+                header, _ = prepare_protocol_region(field, number_bins, time_step, time_step_last, is_aggregate=True)
                 
-                protocol_header = "Origin_ID"
-                time_step_min = time_step
-                low_bound_min = 0
-                top_bound_min = time_step_min
-                grades = []
-                intervals_number = number_bins 
-
-                for i in range(0, intervals_number):
-                    protocol_header += f',{top_bound_min}m'
-                    protocol_header += f',sum({field}[{top_bound_min}m])'
-                    grades.append([low_bound_min, top_bound_min])
-                    low_bound_min = low_bound_min + time_step_min
-                    top_bound_min = top_bound_min + time_step_min
-
-                
-                if time_step_last != 0:
-                    intervals_number += 1
-                    top_bound_add = low_bound_min + time_step_last
-                    grades.append([low_bound_min, top_bound_add])
-                    protocol_header += f',{top_bound_add}m'
-                    protocol_header += f',sum({field}[{top_bound_add}m])'
-                
-                protocol_header += f',{field}_total\n'
-                
-                f[field] = f'{self.folder_name}//{self.alias}_{field}.csv'
-
-                f_curr = f[field].replace(".csv", "_min_duration.csv")
-                with open(f_curr, 'w') as filetowrite:
-                    filetowrite.write(protocol_header)
-
-                f_curr = f[field].replace(".csv", "_min_endtime.csv")
-                with open(f_curr, 'w') as filetowrite:
-                    filetowrite.write(protocol_header)
-
-        f_copy = f
+                # Записываем файлы
+                for suffix in suffixes:
+                    file_path = str(base_path / f"{self.alias}_{field}{suffix}") 
+                    files_path[field, suffix] = file_path
+                    with open(file_path, 'w') as f_out:
+                        f_out.write(header)
+    
+    
     
     if not (shift_mode):
         vis = visualization(self, LayerViz, mode=protocol_type,
@@ -445,7 +395,7 @@ def runRaptorWithProtocol(self,
                         LayerDest,
                         vis,
                         fields_ok,
-                        f,
+                        files_path,
                         protocol_type,
                         shift_mode                        
                         ):
@@ -769,17 +719,27 @@ def runRaptorWithProtocol(self,
             output_duration = final_output_duration
         """
         if protocol_type == 1:
-            f_new = []
+            
             if len(fields_ok) > 0:
                 for field in fields_ok:
-                    
-                    path_file = f_copy[field]
-                    f_curr = path_file.replace(".csv", "_min_duration.csv")
-                    f_new.append(f_curr) 
-                                        
-                    make_protocol_summary(SOURCE,
+                    for suffix in suffixes:
+                        path_file = files_path[field, suffix]
+                        if "_min_duration" in suffix:
+                            make_protocol_summary(SOURCE,
                                           output_duration,
-                                          f_curr,
+                                          path_file,
+                                          grades,
+                                          aggregate_dict_all[field],
+                                          nearby_buildings_from_start,
+                                          list_buildings_from_start,
+                                          set_stops,
+                                          field,
+                                          short_result
+                                          )
+                        else: 
+                            make_protocol_summary(SOURCE,
+                                          output_endtime,
+                                          path_file,
                                           grades,
                                           aggregate_dict_all[field],
                                           nearby_buildings_from_start,
@@ -787,31 +747,14 @@ def runRaptorWithProtocol(self,
                                           set_stops,
                                           field
                                           )
-                    
-                    
-                    f_curr = path_file.replace(".csv", "_min_endtime.csv")
-                    f_new.append(f_curr)
-                    QApplication.processEvents()
-                    make_protocol_summary(SOURCE,
-                                          output_endtime,
-                                          f_curr,
-                                          grades,
-                                          aggregate_dict_all[field],
-                                          nearby_buildings_from_start,
-                                          list_buildings_from_start,
-                                          set_stops,
-                                          field)
-                    
-                
-            f = f_new
-            
+                        
         if protocol_type == 2:
             
             f_curr = f'{self.folder_name}//{self.alias}.csv'
             f_min_duration = f_curr.replace(".csv", "_min_duration.csv")
             f_min_endtime = f_curr.replace(".csv", "_min_endtime.csv")
 
-            f = (f_min_endtime, f_min_duration)
+            files_path = (f_min_endtime, f_min_duration)
             
 
             if i == 0:
@@ -853,13 +796,13 @@ def runRaptorWithProtocol(self,
             
 
     if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
-        f_min_endtime = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime')
-        f_min_duration = make_service_area_report(f_min_duration, f'{self.alias}_min_duration')
+        f_min_endtime, _ = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime')
+        f_min_duration, short_result = make_service_area_report(f_min_duration, f'{self.alias}_min_duration')
         
-        f = [f_min_endtime,f_min_duration]
+        files_path = [f_min_endtime,f_min_duration]
         
-    if protocol_type == 1:
-        f = f_new
+    #if protocol_type == 1:
+    #    f = f_new
 
     QApplication.processEvents()
     if not (shift_mode):
@@ -882,7 +825,7 @@ def runRaptorWithProtocol(self,
                selected_only2,
                vis,
                fields_ok,
-               f,
+               files_path,
                protocol_type,
                shift_mode,
                add_thematic_map               
@@ -993,11 +936,10 @@ def write_info(self,
     
     self.textLog.append(f'<a>Output:</a>')
 
-    
     if protocol_type == 1:
         if len(fields_ok) > 0:
-            for item in f:
-                item = os.path.normpath (item)
+            for _, file_path in f.items():
+                item = os.path.normpath (file_path)
                 self.textLog.append(f'<a>{item}</a>')
                 if not (shift_mode):
                     alias = os.path.splitext(os.path.basename(item))[0]

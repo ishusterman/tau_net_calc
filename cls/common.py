@@ -105,7 +105,6 @@ def get_prefix_alias(PT, protocol, mode, timetable=None, field_name="", full_pre
     
     return result
 
-
 def zip_directory(directory):
     file_list = ['stops.txt', 'trips.txt', 'routes.txt',
                  'stop_times.txt', 'calendar.txt', 'rev_stop_times.txt']
@@ -137,18 +136,7 @@ def time_to_seconds(t):
 
 # Convert seconds to time string (e.g., total seconds -> HH:MM:SS)
 def seconds_to_time(total_seconds):
-    """
-    if not pd.notnull(seconds):  # Проверяем, что значение не None и не NaN
-        return ""
-    total_seconds = round(seconds)
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    seconds = total_seconds % 60
-    return "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
-    """
-    #if not pd.notnull(seconds):
-    #    return ""
-    
+        
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
@@ -375,44 +363,6 @@ def showAllLayersInCombo_Polygon(cmb):
                 (layer.geometryType() == QgsWkbTypes.PolygonGeometry):
                 cmb.addItem(layer.name(), [])
 
-"""
-def extract_time_pattern_from_txt(txt_path):
-    
-    # Define the regex pattern
-    time_pattern = re.compile(
-        r"Start at \(hh:mm:ss\):\s+(\d{1,2}:\d{2}:\d{2})|"
-        r"Earliest start time:\s+(\d{1,2}:\d{2}:\d{2})|"
-        r"Arrive before \(hh:mm:ss\):\s+(\d{1,2}:\d{2}:\d{2})|"
-        r"Earliest arrival time:\s+(\d{1,2}:\d{2}:\d{2})"
-    )
-
-    # If the provided path is a directory, look for .txt files in it
-    if os.path.isdir(txt_path):
-        txt_files = [f for f in os.listdir(txt_path) if f.endswith('.txt')]
-        if not txt_files:
-            return None
-        # Use the first found .txt file
-        txt_path = os.path.join(txt_path, txt_files[0])
-
-    # Read the .txt file
-    try:
-        with open(txt_path, "r", encoding="utf-8") as file:
-            content = file.read()
-    except (PermissionError, FileNotFoundError, UnicodeDecodeError) as e:
-        print(f"Error reading file {txt_path}: {e}")
-        return None
-
-    # Find all matches
-    matches = time_pattern.findall(content)
-
-    # If there are matches, return the last non-empty match
-    if matches:
-        for match in reversed(matches):
-            for time in match:
-                if time:
-                    return time
-    return None
-"""
 def extract_time_pattern_from_txt(txt_path):
 
     # Define the regex patterns with types
@@ -451,3 +401,14 @@ def extract_time_pattern_from_txt(txt_path):
                 return match.group(1), time_type
     
     return None, None
+
+def get_existing_path(folder_path, filename):
+        """Вспомогательный метод для выбора пути: с префиксом или без."""
+        prefix = os.path.basename(folder_path.rstrip('\\/'))
+        path_with_prefix = os.path.join(folder_path, f'{prefix}_{filename}')
+        path_without_prefix = os.path.join(folder_path, filename)
+
+        # Если файл с префиксом существует — возвращаем его, иначе обычный
+        if os.path.exists(path_with_prefix):
+            return path_with_prefix
+        return path_without_prefix

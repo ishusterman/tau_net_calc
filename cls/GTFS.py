@@ -51,6 +51,8 @@ class GTFS ():
         self.filelog_name = f'{self.__path_to_file}//log_processing_GTFS_{postfix}.txt'
         self.log_processing = []
         self.line_break = '-----------------------------'
+
+        os.makedirs(self.__path_to_file, exist_ok=True)
     
 
     def change_time(self, time1_str):
@@ -903,7 +905,8 @@ class GTFS ():
         lon2, lat2 = (geom2.x, geom2.y)
         _, _, distance = geod.inv(lon1, lat1, lon2, lat2)
         return distance
-
+    
+    
     def create_footpath_AIR(self):
 
         stops = self.create_stops_gpd()
@@ -999,6 +1002,7 @@ class GTFS ():
                 distance = pair[2]
                 file.write(f'{id_from_points_layer},{stop_id1},{distance}\n')
                 file.write(f'{stop_id1},{id_from_points_layer},{distance}\n')
+       
 
     def verify_break(self):
         if self.parent is not None:

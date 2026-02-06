@@ -604,14 +604,23 @@ class CarAccessibility(QDialog, FORM_CLASS):
         #    self.setMessage(f"Folder '{self.txtPathToPKL.text()}' does not exist")
         #    return False
 
+        path_to_pkl = self.txtPathToPKL.text().rstrip('\\/') # Убираем слеши в конце, если они есть
+        prefix = os.path.basename(path_to_pkl)
+
         required_files = ['dict_building_vertex.pkl',
                           'dict_vertex_buildings.pkl',
                           'graph.pkl',
                           'graph_rev.pkl',
                           'cdi_index.csv'
                           ]
-        missing_files = [file for file in required_files if not os.path.isfile(
-            os.path.join(self.txtPathToPKL.text(), file))]
+        
+        missing_files = []
+        for file in required_files:
+            
+            file_with_prefix = os.path.join(path_to_pkl, f"{prefix}_{file}")
+            file_without_prefix = os.path.join(path_to_pkl, file)
+            if not (os.path.isfile(file_with_prefix) or os.path.isfile(file_without_prefix)):
+                missing_files.append(file)
 
         if missing_files:
             limited_files = missing_files[:2]

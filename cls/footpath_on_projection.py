@@ -22,6 +22,8 @@ from PyQt5.QtWidgets import QApplication
 
 from PyQt5.QtCore import QMetaType
 
+from common import get_existing_path
+
 class cls_footpath_on_projection:
     def __init__(
         self,
@@ -163,7 +165,7 @@ class cls_footpath_on_projection:
         count = self.layer_buildings.featureCount()
         # loop through all the polygons in the buildings layer
         for i, polygon_feat in enumerate(self.layer_buildings.getFeatures()):
-            if i % 5000 == 0:
+            if i % 1000 == 0:
                 if self.parent is not None:
                     self.parent.setMessage(f'Projecting buildings on links №{i} of {count}...')
                     QApplication.processEvents()
@@ -325,18 +327,21 @@ class cls_footpath_on_projection:
             # add an edge with the length attribute (weight).
             graph.add_edge(start_point, end_point, weight=length_in_meters)
 
-        dict_path = os.path.join(file_path, 'dict_osm_vertex.pkl')
+        prefix = os.path.basename(file_path)
+
+        dict_path = os.path.join(file_path, f'{prefix}_dict_osm_vertex.pkl')
         with open(dict_path, 'wb') as f:
             pickle.dump(dict_osm_vertex, f)
 
-        dict_path = os.path.join(file_path, 'dict_vertex_osm.pkl')
+        dict_path = os.path.join(file_path, f'{prefix}_dict_vertex_osm.pkl')
         with open(dict_path, 'wb') as f:
             pickle.dump(dict_vertex_osm, f)
 
         return graph
 
     def save_graph(self, graph, file_path):
-        graph_path = os.path.join(file_path, 'graph_projection.pkl')
+        prefix = os.path.basename(file_path)
+        graph_path = os.path.join(file_path, f'{prefix}_graph_projection.pkl')
         graph_data = {
             'nodes': [
                 (node, {
@@ -360,7 +365,9 @@ class cls_footpath_on_projection:
             QApplication.processEvents()
         # read the saved graph.
         
-        graph_path = os.path.join(file_path, 'graph_projection.pkl')
+        # Используем вспомогательный метод для получения правильного пути
+        graph_path = get_existing_path(file_path, 'graph_projection.pkl')
+        
         with open(graph_path, 'rb') as f:
             graph_data = pickle.load(f)
 
@@ -380,12 +387,14 @@ class cls_footpath_on_projection:
         )
 
         return nx_graph
-
+    
     def load_dict_osm_vertex(self, file_path):
         if self.parent is not None:
             self.parent.setMessage(f'Loading database...')
             QApplication.processEvents()
-        dict_path = os.path.join(file_path, 'dict_osm_vertex.pkl')
+        
+        dict_path = get_existing_path(file_path, 'dict_osm_vertex.pkl')
+        
         with open(dict_path, 'rb') as f:
             osm_vertex = pickle.load(f)
         return osm_vertex
@@ -394,10 +403,13 @@ class cls_footpath_on_projection:
         if self.parent is not None:
             self.parent.setMessage(f'Loading database...')
             QApplication.processEvents()
-        dict_path = os.path.join(file_path, 'dict_vertex_osm.pkl')
+        
+        dict_path = get_existing_path(file_path, 'dict_vertex_osm.pkl')
+        
         with open(dict_path, 'rb') as f:
             vertex_osm = pickle.load(f)
         return vertex_osm
+    
 
     def construct_dict_transfers_projections(self,
                                              graph,
@@ -473,11 +485,16 @@ class cls_footpath_on_projection:
 
         cutoff = dist - dist_1
 
+        """
         lengths, _ = nx.single_source_dijkstra(graph,
                                                vertex_id,
                                                cutoff=cutoff,
                                                weight='weight'
                                                )
+        """
+        
+        lengths = nx.single_source_dijkstra_path_length(graph, vertex_id, cutoff=cutoff, weight='weight')
+
         end_nodes_nearest = list(lengths.keys())
 
         for node in end_nodes_nearest:  # cicle of all founded node of graph

@@ -245,7 +245,6 @@ class generator:
             path_to_pkl = self.path_to_PKL,
             path_to_GTFS = self.path_to_GTFS,
             layer_buildings = self.layer_buildings,
-            mode_append = False,
             building_id_field = self.layer_building_field
         )
         calc_PKL.create_files()

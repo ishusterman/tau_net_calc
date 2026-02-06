@@ -19,6 +19,7 @@ class PKL ():
                  path_to_pkl='', 
                  path_to_GTFS='', 
                  layer_buildings='', 
+                 mode_append=False, 
                  building_id_field = "osm_id"):
         
         if path_to_GTFS == '':
@@ -27,18 +28,22 @@ class PKL ():
             self.__path_gtfs = path_to_GTFS
 
         self.__path_pkl = path_to_pkl
+
         self.prefix = os.path.basename(self.__path_pkl)
 
         
         self.parent = parent
         self.layer_buildings = layer_buildings
 
+        self.mode_append = mode_append
+
         self.__transfers_start_file1 = pd.read_csv(
             f'{self.__path_gtfs}/footpath_air.txt', sep=',', dtype={'from_stop_id': str, 'to_stop_id': str})
         self.__transfers_start_file2 = pd.read_csv(
             f'{self.__path_gtfs}/footpath_road_projection.txt', sep=',', dtype={'from_stop_id': str, 'to_stop_id': str})
 
-        os.makedirs(self.__path_pkl, exist_ok=True)
+        if not os.path.exists(self.__path_pkl):
+            os.makedirs(self.__path_pkl)
 
         self.already_display_break = False
         self.building_id_field = building_id_field
@@ -52,6 +57,7 @@ class PKL ():
         list_stops = pd.read_csv(
             f'{self.__path_gtfs}/stops.txt', sep=',', dtype={'stop_id': str})
         stop_ids = list_stops['stop_id']
+        
         f = os.path.join(self.__path_pkl, f"{self.prefix}_stop_ids.pkl")
         stop_ids.to_pickle(f)
 
@@ -217,10 +223,15 @@ class PKL ():
         
         f = os.path.join(self.__path_pkl, f"{self.prefix}_stops_dict_pkl.pkl")
 
-       
-        with open(f, "wb") as pickle_file:
-            pickle.dump(stops_dict, pickle_file)
-       
+        if not (self.mode_append):
+            with open(f, "wb") as pickle_file:
+                pickle.dump(stops_dict, pickle_file)
+        else:
+            with open(f, 'rb') as pickle_file:
+                existing_data = pickle.load(pickle_file)
+            existing_data.update(stops_dict)
+            with open(f, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
 
         return stops_dict
 
@@ -262,12 +273,20 @@ class PKL ():
                 arrival_time)) for stop_id, arrival_time in trip_data] for trip_id, trip_data in sorted_trips}
 
         f = os.path.join(self.__path_pkl, f"{self.prefix}_stoptimes_dict_pkl.pkl")
-        
-        with open(f, "wb") as pickle_file:
-            pickle.dump(result_dict, pickle_file)
+        if not (self.mode_append):
+            with open(f, "wb") as pickle_file:
+                pickle.dump(result_dict, pickle_file)
+        else:
+            with open(f, 'rb') as pickle_file:
+                existing_data = pickle.load(pickle_file)
+            existing_data.update(result_dict)
+            with open(f, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
+
         return 1
     
     # Function to merge dictionary values
+
     def merge_dicts(self, dict1, dict2):
         result = defaultdict(list)
         for d in (dict1, dict2):
@@ -292,12 +311,22 @@ class PKL ():
 
         # Path to save the pickle file
         pickle_path = os.path.join(self.__path_pkl, f"{self.prefix}_{file_name}")
-
+        
         # Write or append to the pickle file
-        
-        with open(pickle_path, "wb") as pickle_file:
-            pickle.dump(footpath_dict, pickle_file)
-        
+        if not self.mode_append:
+            with open(pickle_path, "wb") as pickle_file:
+                pickle.dump(footpath_dict, pickle_file)
+        else:
+            with open(pickle_path, 'rb') as pickle_file:
+                existing_data = pickle.load(pickle_file)
+
+            # Merging dictionaries
+            for key, value in footpath_dict.items():
+                existing_data.setdefault(key, []).extend(value)
+
+            with open(pickle_path, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
+
         return 1
 
     def build_stop_idx_in_route(self):
@@ -319,11 +348,70 @@ class PKL ():
             route_stop_pair: details.stop_sequence.iloc[0] for route_stop_pair, details in pandas_group}
 
         f = os.path.join(self.__path_pkl, f"{self.prefix}_idx_by_route_stop.pkl")
-        
-        with open(f, "wb") as pickle_file:
-            pickle.dump(idx_by_route_stop, pickle_file)
-        
+        if not (self.mode_append):
+            with open(f, "wb") as pickle_file:
+                pickle.dump(idx_by_route_stop, pickle_file)
+        else:
+            with open(f, 'rb') as pickle_file:
+                existing_data = pickle.load(pickle_file)
+            existing_data.update(idx_by_route_stop)
+            with open(f, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
 
+        return 1
+    
+    def build_rev_stop_idx_in_route(self):
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building reversed index from file...')
+            QApplication.processEvents()
+        
+        if self.verify_break():
+            return 0
+
+        # 1. Читаем файл. Так как route_id уже внутри, нам не нужен merge с trips!
+        # Это экономит массу времени и памяти.
+        f_input = os.path.join(self.__path_gtfs, "rev_stop_times.txt")
+        
+        # Читаем только нужные колонки, чтобы не забивать память
+        df = pd.read_csv(
+            f_input, 
+            sep=',', 
+            usecols=['route_id', 'stop_id', 'stop_sequence'],
+            dtype={'stop_id': str, 'route_id': str, 'stop_sequence': int}
+        )
+
+        # 2. Формируем индекс. 
+        # Нам нужно для каждой пары (маршрут, остановка) знать её порядковый номер.
+        # drop_duplicates гарантирует, что мы не получим гигантский словарь, если данных много.
+        temp_df = df.drop_duplicates(subset=['route_id', 'stop_id'])
+        
+        # Создаем словарь: {(route_id, stop_id): stop_sequence}
+        idx_by_route_stop = dict(zip(
+            zip(temp_df['route_id'], temp_df['stop_id']), 
+            temp_df['stop_sequence']
+        ))
+
+        # 3. Сохранение в PKL
+        f_output = os.path.join(self.__path_pkl, f"{self.prefix}_rev_idx_by_route_stop.pkl")
+        
+        if not self.mode_append:
+            with open(f_output, "wb") as pickle_file:
+                pickle.dump(idx_by_route_stop, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            # Если режим добавления, сначала читаем старое
+            if os.path.exists(f_output):
+                with open(f_output, 'rb') as pickle_file:
+                    existing_data = pickle.load(pickle_file)
+                existing_data.update(idx_by_route_stop)
+                with open(f_output, 'wb') as pickle_file:
+                    pickle.dump(existing_data, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+            else:
+                with open(f_output, "wb") as pickle_file:
+                    pickle.dump(idx_by_route_stop, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        if self.IN_QGIS:
+            QApplication.processEvents()
+            
         return 1
 
     def build_routes_by_stop_dict(self):
@@ -332,9 +420,9 @@ class PKL ():
             QApplication.processEvents()
         if self.verify_break():
             return 0
-
-        f = os.path.join(self.__path_pkl, f"{self.prefix}_stops_dict_pkl.pkl")
         
+        f = os.path.join(self.__path_pkl, f"{self.prefix}_stops_dict_pkl.pkl")
+
         with open(f, 'rb') as file:
             stops_dict = pickle.load(file)
 
@@ -344,12 +432,17 @@ class PKL ():
             for stop_index, stop in enumerate(stops):
                 routes_stops_index[(route, stop)] = stop_index
         routesindx_by_stop_dict = routes_stops_index
-
+        
         f = os.path.join(self.__path_pkl, f"{self.prefix}_routesindx_by_stop.pkl")
-     
-        with open(f, "wb") as pickle_file:
-            pickle.dump(routesindx_by_stop_dict, pickle_file)
-     
+        if not (self.mode_append):
+            with open(f, "wb") as pickle_file:
+                pickle.dump(routesindx_by_stop_dict, pickle_file)
+        else:
+            with open(f, 'rb') as pickle_file:
+                existing_data = pickle.load(pickle_file)
+            existing_data.update(routesindx_by_stop_dict)
+            with open(f, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
 
         return 1
 
@@ -365,10 +458,15 @@ class PKL ():
 
         f = os.path.join(self.__path_pkl, f"{self.prefix}_stops_dict_reversed_pkl.pkl")
 
-    
-        with open(f, "wb") as pickle_file:
-            pickle.dump(self.__stop_pkl, pickle_file)
-    
+        if not (self.mode_append):
+            with open(f, "wb") as pickle_file:
+                pickle.dump(self.__stop_pkl, pickle_file)
+        else:
+            with open(f, 'rb') as pickle_file:
+                existing_data = pickle.load(pickle_file)
+            existing_data.update(self.__stop_pkl)
+            with open(f, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
 
     def __reverse(self, lst):
         new_lst = lst[::-1]
@@ -409,134 +507,70 @@ class PKL ():
                 arrival_time)) for stop_id, arrival_time in trip_data] for trip_id, trip_data in sorted_trips}
 
         f = os.path.join(self.__path_pkl, f"{self.prefix}_stoptimes_dict_reversed_pkl.pkl")
+        if not (self.mode_append):
+            with open(f, "wb") as pickle_file:
+                pickle.dump(result_dict, pickle_file)
+        else:
+            with open(f, 'rb') as pickle_file:
+                existing_data = pickle.load(pickle_file)
+            existing_data.update(result_dict)
+            with open(f, 'wb') as pickle_file:
+                pickle.dump(existing_data, pickle_file)
+
+    def build_reverse_stoptimes_file_txt(self):
+
+        if self.IN_QGIS:
+            self.parent.setMessage(f'Building database for to-accessibility...')
+            QApplication.processEvents()
+        if self.verify_break():
+            return 0
         
-        with open(f, "wb") as pickle_file:
-            pickle.dump(result_dict, pickle_file)
+        df = self.__stop_times_file.copy()
         
-
-    # Function to swap stop numbers with the opposite ones within each trip
-
-    """
-    def reverse_stop_sequence(self, group, *args, **kwargs):
-
-        num_stops = len(group)
-        reversed_stop_sequence = range(num_stops, 0, -1)
-        group = group.assign(stop_sequence=reversed_stop_sequence)
-        return group
-
+        # Умный разворот: считаем максимальную последовательность в каждом трипе
+        # и вычитаем текущую. Это векторная операция.
+        max_seq = df.groupby('trip_id')['stop_sequence'].transform('max')
+        df['stop_sequence'] = max_seq - df['stop_sequence'] + 1
+        
+        df.to_csv(os.path.join(self.__path_gtfs, "rev_stop_times.txt"), index=False)
     
-    def build_reverse_stoptimes_file_txt(self):
-
-        if self.IN_QGIS:
-            self.parent.setMessage(f'Building database for to-accessibility...')
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-
-        with open(self.__path_gtfs + "/stop_times.txt", "r") as f:
-            allrows = f.readlines()
-        
-        # convert a list of strings to a delimited string and create a DataFrame
-        data_str = '\n'.join(allrows)
-        df = pd.read_csv(StringIO(data_str))
-
-        #df_result = df.groupby('trip_id', group_keys=False).apply(self.reverse_stop_sequence)
-        
-        df_result = df.drop(columns='trip_id').groupby(df['trip_id'], group_keys=False).apply(
-        lambda group: self.reverse_stop_sequence(group).assign(trip_id=group.name))
-
-        # using StringIO again to write a DataFrame to a String
-        output_str = StringIO()
-        df_result.to_csv(output_str, index=False, lineterminator='\n')
-
-        # get a row of data
-        output_data = output_str.getvalue()
-        f = self.__path_gtfs + "/rev_stop_times.txt"
-
-        with open(f, "w") as output_file:
-            output_file.write(output_data)
-
-        return 1
-    """
-
-    def build_reverse_stoptimes_file_txt(self):
-        if self.IN_QGIS:
-            self.parent.setMessage(f'Building database for to-accessibility...')
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-        
-        with open(self.__path_gtfs + "/stop_times.txt", "r") as f:
-            df = pd.read_csv(f, dtype={'trip_id': str, 'stop_id': str})
-            
-        group_max = df.groupby('trip_id')['stop_sequence'].transform('max')
-        df['stop_sequence'] = group_max - df['stop_sequence'] + 1
-        
-        path_rev = self.__path_gtfs + "/rev_stop_times.txt"
-        df.to_csv(path_rev, index=False, lineterminator='\n')
-
-        return 1    
-
-    def build_rev_stop_idx_in_route(self):
-        if self.IN_QGIS:
-            self.parent.setMessage(f'Building database for to-accessibility...')
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-
-        reverse_stoptimes_txt = pd.read_csv(
-            f'{self.__path_gtfs}/rev_stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
-        if self.IN_QGIS:
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-        rev_stop_times_file = pd.merge(
-            reverse_stoptimes_txt, self.__trips_file, on='trip_id')
-        if self.IN_QGIS:
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-
-        pandas_group = rev_stop_times_file.groupby(["route_id", "stop_id"])
-        if self.IN_QGIS:
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-        idx_by_route_stop = {
-            route_stop_pair: details.stop_sequence.iloc[0] for route_stop_pair, details in pandas_group}
-        if self.IN_QGIS:
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-
-        
-        f = os.path.join(self.__path_pkl, f"{self.prefix}_rev_idx_by_route_stop.pkl")
-        
-        with open(f, "wb") as pickle_file:
-            pickle.dump(idx_by_route_stop, pickle_file)
-        
-
-        return 1
-
     def build__route_by_stop(self):
         if self.IN_QGIS:
-            self.parent.setMessage(f'Building database for to-accessibility...')
+            self.parent.setMessage(f'Building route by stop database...')
             QApplication.processEvents()
         if self.verify_break():
             return 0
 
+        # 1. Сначала обрабатываем остановки из GTFS
+        # Используем drop_duplicates для оптимизации
         stops_by_route = self.__stop_times_file.drop_duplicates(
             subset=['route_id', 'stop_id'])[['stop_id', 'route_id']].groupby('stop_id')
-        route_by_stop_dict = {id: list(routes.route_id)
-                              for id, routes in stops_by_route}
-        # add buildings
-        for feature in self.layer_buildings.getFeatures():
-            osm_id = feature[self.building_id_field]
-            route_by_stop_dict[osm_id] = []
+        
+        route_by_stop_dict = {str(stop_id): list(routes.route_id)
+                            for stop_id, routes in stops_by_route}
+        
+        # 2. Добавляем здания (Исправленная часть)
+        if self.layer_buildings:
+            # Получаем индекс поля по имени
+            idx = self.layer_buildings.fields().indexOf(self.building_id_field)
+            if idx != -1:
+                # uniqueValues — самый быстрый способ получить все ID без дубликатов
+                # Если вам нужны абсолютно все (даже дубликаты), используйте генератор ниже
+                building_ids = self.layer_buildings.uniqueValues(idx)
+                
+                # Добавляем их в словарь с пустым списком маршрутов
+                for b_id in building_ids:
+                    if b_id is not None:
+                        route_by_stop_dict[str(b_id)] = []
+        
+        # 3. Сохранение в PKL
         f = os.path.join(self.__path_pkl, f"{self.prefix}_routes_by_stop.pkl")
+        
         with open(f, "wb") as pickle_file:
-                pickle.dump(route_by_stop_dict, pickle_file)
+                pickle.dump(route_by_stop_dict, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        
         return 1
+
 
     def verify_break(self):
         if self.IN_QGIS:  
