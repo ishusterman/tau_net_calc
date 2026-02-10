@@ -37,6 +37,7 @@ class TAUNetCalc():
         plugin_dir = os.path.dirname(__file__)
         self.clean_pyc(plugin_dir)
         self.compile_all_py(plugin_dir)
+    
 
     def tr(self, message):
         return QCoreApplication.translate('Accessibility calculator', message)

@@ -29,7 +29,9 @@ from common import (getDateTime,
                     get_qgis_info, 
                     is_valid_folder_name, 
                     check_file_parameters_accessibility,
-                    showAllLayersInCombo_Polygon)
+                    showAllLayersInCombo_Polygon,
+                    get_name_columns
+                    )
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'relative.ui'))
@@ -215,23 +217,28 @@ class form_relative(QDialog, FORM_CLASS):
             self.setMessage('Choose calculation mode')
             self.run_button.setEnabled(True)
             return 0
-
+        
+        cols_dict = get_name_columns()
+        
         mode_first, self.MAP_first, max_time_travel_PT, time_interval_PT, run_aggregate_PT, field_to_aggregate_PT = self.check_log(
             self.txtPathToPT.text())
+        
+        self.from_to_first = 1 if mode_first else 2
+        protocol = 1 if self.MAP_first else 2
+        cols = cols_dict[(self.from_to_first, protocol)]
+        self.first_col_star = cols["star"]
+        self.first_col_hash = cols["hash"]
+        
+
+
         mode_second, self.MAP_second, max_time_travel_Car, time_interval_Car, run_aggregate_Car, field_to_aggregate_Car = self.check_log(
             self.txtPathToCar.text())
-
-        """
-        if  mode_first != mode_second:
-            self.setMessage(
-                            "First csv mode: {}. Second csv mode: {}. Must be the same.".format(
-                            "forward" if mode_first else "backward",
-                            "forward" if mode_second else "backward"
-                            )
-                            )
-            self.run_button.setEnabled(True)
-            return 0
-        """
+        
+        self.from_to_second = 1 if mode_second else 2
+        protocol = 1 if self.MAP_second else 2
+        cols = cols_dict[(self.from_to_second, protocol)]
+        self.second_col_star = cols["star"]
+        self.second_col_hash = cols["hash"]
 
         if self.mode == 1:
             if self.MAP_first or self.MAP_second:
@@ -337,7 +344,8 @@ class form_relative(QDialog, FORM_CLASS):
                             LayerVis,
                             mode=mode_visualization,
                             fieldname_layer=fieldname_layer,
-                            mode_compare=True
+                            mode_compare=True,
+                            from_to = 1
                             )
 
         begin_computation_time = datetime.now()
@@ -390,62 +398,56 @@ class form_relative(QDialog, FORM_CLASS):
         self.progressBar.setValue(4)
         QApplication.processEvents()
         if self.MAP_first:
-            field_name = "Origin_ID"
+            field_name1 = self.first_col_star
+            field_name2 = self.second_col_star
         else:
-            field_name = "Destination_ID"
+            field_name1 = self.first_col_hash
+            field_name2 = self.second_col_hash
 
         vis2 = visualization(self,
                              LayerVis,
                              mode=mode_visualization,
                              fieldname_layer=fieldname_layer,
-                             mode_compare=False
-                             )
+                             mode_compare=False,
+                             from_to = self.from_to_first)
+                            
         df1 = pd.read_csv(self.file1)
+        df2 = pd.read_csv(self.file2)
         
-        df1 = df1[df1[field_name].notna()]
-        df1[field_name] = pd.to_numeric(df1[field_name], errors='coerce')
-        
-
-        df1 = df1[~df1[field_name].isin(self.result_merge[field_name])]
-
-        columns_to_keep = ['Origin_ID', 'Destination_ID']
-        last_column = df1.columns[-1]
-        columns_to_keep.append(last_column)
-        df1 = df1[[col for col in columns_to_keep if col in df1.columns]]
-
-        self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name1}_only.csv'
-        df1.to_csv(self.path_output, index=False, na_rep='NaN')
-        aliase_res = f'{self.alias}_{self.file_name1}_only'
-        vis2.add_thematic_map(self.path_output,
-                              aliase_res,
-                              type_compare = "CompareFirstOnly"
-                              )
-        list_file_name.append(self.path_output)
+        for df, col in [(df1, field_name1), (df2, field_name2)]:
+            df.dropna(subset=[col], inplace=True)
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        # Оставляем строки из df1, которых нет в df2 по ключевому полю
+        df1_only = df1[~df1[field_name1].isin(df2[field_name2])].copy()
+        # Выбираем колонки: ключи + последняя (метрика)
+        cols_to_save1 = [c for c in [field_name1, field_name2, df1.columns[-1]] if c in df1.columns]
+        df1_only = df1_only[cols_to_save1]
+        # Сохранение и карта для DF1
+        path1 = os.path.join(self.folder_name, f"{self.txtAliase.text()}_{self.file_name1}_only.csv")
+        df1_only.to_csv(path1, index=False, na_rep='NaN')
+        vis2.add_thematic_map(path1, f"{self.alias}_{self.file_name1}_only", type_compare="CompareFirstOnly")
+        list_file_name.append(path1)
 
         self.progressBar.setValue(5)
         QApplication.processEvents()
-        df2 = pd.read_csv(self.file2)
 
-        df2 = df2[df2[field_name].notna()]
-        df2[field_name] = pd.to_numeric(df2[field_name], errors='coerce')
-
-
-        df2 = df2[~df2[field_name].isin(self.result_merge[field_name])]
-        df2[field_name] = df2[field_name].astype(str)
-        self.path_output = f'{self.folder_name}//{self.txtAliase.text()}_{self.file_name2}_only.csv'
-
-        columns_to_keep = ['Origin_ID', 'Destination_ID']
-        last_column = df2.columns[-1]
-        columns_to_keep.append(last_column)
-        df2 = df2[[col for col in columns_to_keep if col in df1.columns]]
-
-        df2.to_csv(self.path_output, index=False, na_rep='NaN')
-        aliase_res = f'{self.alias}_{self.file_name2}_only'
-        vis2.add_thematic_map(self.path_output,
-                              aliase_res,
-                              type_compare = "CompareSecondOnly"
-                              )
-        list_file_name.append(self.path_output)
+        vis3 = visualization(self,
+                             LayerVis,
+                             mode=mode_visualization,
+                             fieldname_layer=fieldname_layer,
+                             mode_compare=False,
+                             from_to = self.from_to_second)
+        
+        # Оставляем строки из df2, которых нет в df1 по ключевому полю
+        df2_only = df2[~df2[field_name2].isin(df1[field_name1])].copy()
+        # Выбираем колонки
+        cols_to_save2 = [c for c in [field_name1, field_name2, df2.columns[-1]] if c in df2.columns]
+        df2_only = df2_only[cols_to_save2]
+        # Сохранение и карта для DF2
+        path2 = os.path.join(self.folder_name, f"{self.txtAliase.text()}_{self.file_name2}_only.csv")
+        df2_only.to_csv(path2, index=False, na_rep='NaN')
+        vis3.add_thematic_map(path2, f"{self.alias}_{self.file_name2}_only", type_compare="CompareSecondOnly")
+        list_file_name.append(path2)
 
         QApplication.processEvents()
         after_computation_time = datetime.now()
@@ -590,10 +592,6 @@ class form_relative(QDialog, FORM_CLASS):
 
         os.makedirs(self.txtPathToOutput.text(), exist_ok=True)
 
-        #if not os.path.exists(self.txtPathToOutput.text()):
-        #    self.setMessage(f"Output folder '{self.txtPathToOutput.text()}' does not exist")
-        #    return False
-
         try:
             tmp_prefix = "write_tester"
             filename = f'{self.txtPathToOutput.text()}//{tmp_prefix}'
@@ -692,7 +690,7 @@ class form_relative(QDialog, FORM_CLASS):
 
             for line in file:
                 if "Mode:" in line:
-                    if "forward" in line:
+                    if "From" in line:
                         found_forward = True
 
                     if "Region" in line:
@@ -786,17 +784,17 @@ class form_relative(QDialog, FORM_CLASS):
         postfix2 = self.file_name2
 
         df1_renamed = df1.rename(
-            columns={col: col + postfix1 for col in df1.columns if col != 'Origin_ID'})
+            columns={col: col + "_" + postfix1 for col in df1.columns if col != self.first_col_star})
         df2_renamed = df2.rename(
-            columns={col: col + postfix2 for col in df2.columns if col != 'Origin_ID'})
+            columns={col: col  + "_" +  postfix2 for col in df2.columns if col != self.second_col_star})
 
-        merged_df = pd.merge(df1_renamed, df2_renamed, on='Origin_ID')
+        merged_df = pd.merge(df1_renamed, df2_renamed, left_on=self.first_col_star, right_on=self.second_col_star )
 
         result_df = pd.DataFrame()
-        result_df['Origin_ID'] = merged_df['Origin_ID']
+        result_df[self.first_col_star] = merged_df[self.first_col_star]
 
-        col1 = f'{column_name1}{postfix1}'
-        col2 = f'{column_name2}{postfix2}'
+        col1 = f'{column_name1}_{postfix1}'
+        col2 = f'{column_name2}_{postfix2}'
 
         result_df[col1] = merged_df[col1]
         result_df[col2] = merged_df[col2]
@@ -830,27 +828,26 @@ class form_relative(QDialog, FORM_CLASS):
 
         # filtering data by the first value of Origin_ID
         
-        origin_id = df1['Origin_ID'].iloc[0]
+        origin_id = df1[self.first_col_star].iloc[0]
         
-        df1_filtered = df1[df1['Origin_ID'] == origin_id]
-        df2_filtered = df2[df2['Origin_ID'] == origin_id]
-
+        df1_filtered = df1[df1[self.first_col_star] == origin_id]
+        df2_filtered = df2[df2[self.second_col_star] == origin_id]
         result_df = pd.DataFrame()
 
         # Saving the Destination_ID values from the first file
-        result_df['Destination_ID'] = df1_filtered['Destination_ID']
+        result_df[self.first_col_hash] = df1_filtered[self.first_col_hash]
 
         # Convert Destination_ID to numeric
-        df1_filtered["Destination_ID"] = pd.to_numeric(df1_filtered["Destination_ID"].astype(str).str.strip(), errors="coerce")
-        df2_filtered["Destination_ID"] = pd.to_numeric(df2_filtered["Destination_ID"].astype(str).str.strip(), errors="coerce")
+        df1_filtered[self.first_col_hash] = pd.to_numeric(df1_filtered[self.first_col_hash].astype(str).str.strip(), errors="coerce")
+        df2_filtered[self.second_col_hash] = pd.to_numeric(df2_filtered[self.second_col_hash].astype(str).str.strip(), errors="coerce")
         
         # joining by Destination_ID
-        merged_df = pd.merge(df1_filtered[['Origin_ID', 'Destination_ID', column_name1]],
-                             df2_filtered[['Destination_ID', column_name2]],
-                             on='Destination_ID',
+        merged_df = pd.merge(df1_filtered[[self.first_col_star, self.first_col_hash, column_name1]],
+                             df2_filtered[[self.second_col_hash, column_name2]],
+                             left_on=self.first_col_hash, right_on=self.second_col_hash,
                              suffixes=(postfix1, postfix2))
 
-        result_df = merged_df[['Origin_ID', 'Destination_ID']].copy()
+        result_df = merged_df[[self.first_col_star, self.first_col_hash, self.second_col_star, self.second_col_hash]].copy()
         result_df[f'Duration_{self.file_name1}'] = merged_df[f'{column_name1}{postfix1}']
         result_df[f'Duration_{self.file_name2}'] = merged_df[f'{column_name2}{postfix2}']
 

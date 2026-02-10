@@ -526,21 +526,21 @@ def make_protocol_detailed(raptor_mode,
    
     return 1
 
-def make_service_area_report(file_path, alias):
+def make_service_area_report(file_path, alias, col_star, col_hash):
 
     dtype_dict = {
-        'Destination_ID': 'int',
+        col_hash: 'int',
         'Duration': 'int'      
     }
 
     df = pd.read_csv(file_path, dtype=dtype_dict)
 
-    result = df.loc[df.groupby('Destination_ID')['Duration'].idxmin()]
+    result = df.loc[df.groupby(col_hash)['Duration'].idxmin()]
     folder_name = os.path.dirname(file_path)
     filename = os.path.join(folder_name, f"{alias}_service_area.csv")
 
     short_result = {
-        (int(row['Origin_ID']), int(row['Destination_ID'])): int(row['Duration']) 
+        (int(row[col_star]), int(row[col_hash])): int(row['Duration']) 
         for _, row in result.iterrows()
     }
 

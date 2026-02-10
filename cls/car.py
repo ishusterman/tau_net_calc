@@ -17,9 +17,9 @@ from qgis.core import (QgsProject,
                        QgsWkbTypes
                        )
 
-from pkl_car import pkl_car
 from visualization import visualization
-from common import get_prefix_alias, get_existing_path
+from common import (get_existing_path, 
+                    get_name_columns)
 
 
 class car_accessibility:
@@ -59,13 +59,15 @@ class car_accessibility:
 
         self.list_fields_aggregate = list_fields_aggregate
 
-        self.writed_info = False
+        
 
         self.already_display_break = False
 
         self.read_factor_speed_by_hour()
 
-        self.factor_speed = self.factor_speed_by_hour[self.parent.hour]
+        cols_dict = get_name_columns()
+        self.cols = cols_dict[(self.parent.mode, self.parent.protocol_type)]
+        self.short_result = {}
 
     def read_factor_speed_by_hour(self):
              
@@ -79,24 +81,21 @@ class car_accessibility:
                 factor_item = float(row['cdi'])
                 self.factor_speed_by_hour[hour_item] = factor_item
 
-    def find_car_accessibility(self):
+
+    def find_car_accessibility(self, mode):
+
+        if mode == 1:
+            graph = self.parent.graph
+        else: 
+            graph = self.parent.graph_rev
 
         self.f_list = []
-        pkl_car_reader = pkl_car()
+        
         count = len(self.parent.points)
         self.parent.progressBar.setMaximum(count)
         self.parent.setMessage("Loading pkl...")
         QApplication.processEvents()
 
-        self.dict_building_vertex, self.dict_vertex_buildings = pkl_car_reader.load_files(
-            self.parent.path_to_pkl
-        )
-
-        self.graph = pkl_car_reader.load_graph(
-            self.parent.mode,
-            self.parent.path_to_pkl,
-            self.crs
-        )
 
         self.parent.progressBar.setValue(1)
         i = 0
@@ -114,14 +113,13 @@ class car_accessibility:
 
             self.source = source
             
-            idStart, _ = self.dict_building_vertex.get(self.source, ("xxx", "xxx"))
+            idStart, _ = self.parent.dict_building_vertex.get(self.source, ("xxx", "xxx"))
 
             if idStart == "xxx":
                 self.parent.progressBar.setValue(count+1)
                 continue
 
-            (self.tree, self.costs) = QgsGraphAnalyzer.dijkstra(
-                self.graph,  idStart, 0)
+            (self.tree, self.costs) = QgsGraphAnalyzer.dijkstra(graph,  idStart, 0)
 
             self.calc_min_cost()
 
@@ -140,8 +138,7 @@ class car_accessibility:
 
             self.parent.progressBar.setValue(i + 1)
 
-        if self.parent.protocol_type == 2 and count > 1:
-            self.f = self.make_service_area_report(self.parent.folder_name, self.parent.file_name,)
+        
 
     def find_car_accessibility_onAIR(self):
 
@@ -163,10 +160,7 @@ class car_accessibility:
                             self.aggregate_dict_all[field],
                             field
                             )
-           
-
-        if self.parent.protocol_type == 2 and count > 1:
-            self.f = self.make_service_area_report(self.parent.folder_name, self.parent.file_name)        
+   
 
         if self.verify_break():
             return 0    
@@ -181,11 +175,17 @@ class car_accessibility:
             df = pd.read_csv(file)
             all_data = pd.concat([all_data, df], ignore_index=True)
 
-        result = all_data.loc[all_data.groupby('Destination_ID')[
+        result = all_data.loc[all_data.groupby(self.cols["hash"])[
             'Duration'].idxmin()]
         filename = f'{folder_name}//{alias}_service_area.csv'
         result.to_csv(filename, index=False)
-        return filename
+
+        short_result = {
+        (int(row[self.parent.col_star]), int(row[self.parent.col_hash])): int(row['Duration']) 
+        for _, row in result.iterrows()
+    }
+        
+        return filename, short_result
 
     def calc_min_cost(self):
 
@@ -193,7 +193,7 @@ class car_accessibility:
 
         count = 0
 
-        _, dist_start = self.dict_building_vertex[self.source]
+        _, dist_start = self.parent.dict_building_vertex[self.source]
 
         sum_walk = self.parent.walk_on_start_m + self.parent.walk_on_finish_m
 
@@ -216,7 +216,7 @@ class car_accessibility:
                     continue
 
                 buildings, dists_finish = zip(
-                    *self.dict_vertex_buildings[edgeId])
+                    *self.parent.dict_vertex_buildings[edgeId])
                 
 
             except KeyError:
@@ -271,6 +271,8 @@ class car_accessibility:
                     filetowrite.write(f'{source},{building},{veh_legs},{min_cost}\n')
                 else:
                     filetowrite.write(f'{building},{source},{veh_legs},{min_cost}\n')
+
+                self.short_result[(source, building)] = min_cost
 
     def calc_min_cost_onAir(self):
         
@@ -338,6 +340,9 @@ class car_accessibility:
                     cost_res = round(travel_time)
                     
                     self.min_costs[pair] = (cost_res,0)
+                    self.short_result[(source, building)] = cost_res
+        
+        
                     
 
     def makeProtocolMap(self,
@@ -345,17 +350,16 @@ class car_accessibility:
                         aggregate_dict,
                         field):
 
-        # counters for gradations
-        counts = {x: 0 for x in range(0, len(self.grades))}
-        # Счётчики для агрегатов
-        aggregates = {x: 0 for x in range(0, len(self.grades))}
-
-        for source in set(src for src, _ in self.min_costs.keys()):
+        unique_sources = set(src for src, _ in self.min_costs.keys())
+        for source in unique_sources:
+            counts = {x: 0 for x in range(0, len(self.grades))}
+            aggregates = {x: 0 for x in range(0, len(self.grades))}
 
             # iterate through the minimum cost values for each pair (source, building)
             for (src, building), (cost, veh_legs) in self.min_costs.items():
                 if src == source and cost <= self.max_time_sec:
                     # find the corresponding gradation
+                    self.short_result[(src, building)] = cost
                     for i in range(0, len(self.grades)):
                         grad = self.grades[i]
                         if cost <= grad[1]:
@@ -389,7 +393,7 @@ class car_accessibility:
             self.f = {}
 
             intervals_number = self.number_bins
-            protocol_header = "Origin_ID"
+            protocol_header = self.cols["star"]
             time_step_min = self.time_step_minutes
             low_bound_min = 0
             top_bound_min = time_step_min
@@ -447,7 +451,7 @@ class car_accessibility:
                                 statistics_by_accessibility_time_header="Stop_ID,10m,20 m,30 m,40 m,50 m,60 m"+"\n"+"\n"
                                 """
 
-                    protocol_header = "Origin_ID"
+                    protocol_header = self.cols["star"]
                     time_step_min = self.time_step_minutes
                     top_bound_min = time_step_min
 
@@ -471,41 +475,40 @@ class car_accessibility:
                     with open(self.f[field], 'w') as filetowrite:
                         filetowrite.write(protocol_header)
 
-    def run(self, begin_computation_time):
+    def run(self, begin_computation_time, mode, hour, write_info):
+
+        self.begin_computation_time = begin_computation_time
+
+        self.factor_speed = self.factor_speed_by_hour[hour]
 
         self.create_head_files()
 
         if self.parent.mode == 1:
-            table_header = "Origin_ID,Destination_ID,Veh_legs,Duration\n"
+            table_header = f"{self.cols["star"]},{self.cols["hash"]},Veh_legs,Duration\n"
         else:
-            table_header = "Destination_ID,Origin_ID,Veh_legs,Duration\n"
+            table_header = f"{self.cols["hash"]},{self.cols["star"]},Veh_legs,Duration\n"
         
         if self.parent.protocol_type == 2:
             self.f = f'{self.parent.folder_name}//{self.parent.file_name}.csv'
             with open(self.f, 'w') as self.filetowrite:
                 self.filetowrite.write(table_header) 
-
+       
         if self.parent.RunOnAir:
             self.find_car_accessibility_onAIR()
         else:    
-            self.find_car_accessibility()
-
+            self.find_car_accessibility(mode)
+        if self.parent.protocol_type == 2 and len(self.parent.points) > 1:
+            self.f, self.short_result = self.make_service_area_report(self.parent.folder_name, self.parent.file_name)    
         QApplication.processEvents()
-        after_computation_time = datetime.now()
-        after_computation_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
+        text = self.parent.textLog.toPlainText()
+        filelog_name = f'{self.parent.folder_name}//log_{self.parent.alias}.txt'
+        with open(filelog_name, "w") as file:
+            file.write(text)
 
-        duration_computation = after_computation_time - begin_computation_time
-        duration_without_microseconds = str(duration_computation).split('.')[0]
-        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
-
-        if not (self.writed_info):
+        if  write_info:
             self.write_info()
-
-        self.parent.textLog.append(f'<a href="file:///{self.parent.folder_name}" target="_blank" >Output in folder</a>')
-        self.parent.setMessage(f'Finished')
-
-        return self.parent.folder_name
+        
+        return self.short_result
 
     def verify_break(self):
         if self.parent.break_on:
@@ -522,11 +525,11 @@ class car_accessibility:
 
     def write_info(self):
 
-        self.writed_info = True
         vis = visualization(self.parent,
                             self.layer_vis,
                             mode=self.parent.protocol_type,
                             fieldname_layer=self.layer_vis_field,
+                            from_to = self.parent.mode
                             )
         
         self.parent.textLog.append(f'<a>Output:</a>')
@@ -543,10 +546,17 @@ class car_accessibility:
             vis.add_thematic_map(self.f, alias, set_min_value=0)
             self.parent.textLog.append(f'<a>{os.path.normpath(self.f)}</a>')
 
-        text = self.parent.textLog.toPlainText()
-        filelog_name = f'{self.parent.folder_name}//log_{self.parent.alias}.txt'
-        with open(filelog_name, "w") as file:
-            file.write(text)
+        after_computation_time = datetime.now()
+        after_computation_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
+
+        duration_computation = after_computation_time - self.begin_computation_time
+        duration_without_microseconds = str(duration_computation).split('.')[0]
+        self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
+
+        self.parent.textLog.append(f'<a href="file:///{self.parent.folder_name}" target="_blank" >Output in folder</a>')
+        self.parent.setMessage(f'Finished')
+
 
         if self.parent.selected_only1 or self.parent.selected_only2:
             msgBox = QMessageBox()
@@ -560,14 +570,14 @@ class car_accessibility:
             if result == QMessageBox.Yes:
                 if self.parent.selected_only1:
 
-                    zip_filename1 = f'{self.parent.folder_name}//origins_{self.parent.alias}.zip'
-                    filename1 = f'{self.parent.folder_name}//origins_{self.parent.alias}.geojson'
+                    zip_filename1 = f'{self.parent.folder_name}//{self.cols["star"]}_{self.parent.alias}.zip'
+                    filename1 = f'{self.parent.folder_name}//{self.cols["star"]}_{self.parent.alias}.geojson'
                     self.save_layer_to_zip(
                         self.layer_orig, zip_filename1, filename1)
                 if self.parent.selected_only2:
 
-                    zip_filename2 = f'{self.parent.folder_name}//destinations_{self.parent.alias}.zip'
-                    filename2 = f'{self.parent.folder_name}//destinations_{self.parent.alias}.geojson'
+                    zip_filename2 = f'{self.parent.folder_name}//{self.cols["hash"]}_{self.parent.alias}.zip'
+                    filename2 = f'{self.parent.folder_name}//{self.cols["hash"]}_{self.parent.alias}.geojson'
                     self.save_layer_to_zip(
                         self.layer_dest, zip_filename2, filename2)
 
@@ -588,14 +598,6 @@ class car_accessibility:
                 QgsProject.instance().transformContext(), 
                 options)
 
-        """
-        QgsVectorFileWriter.writeAsVectorFormat(layer,
-                                                temp_file,
-                                                "utf-8",
-                                                layer.crs(),
-                                                "GeoJSON",
-                                                onlySelected=True)
-        """
         QApplication.processEvents()
 
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:

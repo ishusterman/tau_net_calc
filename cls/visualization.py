@@ -16,7 +16,7 @@ from qgis.core import (
     QgsFeatureRequest
     )
 
-from common import insert_layer_ontop
+from common import insert_layer_ontop, get_name_columns
 
 from qgis.utils import iface
 
@@ -27,18 +27,22 @@ class visualization:
                  mode = "",
                  fieldname_layer = "",
                  mode_compare = False,
-                 schedule_mode = False
+                 schedule_mode = False,
+                 from_to = ""
                  ):
 
         self.mode = mode
         self.schedule_mode = schedule_mode
         self.mode_compare = mode_compare
         
+        cols_dict = get_name_columns()
+        cols = cols_dict[(from_to, self.mode)]
 
         if self.mode == 1:  # MAP
-            self.fieldname_in_protocol = "Origin_ID"
+            self.fieldname_in_protocol = cols["star"]
         else:  # AREA
-            self.fieldname_in_protocol = "Destination_ID"
+            self.fieldname_in_protocol = cols["hash"]
+
 
         self.fieldname_layer = fieldname_layer
         self.parent = parent
@@ -132,39 +136,9 @@ class visualization:
 
         if self.protocol_layer.featureCount() > 0:
             QgsProject.instance().addMapLayer(self.protocol_layer, False)
-
-            
-            # filter on self.targetField_base  > 0 
-            #if self.mode == 1: # Region
-            #    expression = f'"{self.targetField_base}" > 0'
-            #    self.protocol_layer.setSubsetString(expression)
-            
+           
             insert_layer_ontop (self.protocol_layer)
-                        
-            # if variation Origin_ID > 1 thne filter on first value Origin_ID 
          
-            if self.mode == 2 and self.schedule_mode: # AREA
-       
-                #unique_count = len(self.protocol_layer.uniqueValues(self.protocol_layer.fields().indexFromName("Origin_ID")))    
-                
-                #if unique_count > 1:
-                #    first_feature = next(self.protocol_layer.getFeatures())
-                #    origin_id_value = first_feature['Origin_ID']
-                #    expression = f'"Origin_ID" = {origin_id_value}'
-                #    self.protocol_layer.setSubsetString(expression)
-                """
-                first_feature = None
-                for feature in self.protocol_layer.getFeatures(QgsFeatureRequest().setLimit(1)):
-                    first_feature = feature
-                    break
-                
-                if first_feature and first_feature['Origin_ID'] is not None:
-                    origin_id_value = first_feature['Origin_ID']
-                    expression = f'"Origin_ID" = {origin_id_value}'
-                    self.protocol_layer.setSubsetString(expression)
-                """
-    
-
             self.max_value = 0
             self.max_abs_value = 0
             data_provider = self.protocol_layer.dataProvider()

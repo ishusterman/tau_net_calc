@@ -10,6 +10,30 @@ import shutil
 
 from pathlib import Path
 
+def get_name_columns():
+
+        # ({from-to}, protokol) ....
+        return {
+            (1, 2): {
+                "star": "Facility_ID", "hash": "Destination_ID",
+                1: "Facility_ID", 2: "Destination_ID"
+            },
+            (2, 2): {
+                "star": "Facility_ID", "hash": "Origin_ID",
+                1: "Origin_ID", 2: "Facility_ID"
+            },
+            (1, 1): {
+                "star": "Origin_ID", "hash": "Destination_ID",
+                1: "Origin_ID", 2: "Destination_ID"
+            },
+            (2, 1): {
+                "star": "Destination_ID", "hash": "Origin_ID",
+                1: "Destination_ID", 2: "Origin_ID"
+            }
+        }    
+
+    
+
 try:
     import qgis.core
     import qgis.PyQt
@@ -145,12 +169,12 @@ def seconds_to_time(total_seconds):
 def check_file_parameters_accessibility ():
     project_directory = os.path.dirname(QgsProject.instance().fileName())
     parameters_path = os.path.join(project_directory, 'parameters_accessibility.txt')
-    parameters_add_path = os.path.join(project_directory, 'parameters_accessibility_add.txt')
+    parameters_add_path = os.path.join(project_directory, 'roundtrip_additional_parameters.txt')
 
     current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(current_dir, 'config')
     source_path = os.path.join(config_path, 'parameters_accessibility_shablon.txt')
-    source_add_path = os.path.join(config_path, 'parameters_accessibility_add_shablon.txt')
+    source_add_path = os.path.join(config_path, 'roundtrip_additional_parameters_shablon.txt')
     if not os.path.exists(parameters_path):
         shutil.copy(source_path, parameters_path)
 

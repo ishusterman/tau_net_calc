@@ -17,7 +17,9 @@ class roundtrip_analyzer:
                  path_to: str = None, 
                  report_path: str = None, 
                  duration_max: int = 3600, 
-                 alias = "" ):
+                 alias = "",
+                 field_star =  "Origin_id",
+                 field_hash = "Destination_id"):
         
         self.path_from = path_from
         self.path_to = path_to
@@ -32,7 +34,8 @@ class roundtrip_analyzer:
         self.path_stats = os.path.normpath(os.path.join(self.report_path, f"{self.alias}_round_trip_stats.csv"))
         self.path_bins = os.path.normpath(os.path.join(self.report_path, f"{self.alias}_round_trip_bins.csv"))
 
-        
+        self.field_star = field_star
+        self.field_hash = field_hash
 
     # -------------------------------------------------------------------------
     # File-based processing (original functionality)
@@ -159,7 +162,7 @@ class roundtrip_analyzer:
         
         with open(self.path_stats, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["Origin_ID", "Destination_ID", "Count", "Mean", "Std"])
+            writer.writerow([self.field_star, self.field_hash, "Count", "Mean", "Std"])
             for (o, d), vals in final_results.items():
                 writer.writerow([o, d, vals['count'], vals['duration_mean'], vals['duration_std']])
 
@@ -238,7 +241,7 @@ class roundtrip_analyzer:
 
         with open(self.path_bins, mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            header = ["Origin_ID"] + [f"bin_{b}" for b in all_bin_codes]
+            header = [self.field_star] + [f"bin_{b}" for b in all_bin_codes]
             writer.writerow(header)
             for origin_id, bins in bin_counts.items():
                 row = [origin_id]

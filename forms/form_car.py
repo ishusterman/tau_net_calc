@@ -24,17 +24,26 @@ from PyQt5.QtCore import (Qt,
                           QDateTime
                           )
 
-from PyQt5.QtGui import QRegExpValidator, QDesktopServices
+from PyQt5.QtGui import (QRegExpValidator, 
+                         QDesktopServices, 
+                         QGuiApplication)
 from PyQt5 import uic
 
+
 from car import car_accessibility
+from pkl_car import pkl_car
 from common import (get_qgis_info, 
                     is_valid_folder_name, 
                     get_prefix_alias, 
                     check_file_parameters_accessibility,
                     showAllLayersInCombo_Point_and_Polygon,
                     showAllLayersInCombo_Polygon,
-                    get_initial_directory)
+                    get_initial_directory,
+                    time_to_seconds,
+                    seconds_to_time,
+                    get_name_columns)
+
+from AnalyzerFromTo_incremental import roundtrip_analyzer
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'car.ui')
@@ -71,6 +80,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
+        self.config_add = configparser.ConfigParser()
 
         self.break_on = False
 
@@ -420,10 +430,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
         PathToProtocols_car = os.path.join(project_directory, f'{project_name}_output')
         PathToProtocols_car = os.path.normpath(PathToProtocols_car)
 
-        file_path = os.path.join(
-            project_directory, 'parameters_accessibility.txt')
+        file_path = os.path.join(project_directory, 'parameters_accessibility.txt')
 
         self.config.read(file_path)
+
+        file_path_add = os.path.join(project_directory, 'roundtrip_additional_parameters.txt')
+        self.config_add.read(file_path_add)
 
         if 'PathToPKL_car' not in self.config['Settings'] or self.config['Settings']['PathToPKL_car'] == "С:/":
             self.config['Settings']['PathToPKL_car'] = self.config['Settings']['PathToProtocols_car_pkl']
@@ -762,7 +774,18 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
 
+        modifiers = QGuiApplication.keyboardModifiers()
+        self.shift_ctrl_mode = False
+        if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.mode == 2:
+            self.shift_ctrl_mode = True 
         
+        self.read_pkl()
+
+        cols_dict = get_name_columns()
+        cols = cols_dict[(self.mode, self.protocol_type)]
+        self.col_star = cols["star"]
+        self.col_hash = cols["hash"]   
+
         car = car_accessibility(self,
                                 layer_dest,
                                 self.selected_only2,
@@ -773,8 +796,191 @@ class CarAccessibility(QDialog, FORM_CLASS):
                                 layer_vis_field,
                                 list_fields_aggregate,
                                 )
-        car.run(begin_computation_time)
+        
+        if not (self.shift_ctrl_mode):
+            car.run(begin_computation_time, 
+                    self.mode, 
+                    self.hour, 
+                    write_info = True)
+
+        if self.shift_ctrl_mode:
+
+            time_delta = int(self.config_add['Settings']['time_delta'])
+            from_time_start = time_to_seconds(self.config_add['Settings']['from_time_start'])
+            from_time_end = time_to_seconds(self.config_add['Settings']['from_time_end'])
+            to_time_start = time_to_seconds(self.config_add['Settings']['to_time_start'])
+            to_time_end = time_to_seconds(self.config_add['Settings']['to_time_end'])
+
+            self.textLog.append(f'<a>Time step: {self.config_add['Settings']['time_delta']} sec</a>')
+            self.textLog.append(f"<a style='font-weight:bold;'> Calculating roundtrip accessibility</a>")
       
+                
+            ###########################
+            #  First From + First TO
+            # #########################
+            # #########################
+            # First From
+            # #########################
+            self.folder_name_copy = self.folder_name
+            self.folder_name_from = os.path.join(self.folder_name_copy, "from")
+            os.makedirs(self.folder_name_from, exist_ok=True)
+
+            
+
+            analyzer = roundtrip_analyzer(
+                                        report_path = os.path.dirname(self.folder_name_from), 
+                                        duration_max=3600, 
+                                        alias = self.alias,
+                                        field_star = cols["star"],
+                                        field_hash = cols["hash"]
+                                        )
+            self.textLog.append(f"<a style='font-weight:bold;'> Calculating first from accessibility</a>")
+            D_TIME_str = seconds_to_time(from_time_start)
+            self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
+            postfix = 1
+            self.folder_name = os.path.join(self.folder_name_from, str(postfix)) 
+            os.makedirs(self.folder_name, exist_ok=True)
+            
+            hour = from_time_start // 3600
+            short_result = car.run(begin_computation_time, 
+                                   mode = 1, 
+                                   hour = hour, 
+                                   write_info = False)
+
+            if not(self.break_on):
+                first_from = analyzer.get_data_for_analyzer_from_to(short_result)
+
+            
+            # #########################
+            # First to
+            # #########################
+            self.textLog.append(f"<a style='font-weight:bold;'> Calculating first to accessibility</a>")
+            self.mode = 2
+            self.folder_name_to = os.path.join(self.folder_name_copy, "to")
+            os.makedirs(self.folder_name_to, exist_ok=True)
+            D_TIME_str = seconds_to_time(to_time_start)
+            self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
+            postfix = 1
+            self.folder_name = os.path.join(self.folder_name_to, str(postfix)) 
+            os.makedirs(self.folder_name, exist_ok=True)
+            hour = to_time_start // 3600 
+            short_result = car.run(begin_computation_time, 
+                                   mode = 2 , 
+                                   hour = hour, 
+                                   write_info = False)
+
+            
+            if not(self.break_on):
+                first_to = analyzer.get_data_for_analyzer_from_to (short_result)
+                analyzer.init_from_data(first_to, first_from)
+            
+            ###########################
+            #  From
+            # #########################
+            self.textLog.append(f"<a style='font-weight:bold;'> Calculating remained from accessibility</a>")
+            self.mode = 1
+            i = 1
+            while True:
+                
+                D_TIME = from_time_start + i * time_delta 
+                if D_TIME > from_time_end + time_delta / 2: 
+                    break
+
+                D_TIME_str = seconds_to_time(D_TIME)
+                self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
+                 
+                postfix = i + 1
+                self.folder_name = os.path.join(self.folder_name_from, str(postfix)) 
+                os.makedirs(self.folder_name, exist_ok=True)
+                hour = D_TIME // 3600 
+                short_result = car.run(begin_computation_time, 
+                                   mode = 1 , 
+                                   hour = hour, 
+                                   write_info = False)
+
+            
+                if not(self.break_on):
+                    data_from = analyzer.get_data_for_analyzer_from_to (short_result)
+                    analyzer.add_from_data(data_from)
+            
+         
+                if self.break_on:
+                    self.setMessage("Roundtrip accessibility computations are interrupted by user")
+                    self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
+                    self.progressBar.setValue(0)
+                    return 0
+                i += 1
+                
+            ###########################
+            #  TO
+            # #########################
+                
+            self.textLog.append(f"<a style='font-weight:bold;'> Calculating remained to accessibility</a>")
+            self.mode = 2
+            i = 1
+
+            while True:
+                D_TIME = to_time_start + i * time_delta 
+                if D_TIME > to_time_end + time_delta / 2: 
+                        break
+                D_TIME_str = seconds_to_time(D_TIME)
+                self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
+                    
+                postfix = i + 1
+                self.folder_name = os.path.join(self.folder_name_to, str(postfix)) 
+                os.makedirs(self.folder_name, exist_ok=True)
+                hour = D_TIME // 3600                     
+                short_result = car.run(begin_computation_time, 
+                                   mode = 2 , 
+                                   hour = hour, 
+                                   write_info = False)
+                
+                if not(self.break_on):
+                    data_to = analyzer.get_data_for_analyzer_from_to (short_result)
+                    analyzer.add_to_data(data_to)
+                        
+               
+                i += 1
+                if self.break_on:
+                    self.setMessage("Roundtrip accessibility computations are interrupted by user")
+                    self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
+                    self.progressBar.setValue(0)
+                    return 0
+                
+                
+            if not(self.break_on):
+                    
+                    analyzer.run_finalize_all()
+                    self.textLog.append(f'<a href="file:///{os.path.dirname(self.folder_name_from)}" target="_blank" >Statistics in folder</a>')
+                    after_computation_time = datetime.now()
+                    after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
+                    self.textLog.append(f'<a>Finished {after_computation_str}</a>')
+                    duration_computation = after_computation_time - begin_computation_time
+                    duration_without_microseconds = str(duration_computation).split('.')[0]
+                    self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
+
+                    self.setMessage(f'Finished')
+                    self.progressBar.setValue(self.progressBar.maximum())
+            
+
+    def read_pkl(self):
+            pkl_car_reader = pkl_car()
+            self.crs = self.layer_dest.crs()
+            self.dict_building_vertex, self.dict_vertex_buildings = pkl_car_reader.load_files(
+                self.path_to_pkl
+            )
+
+            self.graph = pkl_car_reader.load_graph(
+                mode = 1,
+                pathtopkl = self.path_to_pkl,
+                crs = self.crs
+            )
+
+            self.graph_rev = pkl_car_reader.load_graph(
+                mode = 2,
+                pathtopkl = self.path_to_pkl,
+                crs = self.crs
+            )
 
     def prepare(self):
         self.break_on = False

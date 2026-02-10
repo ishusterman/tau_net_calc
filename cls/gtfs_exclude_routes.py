@@ -91,9 +91,6 @@ class GTFSExcludeRoutes:
                     c_df[c_df['service_id'].isin(active_f_services)].to_csv(os.path.join(self.output_path, file), index=False)
                     c_df[c_df['service_id'].isin(active_e_services)].to_csv(os.path.join(self.excluded_data_path, file), index=False)
 
-            print(f"Filtering complete.")
-            print(f"Clean GTFS: {self.output_path}")
-            print(f"Excluded GTFS: {self.excluded_data_path}")
 
         except Exception as e:
             print(f"Error: {e}")

@@ -149,8 +149,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.label_9.setText(msg)
         self.label_9.setEnabled(result)
         self.calendar.setEnabled(result)
-        print(repr(msg))
-        
+                
 
     def get_gtfs_date_range(self):
         gtfs_path = self.txtPathToGTFS.text()
@@ -371,8 +370,10 @@ class form_pkl(QDialog, FORM_CLASS):
         self.textLog.append(f"<a> Maximal walking path on air: {self.config['Settings']['MaxPathAir_pkl']}</a>")
         self.textLog.append(f"<a> The folder of the initial GTFS dataset: {self.config['Settings']['PathToGTFS_pkl']}</a>")
         self.textLog.append(f"<a> The day for constructing a modified GTFS dataset : {QDate.fromString(self.config['Settings']['Date_pkl'], 'yyyyMMdd').toString('dd.MM.yyyy')}</a>")
-        self.textLog.append(f"<a> Select lines to delete from the GTFS dataset: {self.config['Settings']['ExcludeRoutes_pkl']} </a>")
-        self.textLog.append(f"<a> The folder of the GTFS dataset of the additional lines: {self.config['Settings']['AddRoutes_pkl']} </a>")
+        if self.config['Settings']['DeleteLines_pkl']:
+            self.textLog.append(f"<a> Select lines to delete from the GTFS dataset: {self.config['Settings']['DeleteLines_pkl']} </a>")
+        if self.config['Settings']['AddLines_pkl']:
+            self.textLog.append(f"<a> The folder of the GTFS dataset of the additional lines: {self.config['Settings']['AddLines_pkl']} </a>")
         self.textLog.append(f"<a> Folder to store transit database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
 
         self.prepare()
@@ -450,11 +451,11 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'Date_pkl' not in self.config['Settings']:
             self.config['Settings']['Date_pkl'] = '20000101'  
 
-        if 'ExcludeRoutes_pkl' not in self.config['Settings']:
-            self.config['Settings']['ExcludeRoutes_pkl'] = "C:/"
+        if 'DeleteLines_pkl' not in self.config['Settings']:
+            self.config['Settings']['DeleteLines_pkl'] = "C:/"
         
-        if 'AddRoutes_pkl' not in self.config['Settings']:
-            self.config['Settings']['AddRoutes_pkl'] = "C:/"
+        if 'AddLines_pkl' not in self.config['Settings']:
+            self.config['Settings']['AddLines_pkl'] = "C:/"
 
 
     def saveParameters(self):
@@ -472,8 +473,8 @@ class form_pkl(QDialog, FORM_CLASS):
         selected_date = self.calendar.date()
         self.config['Settings']['Date_pkl'] = selected_date.toString("yyyyMMdd")
 
-        self.config['Settings']['ExcludeRoutes_pkl'] = self.txtExcludeRoutes.text()
-        self.config['Settings']['AddRoutes_pkl'] = self.txtAddRoutes.text()
+        self.config['Settings']['DeleteLines_pkl'] = self.txtExcludeRoutes.text()
+        self.config['Settings']['AddLines_pkl'] = self.txtAddRoutes.text()
 
 
         with open(f, 'w') as configfile:
@@ -503,9 +504,9 @@ class form_pkl(QDialog, FORM_CLASS):
         self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_pkl'])
 
         
-        val = self.config['Settings']['ExcludeRoutes_pkl']
+        val = self.config['Settings']['DeleteLines_pkl']
         self.txtExcludeRoutes.setText(os.path.normpath(val) if val else "")
-        val = self.config['Settings']['AddRoutes_pkl']
+        val = self.config['Settings']['AddLines_pkl']
         self.txtAddRoutes.setText(os.path.normpath(val) if val else "")
 
         date_string = self.config['Settings']['Date_pkl']
@@ -739,10 +740,10 @@ class form_pkl(QDialog, FORM_CLASS):
         run_ok = True
         if self.txtExcludeRoutes.text():
 
-            self.setMessage(f'Excluding routes ...')
+            self.setMessage(f'Deleting lines ...')
             QApplication.processEvents()
-            out1 = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_ExcludeRoutes')
-            out2 = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS__DeletedLines')
+            out1 = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_DeleteLinesOK')
+            out2 = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_DeletedLines')
             cleaner = GTFSExcludeRoutes(gtfs_path = path_to_GTFS, 
                                         exclude_file_path = self.txtExcludeRoutes.text(), 
                                         output_path = out1,
@@ -753,10 +754,10 @@ class form_pkl(QDialog, FORM_CLASS):
         
         if run_ok and self.txtAddRoutes.text():
 
-            self.setMessage(f'Adding routes ...')
+            self.setMessage(f'Adding lines ...')
             QApplication.processEvents()
             
-            out = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_AddRoutes')
+            out = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_AddLinesOK')
             cleaner = GTFSAddRoutes(gtfs_path1 = path_to_GTFS, 
                                     gtfs_path2 = self.txtAddRoutes.text(), 
                                     output_path = out)

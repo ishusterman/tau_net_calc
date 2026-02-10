@@ -10,7 +10,9 @@ import pandas as pd
 import cProfile
 import pstats
 #from collections import Counter
-from report import make_protocol_detailed, make_protocol_summary, make_service_area_report
+from report import (make_protocol_detailed, 
+                    make_protocol_summary, 
+                    make_service_area_report)
 
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from qgis.core import (QgsProject,
@@ -24,7 +26,9 @@ from RAPTOR.rev_std_raptor import rev_raptor
 
 from footpath_on_air_b_to_b import cls_footpath_on_air_b_b
 from visualization import visualization
-from common import seconds_to_time, get_existing_path
+from common import (seconds_to_time, 
+                    get_existing_path, 
+                    get_name_columns)
 
 # # Get the current directory
 #current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -135,17 +139,18 @@ def verify_break(self,
                        fields_ok,
                        f,
                        protocol_type,
-                       shift_mode
-
+                       shift_mode,
+                       
                        )
+                
             self.progressBar.setValue(0)
             self.setMessage("Raptor Algorithm is interrupted by user")
             return True
     return False
 
-def prepare_protocol_region(field, number_bins, time_step, time_step_last, is_aggregate=False):
+def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_star, is_aggregate=False):
         
-        header_parts = ["Origin_ID"]
+        header_parts = [cols_star]
         grades = []
         
         curr_low = 0
@@ -287,17 +292,19 @@ def runRaptorWithProtocol(self,
     fields_ok = []
     
     f = ""
+    cols_dict = get_name_columns()
+    cols = cols_dict[(raptor_mode, protocol_type)]
     if protocol_type == 2:
 
-        ss = "Origin_ID,Start_time"
+        ss = f"{cols[1]},Start_time"
         ss += ",Walk_time1,BStop_ID1,Wait_time1,Bus_start_time1,Line_ID1,Ride_time1,AStop_ID1,Bus_finish_time1"
         ss += ",Walk_time2,BStop_ID2,Wait_time2,Bus_start_time2,Line_ID2,Ride_time2,AStop_ID2,Bus_finish_time2"
         ss += ",Walk_time3,BStop_ID3,Wait_time3,Bus_start_time3,Line_ID3,Ride_time3,AStop_ID3,Bus_finish_time3"
-        ss += ",DestWalk_time,Destination_ID,Destination_time"
+        ss += f",DestWalk_time,{cols[2]},Destination_time"
         if raptor_mode == 2:
-            ss = ss.replace("Origin_ID", "TEMP_ORIGIN_ID")
-            ss = ss.replace("Destination_ID", "Origin_ID")
-            ss = ss.replace("TEMP_ORIGIN_ID", "Destination_ID")
+            #ss = ss.replace("Origin_ID", "TEMP_ORIGIN_ID")
+            #ss = ss.replace("Destination_ID", "Origin_ID")
+            #ss = ss.replace("TEMP_ORIGIN_ID", "Destination_ID")
             if timetable_mode:
                 ss += ",Earlest_arrival_time"
             if not(timetable_mode):
@@ -314,7 +321,8 @@ def runRaptorWithProtocol(self,
 
         # 1. Обработка базового поля "bldg"
         field_bldg = "bldg"
-        header, grades = prepare_protocol_region(field_bldg, number_bins, time_step, time_step_last)
+        
+        header, grades = prepare_protocol_region(field_bldg, number_bins, time_step, time_step_last, cols ["star"])
         
         fields_ok.append(field_bldg)
         aggregate_dict_all[field_bldg] = {}
@@ -356,7 +364,7 @@ def runRaptorWithProtocol(self,
                 fields_ok.append(field)
 
                 # Генерируем заголовки с суммами
-                header, _ = prepare_protocol_region(field, number_bins, time_step, time_step_last, is_aggregate=True)
+                header, _ = prepare_protocol_region(field, number_bins, time_step, time_step_last, cols ["star"],is_aggregate=True)
                 
                 # Записываем файлы
                 for suffix in suffixes:
@@ -368,8 +376,13 @@ def runRaptorWithProtocol(self,
     
     
     if not (shift_mode):
-        vis = visualization(self, LayerViz, mode=protocol_type,
-                        fieldname_layer=layer_vis_field, schedule_mode = timetable_mode)
+        vis = visualization(self, 
+                            LayerViz, 
+                            mode=protocol_type,
+                            fieldname_layer=layer_vis_field, 
+                            schedule_mode = timetable_mode, 
+                            from_to = raptor_mode
+                            )
     else:
         vis = None 
     
@@ -796,8 +809,10 @@ def runRaptorWithProtocol(self,
             
 
     if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
-        f_min_endtime, _ = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime')
-        f_min_duration, short_result = make_service_area_report(f_min_duration, f'{self.alias}_min_duration')
+        col_star = cols["star"]
+        col_hash = cols["hash"]
+        f_min_endtime, _ = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime', col_star, col_hash)
+        f_min_duration, short_result = make_service_area_report(f_min_duration, f'{self.alias}_min_duration', col_star, col_hash)
         
         files_path = [f_min_endtime,f_min_duration]
         
@@ -828,7 +843,9 @@ def runRaptorWithProtocol(self,
                files_path,
                protocol_type,
                shift_mode,
-               add_thematic_map               
+               add_thematic_map,
+               field_star = cols["star"],              
+               field_hash = cols["hash"],              
                )
     
     if hasattr(self, 'progressBar'):   
@@ -848,8 +865,6 @@ def runRaptorWithProtocol(self,
     
 
     return short_result
-
-
 
 def preprocess_stop_times(stop_times):
    
@@ -922,7 +937,9 @@ def write_info(self,
                f,
                protocol_type,
                shift_mode = False,
-               add_thematic_map = True
+               add_thematic_map = True,
+               field_star = "",
+               field_hash = ""
                ):
 
     if hasattr(self, 'textLog'):        
@@ -956,35 +973,36 @@ def write_info(self,
                 vis.add_thematic_map(item, alias, set_min_value=0)
 
     if (selected_only1 or selected_only2) and not shift_mode:
-        msgBox = QMessageBox()
-        msgBox.setIcon(QMessageBox.Question)
-        msgBox.setWindowTitle("Confirm")
-        msgBox.setText(
-            f'Do you want to store selected features as a layer?'
-        )
-        msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        if field_star and field_hash:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setWindowTitle("Confirm")
+            msgBox.setText(
+                f'Do you want to store selected features as a layer?'
+            )
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
 
-        result = msgBox.exec_()
-        if result == QMessageBox.Yes:
-            if selected_only1:
+            result = msgBox.exec_()
+            if result == QMessageBox.Yes:
+                if selected_only1:
 
-                zip_filename1 = f'{self.folder_name}//origins_{self.alias}.zip'
-                filename1 = f'{self.folder_name}//origins_{self.alias}.geojson'
+                    zip_filename1 = f'{self.folder_name}//{field_star}_{self.alias}.zip'
+                    filename1 = f'{self.folder_name}//{field_star}_{self.alias}.geojson'
 
-                self.setMessage(f'Zipping the layer of origins ...')
-                QApplication.processEvents()
+                    self.setMessage(f'Zipping the layer of {field_star} ...')
+                    QApplication.processEvents()
 
-                save_layer_to_zip(Layer, zip_filename1, filename1)
+                    save_layer_to_zip(Layer, zip_filename1, filename1)
 
-            if selected_only2:
+                if selected_only2:
 
-                zip_filename2 = f'{self.folder_name}//destinations_{self.alias}.zip'
-                filename2 = f'{self.folder_name}//destinations_{self.alias}.geojson'
+                    zip_filename2 = f'{self.folder_name}//{field_hash}_{self.alias}.zip'
+                    filename2 = f'{self.folder_name}//{field_hash}_{self.alias}.geojson'
 
-                self.setMessage(f'Zipping the layer of destinations ...')
-                QApplication.processEvents()
+                    self.setMessage(f'Zipping the layer of {field_hash} ...')
+                    QApplication.processEvents()
 
-                save_layer_to_zip(LayerDest, zip_filename2, filename2)
+                    save_layer_to_zip(LayerDest, zip_filename2, filename2)
 
     self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Output in folder</a>')
 

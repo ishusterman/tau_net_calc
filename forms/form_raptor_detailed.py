@@ -47,7 +47,8 @@ from AnalyzerFromTo_incremental import roundtrip_analyzer
 
 from common import (showAllLayersInCombo_Point_and_Polygon,
                     showAllLayersInCombo_Polygon,
-                    get_initial_directory)
+                    get_initial_directory,
+                    get_name_columns)
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui')
@@ -101,8 +102,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.config_add = configparser.ConfigParser()
 
         self.break_on = False
-
-        self.shift_mode = False
         self.shift_ctrl_mode =  False
 
         self.parent = parent
@@ -337,13 +336,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
     def on_run_button_clicked(self):
 
         modifiers = QGuiApplication.keyboardModifiers()
-        if (modifiers & Qt.ShiftModifier) and not (modifiers & Qt.ControlModifier) and self.protocol_type == 2:
-            self.shift_mode = True
-
         #if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.protocol_type == 2 and self.mode == 1 :
         #    self.shift_ctrl_mode = True    
 
-        if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.mode == 1 :
+        if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.mode == 2:
             self.shift_ctrl_mode = True    
 
         self.run_button.setEnabled(False)
@@ -518,7 +514,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             project_directory, 'parameters_accessibility.txt')
         
         file_path_add = os.path.join(
-            project_directory, 'parameters_accessibility_add.txt')
+            project_directory, 'roundtrip_additional_parameters.txt')
         
         self.config.read(file_path)
 
@@ -872,6 +868,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if run:
             PathToNetwork = self.config['Settings']['PathToPKL']
             raptor_mode = self.mode
+            raptor_mode_copy = raptor_mode
             
             RunOnAir = self.config['Settings']['RunOnAir'] == 'True'
 
@@ -900,80 +897,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         PathToNetwork,
                         raptor_mode,
                         RunOnAir
-                        )
+                       )
             
-            """
-            if self.shift_mode:
-                self.folder_name_copy = self.folder_name
-                
-                generator = TimeMarkGenerator(
-                    start_hour=7,
-                    end_hour=19,
-                    marks_per_hour=2,
-                    n_experiments=1,
-                    )
-                times = generator.run()
-                self.textLog.append(f"Times: {times}")
-                
-                for i, source in enumerate(sources):
-                
-                    source = [source]
-                    
-                    if i % 10 == 0:
-                        self.textLog.append(f"Num {i}")
-                   
-                  
-                    for idx, D_TIME_str in enumerate(times):                    
-                        
-                        t = datetime.strptime(D_TIME_str, '%H:%M:%S')
-                        D_TIME = t.hour * 3600 + t.minute * 60 + t.second
-
-                        if not self.timetable_mode:
-                            if self.mode == 1:
-                                self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
-                            else:
-                                self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
-                        if self.timetable_mode:
-                            if self.mode == 1:
-                                self.textLog.append(f"<a style='font-weight:bold;'> Earliest start time: {D_TIME_str}</a>")
-                            else:
-                                self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
-                
-                 
-                        postfix = i + 1 
-                        self.folder_name = os.path.join(f'{self.folder_name_copy}_{source}', f'{self.txtAliase.text()}-{postfix}')
-
-                        os.makedirs(self.folder_name, exist_ok=True)
-        
-                        runRaptorWithProtocol(self,
-                                  source,
-                                  mode,
-                                  protocol_type,
-                                  timetable_mode,
-                                  D_TIME,
-                                  self.cbSelectedOnly1.isChecked(),
-                                  self.cbSelectedOnly2.isChecked(),
-                                  dictionary,
-                                  self.shift_mode,
-                                  layer_dest,
-                                  layer_origin,
-                                  PathToNetwork
-                                  )
-                        i += 1
-                    
-                        if self.break_on:
-                            self.setMessage("Statistic computations are interrupted by user")
-                            self.textLog.append(f'<a><b><font color="red">Statistic computations are interrupted by user</font> </b></a>')
-                            self.progressBar.setValue(0)
-                            break
-                            #return 0
-                    
-                    #base_path = f'{self.folder_name_copy}_{source}' # os.path.dirname(self.folder_name) #self.folder_name_copy
-                    #output_path = os.path.join(os.path.dirname(base_path), f"stat_{source}_{self.alias}.csv")
-                    #processor = DayStat_DestinationID(base_path, output_path)
-                    #processor.process_files()
-                    #self.textLog.append(f'<a href="file:///{base_path}" target="_blank" >Statistics in folder</a>')
-            """
             #analyzer_time = 0.0
             if self.shift_ctrl_mode:
                 
@@ -1017,10 +942,16 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 self.folder_name_from = os.path.join(self.folder_name_copy, "from")
                 os.makedirs(self.folder_name_from, exist_ok=True)
 
+                cols_dict = get_name_columns()
+                cols = cols_dict[(raptor_mode_copy, protocol_type)]
+
                 analyzer = roundtrip_analyzer(
                                         report_path = os.path.dirname(self.folder_name_from), 
                                         duration_max=3600, 
-                                        alias = self.alias)
+                                        alias = self.alias,
+                                        field_star = cols["star"],
+                                        field_hash = cols["hash"]
+                                        )
 
                 START_TIME = from_time_start
 
@@ -1281,7 +1212,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
                 
 
-            if not(self.shift_mode) and not (self.shift_ctrl_mode):
+            if not (self.shift_ctrl_mode):
                 
                 self.run_button.setEnabled(False)
                 D_TIME = time_to_seconds(self.config['Settings']['TIME'])
