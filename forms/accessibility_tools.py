@@ -14,6 +14,7 @@ from qgis.core import QgsProject
 from .form_raptor_detailed import RaptorDetailed
 from .form_raptor_summary import RaptorSummary
 from .form_car import CarAccessibility
+from .form_gtfs import form_gtfs
 from .form_pkl import form_pkl
 from .form_pkl_car import form_pkl_car
 from .form_relative import form_relative
@@ -21,6 +22,7 @@ from .form_relative import form_relative
 from .form_roads_clean import form_roads_clean
 from .form_visualization_clean import form_visualization_clean
 from .form_buildings_clean import form_buildings_clean
+from .form_raptor_roundtrip import RaptorRoundtrip
 
 
 class AccessibilityTools(QWidget):
@@ -52,34 +54,42 @@ class AccessibilityTools(QWidget):
             group1, ['Clean layer of buildings'])
         self.item19 = QTreeWidgetItem(
             group1, ['Prepare visualisation layers'])
-        #group8 = QTreeWidgetItem(self.tree_widget, ['Construct databases'])
-        #group8.setExpanded(True)
-        
         
 
         group2 = QTreeWidgetItem(self.tree_widget, ['Transit accessibility'])
         group2.setExpanded(True)
+        self.item27 = QTreeWidgetItem(group2, ['Modify GTFS'])
         self.item3 = QTreeWidgetItem(group2, ['Transit routing database'])
         group3 = QTreeWidgetItem(group2, ['Service area maps'])
         self.item4 = QTreeWidgetItem(
             group3, ['From service locations – Fixed-time departure'])
-        self.item5 = QTreeWidgetItem(
-            group3, ['From service locations – Schedule-based departure'])
         self.item6 = QTreeWidgetItem(
             group3, ['To service locations – Fixed-time arrival'])
+        self.item21 = QTreeWidgetItem(
+            group3, ['Roundtrip accessibility, Fixed-time arrival'])
+        
+        self.item5 = QTreeWidgetItem(
+            group3, ['From service locations – Schedule-based departure'])
         self.item7 = QTreeWidgetItem(
             group3, ['To service locations – Schedule-based arrival'])
+        self.item22 = QTreeWidgetItem(
+            group3, ['Roundtrip accessibility, Schedule-based arrival'])
         group3.setExpanded(True)
 
         group4 = QTreeWidgetItem(group2, ['Region maps'])
         self.item8 = QTreeWidgetItem(
             group4, ['From every location – Fixed-time departure'])
-        self.item9 = QTreeWidgetItem(
-            group4, ['From every location – Schedule-based departure'])
         self.item10 = QTreeWidgetItem(
             group4, ['To every location – Fixed-time arrival'])
+        self.item23 = QTreeWidgetItem(
+            group4, ['Roundtrip accessibility, Fixed-time arrival'])
+        self.item9 = QTreeWidgetItem(
+            group4, ['From every location – Schedule-based departure'])
         self.item11 = QTreeWidgetItem(
             group4, ['To every location – Schedule-based arrival'])
+        self.item24 = QTreeWidgetItem(
+            group4, ['Roundtrip accessibility, Schedule-based arrival'])
+        
         group4.setExpanded(True)
 
         group5 = QTreeWidgetItem(self.tree_widget, ['Car accessibility'])
@@ -89,6 +99,8 @@ class AccessibilityTools(QWidget):
             group8, ['From service locations – Fixed-time departure'])
         self.item13 = QTreeWidgetItem(
             group8, ['To service locations – Fixed-time arrival'])
+        self.item25 = QTreeWidgetItem(
+            group8, ['Roundtrip accessibility, Fixed-time arrival'])
         group5.setExpanded(True)
         group8.setExpanded(True)
 
@@ -97,6 +109,9 @@ class AccessibilityTools(QWidget):
             group6, ['From every location – Fixed-time departure'])
         self.item15 = QTreeWidgetItem(
             group6, ['To every location – Fixed-time arrival'])
+        self.item26 = QTreeWidgetItem(
+            group6, ['Roundtrip accessibility, Fixed-time arrival'])
+        
         group6.setExpanded(True)
 
         group7 = QTreeWidgetItem(
@@ -144,7 +159,8 @@ class AccessibilityTools(QWidget):
         self.titles = ["Data preprocessing. Clean road network", 
                        "Data preprocessing. Clean layer of buildings", 
                        "Data preprocessing. Prepare visualisation layers",
-                       "Transit accessibility Transit routing database", 
+                       "Transit accessibility. Transit routing database", 
+                       "Transit accessibility. Modify GTFS", 
                        "Car accessibility. Car routing database", 
                        "Transit accessibility. Service area maps. From service locations – Fixed-time departure",
                        "Transit accessibility. Service area maps. From service locations – Schedule-based departure", 
@@ -159,7 +175,16 @@ class AccessibilityTools(QWidget):
                        "Car accessibility. Region maps. From every location – Fixed-time departure", 
                        "Car accessibility. Region maps. To every location – Fixed-time arrival", 
                        "Compare accessibility. Service areas",
-                       "Compare accessibility. Regions",                        
+                       "Compare accessibility. Regions",
+
+                       "Transit accessibility. Service area maps. Roundtrip accessibility, Fixed-time arrival",
+                       "Transit accessibility. Service area maps. Roundtrip accessibility, Schedule-based arrival",
+                       "Transit accessibility. Region maps. Roundtrip accessibility, Fixed-time arrival",
+                       "Transit accessibility. Region maps. Roundtrip accessibility, Schedule-based arrival",
+
+                       "Car accessibility. Service area maps. Roundtrip accessibility, Fixed-time arrival",
+                       "Car accessibility. Region maps. Roundtrip accessibility, Fixed-time arrival",
+
                        ]
         
         
@@ -216,6 +241,13 @@ class AccessibilityTools(QWidget):
                 visualization_clean = form_visualization_clean(title = title)
                 visualization_clean.exec_()    
 
+        if item == self.item27:
+            title="Transit accessibility. Modify GTFS"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                gtfs = form_gtfs(title = title)
+                gtfs.show()
+
         if item == self.item3:
             title="Transit accessibility. Transit routing database"
             existing_window = self.get_existing_window(title)
@@ -270,6 +302,30 @@ class AccessibilityTools(QWidget):
                                              timetable_mode=True)
                 raptor_detailed.show()
 
+        if item == self.item21:
+            title="Transit accessibility. Service area maps. Roundtrip accessibility, Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_roundtrip = RaptorRoundtrip(self, mode=2,
+                                             protocol_type=2,
+                                             title=title,
+                                             timetable_mode=False,
+                                             roundtrip = True)
+                raptor_roundtrip.show()
+        
+        if item == self.item22:
+            title="Transit accessibility. Service area maps. Roundtrip accessibility, Schedule-based arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_roundtrip = RaptorRoundtrip(self, mode=2,
+                                             protocol_type=2,
+                                             title=title,
+                                             timetable_mode=True,
+                                             roundtrip = True)
+                raptor_roundtrip.show()
+
+
+
         if item == self.item8:
             title="Transit accessibility. Region maps. From every location – Fixed-time departure"
             existing_window = self.get_existing_window(title)
@@ -311,6 +367,29 @@ class AccessibilityTools(QWidget):
                                            timetable_mode=True)
                 raptor_summary.show()
 
+        
+        if item == self.item23:
+            title="Transit accessibility. Region maps. Roundtrip accessibility, Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_roundtrip = RaptorRoundtrip(self, mode=2,
+                                             protocol_type=1,
+                                             title=title,
+                                             timetable_mode=False,
+                                             roundtrip = True)
+                raptor_roundtrip.show()
+        if item == self.item24:
+            title="Transit accessibility. Region maps. Roundtrip accessibility, Schedule-based arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_roundtrip = RaptorRoundtrip(self, mode=2,
+                                             protocol_type=1,
+                                             title=title,
+                                             timetable_mode=True,
+                                             roundtrip = True)
+                raptor_roundtrip.show()
+
+
         if item == self.item12:
             title="Car accessibility. Service area maps. From service locations – Fixed-time departure"
             existing_window = self.get_existing_window(title)
@@ -327,6 +406,16 @@ class AccessibilityTools(QWidget):
                 car_accessibility = CarAccessibility(mode=2,
                                                  protocol_type=2,
                                                  title=title)
+                car_accessibility.show()
+        
+        if item == self.item25:
+            title="Car accessibility. Service area maps. Roundtrip accessibility, Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=2,
+                                                 protocol_type=2,
+                                                 title=title,
+                                                 roundtrip = True)
                 car_accessibility.show()
 
         if item == self.item14:
@@ -345,6 +434,16 @@ class AccessibilityTools(QWidget):
                 car_accessibility = CarAccessibility(mode=2,
                                                  protocol_type=1,
                                                  title=title)
+                car_accessibility.show()
+        
+        if item == self.item26:
+            title="Car accessibility. Region maps. Roundtrip accessibility, Fixed-time arrival"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=2,
+                                                 protocol_type=1,
+                                                 title=title,
+                                                 roundtrip = True)
                 car_accessibility.show()
 
         if item == self.item16:

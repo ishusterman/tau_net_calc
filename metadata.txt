@@ -6,7 +6,7 @@
 name=Accessibility calculator
 qgisMinimumVersion=3.1.1
 description=Transport accessibility maps
-version=6.3.2
+version=6.3.5
 
 author=Igor Shusterman, Aleksey Ogulenko, Itzhak Benenson
 email=ishusterman2011@gmail.com

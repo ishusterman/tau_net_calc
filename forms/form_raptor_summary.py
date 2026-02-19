@@ -17,8 +17,9 @@ class RaptorSummary(RaptorDetailed):
                  protocol_type,
                  title,
                  timetable_mode,
+                 roundtrip = False
                  ):
-        super().__init__(parent, mode, protocol_type, title, timetable_mode)
+        super().__init__(parent, mode, protocol_type, title, timetable_mode,roundtrip)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.parent = parent
 
@@ -49,7 +50,6 @@ class RaptorSummary(RaptorDetailed):
         webbrowser.open(url)
     
     # for widget with checkbox
-
     def fillComboBoxWithLayerFields2(self):
         self.cmbFields_ch.clear()
         selected_layer_name = self.cmbLayersDest.currentText()

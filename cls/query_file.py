@@ -4,9 +4,10 @@ from pathlib import Path
 
 import pickle
 from datetime import datetime
-from numbers import Real
+
 import tempfile
 import pandas as pd
+
 import cProfile
 import pstats
 #from collections import Counter
@@ -186,7 +187,8 @@ def runRaptorWithProtocol(self,
                           shift_mode,
                           layer_dest_obj,
                           layer_origin_obj,
-                          path_to_pkl) -> tuple:
+                          path_to_pkl,
+                          MaxExtraTime) -> tuple:
 
     short_result = {}
     
@@ -198,8 +200,7 @@ def runRaptorWithProtocol(self,
     MAX_TRANSFER = int(self.config['Settings']['Max_transfer'])
     MIN_TRANSFER = int(self.config['Settings']['Min_transfer'])
 
-    MaxExtraTime = int(self.config['Settings']['MaxExtraTime'])*60
-    
+        
     Speed = float(self.config['Settings']['Speed'].replace(
         ',', '.')) * 1000 / 3600                    # from km/h to m/sec
 
@@ -431,6 +432,8 @@ def runRaptorWithProtocol(self,
         if not (timetable_mode):
 
             if raptor_mode == 1:
+
+                
             
                 output_endtime, output_duration = raptor(SOURCE,
                             D_TIME,
@@ -493,7 +496,8 @@ def runRaptorWithProtocol(self,
             time_curr = D_TIME
             time_delta = 5 * 60 
             #MaxExtraTime = time_delta # !!!!!!!!!!!!!!!!!!! test
-            count_steps =  MaxExtraTime // time_delta
+            #count_steps =  MaxExtraTime // time_delta
+            count_steps = max(1, MaxExtraTime // time_delta)
             step = 0
 
             MaxWaitTime = 10*60
@@ -525,6 +529,7 @@ def runRaptorWithProtocol(self,
                                     
                 
                 if hasattr(self, 'setMessage'):
+                        
                         if raptor_mode == 1:
                             self.setMessage(f'Calculating №{i+1} of {count} (checking time {seconds_to_time(time_curr)})')
                         else:
@@ -532,7 +537,8 @@ def runRaptorWithProtocol(self,
                         QApplication.processEvents()
 
                 if raptor_mode == 1:
-                                            
+
+                                         
                     output_endtime, output_duration = raptor(SOURCE,
                             time_curr,
                             MAX_TRANSFER,
@@ -553,6 +559,7 @@ def runRaptorWithProtocol(self,
                             timetable_mode,
                             MaxExtraTime                            
                             )
+                    
                     
                 else:
                     
@@ -1003,8 +1010,8 @@ def write_info(self,
                     QApplication.processEvents()
 
                     save_layer_to_zip(LayerDest, zip_filename2, filename2)
-
-    self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Output in folder</a>')
+    if not (shift_mode):
+        self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Output in folder</a>')
 
 
 

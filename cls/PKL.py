@@ -135,6 +135,8 @@ class PKL ():
             self.parent.progressBar.setValue(12)
         if self.verify_break():
             return 0
+        
+        return 1
 
     def load_gtfs(self):
         if self.IN_QGIS:

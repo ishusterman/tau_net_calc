@@ -15,7 +15,6 @@ from qgis.core import (QgsProject,
 
 from PyQt5.QtCore import QVariant
 
-
 from qgis.analysis import (
     QgsGraphBuilder,
     QgsVectorLayerDirector,
@@ -23,6 +22,7 @@ from qgis.analysis import (
     QgsNetworkDistanceStrategy
 )
 
+import csv
 
 from converter_layer import MultiLineStringToLineStringConverter
 from common import getDateTime, convert_distance_to_meters, get_existing_path
@@ -32,6 +32,10 @@ class pkl_car ():
     def __init__(self, parent=""):
         self.parent = parent
         self.already_display_break = False
+
+        ########### experiment !!!!!!
+        #if parent != "":
+        #    self.parent.idx_field_speed = 26
         
 
     def create_files(self):
@@ -52,10 +56,16 @@ class pkl_car ():
         if self.verify_break():
             return 0
         
-        self.parent.setMessage('Converting multilines into lines ...')
-        self.converter = MultiLineStringToLineStringConverter(
-            self.parent, self.parent.layer_road)
-        self.layer_roads = self.converter.execute()
+        ###
+        # experiment
+        
+        #self.parent.setMessage('Converting multilines into lines ...')
+        #self.converter = MultiLineStringToLineStringConverter(
+        #    self.parent, self.parent.layer_road)
+        #self.layer_roads = self.converter.execute()
+        self.layer_roads = self.parent.layer_road
+        ###
+        # experiment
 
         if self.verify_break():
             return 0
@@ -136,7 +146,9 @@ class pkl_car ():
         if self.verify_break():
             return 0
 
-        self.converter.remove_temp_layer()
+        # experiment
+        #self.converter.remove_temp_layer()
+        # experiment
         self.parent.progressBar.setValue(8)
         QApplication.processEvents()
 
@@ -210,6 +222,7 @@ class pkl_car ():
         if self.verify_break():
             return 0
 
+        """
         if self.parent.default_direction == "B":
             direction = QgsVectorLayerDirector.DirectionBoth
         if self.mode == 1:
@@ -222,7 +235,10 @@ class pkl_car ():
                 direction = QgsVectorLayerDirector.DirectionBackward
             if self.parent.default_direction == "F":
                 direction = QgsVectorLayerDirector.DirectionForward
+        """
 
+        direction = QgsVectorLayerDirector.DirectionBoth
+        
         director = QgsVectorLayerDirector(self.layer_roads_mod,
                                           self.parent.idx_field_direction,
                                           "T", "F", "B", direction
@@ -232,16 +248,17 @@ class pkl_car ():
 
         toMetricFactor = 1 / 3.6  # for speed km/h
 
-        if self.parent.strategy_id == 1:
-            strategy = QgsNetworkSpeedStrategy(self.parent.idx_field_speed,
+        #if self.parent.strategy_id == 1:
+        strategy1 = QgsNetworkSpeedStrategy(self.parent.idx_field_speed,
                                                defaultValue,
                                                toMetricFactor
                                                )
-        else:
-            strategy = QgsNetworkDistanceStrategy()
+        #else:
+        #strategy2 = QgsNetworkDistanceStrategy()
         if self.verify_break():
             return 0
-        director.addStrategy(strategy)
+        director.addStrategy(strategy1)
+        #director.addStrategy(strategy2)
         if self.verify_break():
             return 0
         builder = QgsGraphBuilder(self.crs)
@@ -274,7 +291,8 @@ class pkl_car ():
     def save_graph(self, graph, file_path):
 
         graph_data = {
-            'nodes': [(graph.vertex(i).point().x(), graph.vertex(i).point().y()) for i in range(graph.vertexCount())],
+            'nodes': [(graph.vertex(i).point().x(), graph.vertex(i).point().y())
+                    for i in range(graph.vertexCount())],
             'edges': []
         }
 
@@ -285,16 +303,19 @@ class pkl_car ():
                 if self.verify_break():
                     return 0
                 QApplication.processEvents()
+
             edge = graph.edge(edge_id)
             source_id = edge.fromVertex()
             target_id = edge.toVertex()
-            cost = edge.cost(0)  # index 0 for the first value
+
+            # количество стоимостей = количество стратегий
             strategies = edge.strategies()
-            graph_data['edges'].append(
-                (source_id, target_id, cost, strategies))
+            costs = [edge.cost(i) for i in range(len(strategies))]
+
+            graph_data['edges'].append((source_id, target_id, costs))
 
         with open(file_path, 'wb') as f:
-            pickle.dump(graph_data, f)
+            pickle.dump(graph_data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_graph(self, mode, pathtopkl, crs):
 
@@ -302,39 +323,74 @@ class pkl_car ():
 
         if mode == 1:
             graph_path = get_existing_path(pathtopkl, 'graph.pkl')
+            #nodes_file = os.path.join(pathtopkl, 'graph_nodes.csv')
+            #edges_file = os.path.join(pathtopkl, 'graph_edges.csv')
         else:
             graph_path = get_existing_path(pathtopkl, 'graph_rev.pkl')
-            
+            #nodes_file = os.path.join(pathtopkl, 'graph_rev_nodes.csv')
+            #edges_file = os.path.join(pathtopkl, 'graph_rev_edges.csv')
+
         with open(graph_path, 'rb') as f:
             graph_data = pickle.load(f)
 
+        """
+        # --- Сохраняем координаты вершин ---
+        with open(nodes_file, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["id", "x", "y"])
+            for vid, (x, y) in enumerate(graph_data['nodes']):
+                writer.writerow([vid, x, y])
+
+        print(f"Файл с вершинами сохранён: {nodes_file}")
+
+        # --- Сохраняем рёбра с WKT ---
+        with open(edges_file, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([
+                "edge_id", "source_id", "target_id",
+                "x1", "y1", "x2", "y2",
+                "cost", "wkt"
+            ])
+
+            for eid, (source_id, target_id, costs) in enumerate(graph_data['edges']):
+                x1, y1 = graph_data['nodes'][source_id]
+                x2, y2 = graph_data['nodes'][target_id]
+
+                cost = costs[0] if isinstance(costs, (list, tuple)) else costs
+
+                wkt = f"LINESTRING({x1} {y1}, {x2} {y2})"
+
+                writer.writerow([eid, source_id, target_id, x1, y1, x2, y2, cost, wkt])
+
+        print(f"Файл с рёбрами сохранён: {edges_file}")
+        """
+        
+        # --- Восстанавливаем граф ---
         builder = QgsGraphBuilder(crs)
 
-        vertices = {}
+        for vertex_id, point in enumerate(graph_data['nodes']):
+            builder.addVertex(vertex_id, QgsPointXY(point[0], point[1]))
 
-        vertex_id = 0
-        for point in graph_data['nodes']:
-            qgs_point_xy = QgsPointXY(point[0], point[1])  
-            # add a vertex with an identifier and a point
-            builder.addVertex(vertex_id, qgs_point_xy)
-            # save the correspondence between the vertex ID and the point
-            vertices[vertex_id] = point
-            vertex_id += 1  # increment the identifier for the next vertex
+        for source_id, target_id, costs in graph_data['edges']:
+            source_point = graph_data['nodes'][source_id]
+            target_point = graph_data['nodes'][target_id]
 
-        for source_id, target_id, cost, strategies in graph_data['edges']:
-            # get the coordinates of the vertices
-            source_point = vertices[source_id]
-            target_point = vertices[target_id]
+            builder.addEdge(
+                source_id,
+                QgsPointXY(source_point[0], source_point[1]),
+                target_id,
+                QgsPointXY(target_point[0], target_point[1]),
+                costs
+            )
 
-            # convert coordinates to QgsPointXY
-            source_qgs_point_xy = QgsPointXY(source_point[0], source_point[1])
-            target_qgs_point_xy = QgsPointXY(target_point[0], target_point[1])
+        graph = builder.graph()
+        #print(f"vertices = {graph.vertexCount()}, edges = {graph.edgeCount()}")
 
-            # add an edge
-            builder.addEdge(source_id, source_qgs_point_xy,
-                            target_id, target_qgs_point_xy, [cost] + strategies)
+        return graph
 
-        return builder.graph()
+
+
+
 
     def change_road_layer(self):
         comment = ""
@@ -358,21 +414,19 @@ class pkl_car ():
                 current_value = new_feature.attribute(
                     self.parent.idx_field_direction)
 
-                new_value = "B"
-                """
-                if self.mode == 1:  # raptor
-                    if current_value == "T":
-                        new_value = "1"
-                    elif current_value == "F":
-                        new_value = "0"
-                """
-                if self.mode == 2:  # backward raptor
+                current_value = new_feature.attribute(self.parent.idx_field_direction)
+
+                if self.mode == 1:
+                    new_value = current_value
+
+                elif self.mode == 2:
                     if current_value == "T":
                         new_value = "F"
                     elif current_value == "F":
                         new_value = "T"
+                    else:
+                        new_value = "B"
                 
-
                 new_feature.setAttribute(
                     self.parent.idx_field_direction, new_value)
 
@@ -470,6 +524,9 @@ class pkl_car ():
                                                                distance_upper_bound=buffer_radius)
 
             for index, distance in zip(indices, distances):
+
+                if math.isinf(distance): continue
+
                 if self.crs_grad:
                     distance = convert_distance_to_meters(
                         distance, latitude)

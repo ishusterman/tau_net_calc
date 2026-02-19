@@ -84,28 +84,34 @@ class visualization:
 
     def generate_gradient(self, start_color, mid_color, end_color, num_steps):
         gradient = []
-        half_steps = int(num_steps / 2)
-    
-        # Градиент от start_color до mid_color
+
+        if num_steps <= 1:
+            return [start_color.name()]
+
         start_rgb = start_color.getRgb()
         mid_rgb = mid_color.getRgb()
-        for i in range(half_steps):
-            t = i / (half_steps - 1) if half_steps > 1 else 0
-            r = int(start_rgb[0] + (mid_rgb[0] - start_rgb[0]) * t)
-            g = int(start_rgb[1] + (mid_rgb[1] - start_rgb[1]) * t)
-            b = int(start_rgb[2] + (mid_rgb[2] - start_rgb[2]) * t)
-            gradient.append(QColor(r, g, b).name())
-    
-        # Градиент от mid_color до end_color
         end_rgb = end_color.getRgb()
-        for i in range(half_steps, num_steps):
-            t = (i - half_steps) / (num_steps - half_steps - 1) if (num_steps - half_steps) > 1 else 0
-            r = int(mid_rgb[0] + (end_rgb[0] - mid_rgb[0]) * t)
-            g = int(mid_rgb[1] + (end_rgb[1] - mid_rgb[1]) * t)
-            b = int(mid_rgb[2] + (end_rgb[2] - mid_rgb[2]) * t)
+
+        for i in range(num_steps):
+            x = i / (num_steps - 1)  # от 0 до 1
+
+            if x <= 0.5:
+                # интерполяция между start и mid
+                t = x / 0.5  # 0..1
+                r = int(start_rgb[0] + (mid_rgb[0] - start_rgb[0]) * t)
+                g = int(start_rgb[1] + (mid_rgb[1] - start_rgb[1]) * t)
+                b = int(start_rgb[2] + (mid_rgb[2] - start_rgb[2]) * t)
+            else:
+                # интерполяция между mid и end
+                t = (x - 0.5) / 0.5  # 0..1
+                r = int(mid_rgb[0] + (end_rgb[0] - mid_rgb[0]) * t)
+                g = int(mid_rgb[1] + (end_rgb[1] - mid_rgb[1]) * t)
+                b = int(mid_rgb[2] + (end_rgb[2] - mid_rgb[2]) * t)
+
             gradient.append(QColor(r, g, b).name())
-    
+
         return gradient
+
 
     def add_thematic_map(self, path_protokol, aliase, set_min_value=float('inf'), type_compare = ''):
                       

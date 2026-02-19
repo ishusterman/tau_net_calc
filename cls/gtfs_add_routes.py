@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import shutil
+from PyQt5.QtWidgets import QApplication
 
 class GTFSAddRoutes:
     def __init__(self, gtfs_path1, gtfs_path2, output_path):
@@ -35,12 +36,16 @@ class GTFSAddRoutes:
             try:
                 
                 df1 = self._read_file(self.gtfs_path1, filename)
+                QApplication.processEvents()
                 df2 = self._read_file(self.gtfs_path2, filename)
+                QApplication.processEvents()
                 
                 if df1 is None and df2 is None:
                     continue
                 combined_df = pd.concat([df1, df2], ignore_index=True)
+                QApplication.processEvents()
                 combined_df.to_csv(os.path.join(self.output_path, filename), index=False)
+                QApplication.processEvents()
             
             except Exception as e:
                 print(f"An unexpected error occurred while processing {filename}: {e}")

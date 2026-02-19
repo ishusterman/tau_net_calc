@@ -86,9 +86,9 @@ class cls_clean_roads(QgsTask):
             self.signals.set_message.emit('Cleaning layer of roads, step 1 of 3, snapping road links’ ends...')
             
             result0 = processing.run("grass:v.clean", {'input': self.layer_path,
-                                                        'type':[0,1,2,3,4,5,6],
+                                                        'type':[1],
                                                         'tool':[1],
-                                                        'threshold':'1',
+                                                        'threshold':'0.5',
                                                         '-b':False,
                                                         '-c':False,
                                                         'output':'TEMPORARY_OUTPUT',
@@ -107,6 +107,15 @@ class cls_clean_roads(QgsTask):
                 return 0
             snapped_layer_path = result0['output']
             self.signals.progress.emit(1) 
+
+            # Добавляем в проект
+            # Добавляем в проект
+            snapped_layer = QgsVectorLayer(snapped_layer_path, f"{name}_snap", "ogr")
+            QgsProject.instance().addMapLayer(snapped_layer)
+
+            errors0_path = result0['error']
+            errors0_layer = QgsVectorLayer(errors0_path, f"{name}_snap_errors", "ogr")
+            QgsProject.instance().addMapLayer(errors0_layer)
                                     
             #######################################################
             # first clean
@@ -114,7 +123,7 @@ class cls_clean_roads(QgsTask):
             self.signals.set_message.emit('Cleaning layer of roads, step 2 of 3, breaking overlapping links...')
             result1 = processing.run("grass:v.clean", {
                 'input': snapped_layer_path,
-                'type': [0, 1, 2, 3, 4, 5, 6],
+                'type': [1],
                 'tool': [0],
                 'threshold': [0.0, 0.0],
                 'output': 'TEMPORARY_OUTPUT',
@@ -130,12 +139,19 @@ class cls_clean_roads(QgsTask):
             self.signals.progress.emit(2)
             
             cleaned_layer_path1 = result1['output']
+
+            clean1_layer = QgsVectorLayer(cleaned_layer_path1, f"{name}_break", "ogr")
+            QgsProject.instance().addMapLayer(clean1_layer)
+            errors1_path = result1['error']
+            errors1_layer = QgsVectorLayer(errors1_path, f"{name}_break_errors", "ogr")
+            QgsProject.instance().addMapLayer(errors1_layer)
+
             
             # second clean
             self.signals.set_message.emit('Cleaning layer of roads, step 3 of 3, deleting duplicated links...')
             result2 = processing.run("grass:v.clean", {
                 'input': cleaned_layer_path1,
-                'type': [0, 1, 2, 3, 4, 5, 6],
+                'type': [1],
                 'tool': [6],
                 'threshold': [0.0],
                 'output': 'TEMPORARY_OUTPUT',
@@ -155,6 +171,11 @@ class cls_clean_roads(QgsTask):
                 errors_layer_2_path, cleaned_layer_error_name, "ogr")
             error_count = len(list(errors_layer_2.getFeatures()))
             self.signals.log.emit(f'<a>Number of errors: {error_count}</a>')
+
+
+            QgsProject.instance().addMapLayer(cleaned_layer_2)
+            QgsProject.instance().addMapLayer(errors_layer_2)
+
 
             # join errors
 

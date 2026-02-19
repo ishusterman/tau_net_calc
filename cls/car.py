@@ -7,6 +7,8 @@ import pandas as pd
 import glob
 import configparser
 
+from qgis.utils import iface
+
 from qgis.analysis import QgsGraphAnalyzer
 
 from PyQt5.QtWidgets import QApplication, QMessageBox
@@ -14,8 +16,12 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from qgis.core import (QgsProject,
                        QgsVectorFileWriter, 
                        QgsDistanceArea, 
-                       QgsWkbTypes
+                       QgsWkbTypes,
+                       QgsGeometry, 
+                       QgsPointXY,
                        )
+
+from qgis.analysis import QgsGraphBuilder
 
 from visualization import visualization
 from common import (get_existing_path, 
@@ -69,6 +75,8 @@ class car_accessibility:
         self.cols = cols_dict[(self.parent.mode, self.parent.protocol_type)]
         self.short_result = {}
 
+        
+
     def read_factor_speed_by_hour(self):
              
         self.file_path_factor_speed_by_hour = get_existing_path (self.parent.path_to_pkl, "cdi_index.csv")
@@ -82,24 +90,262 @@ class car_accessibility:
                 self.factor_speed_by_hour[hour_item] = factor_item
 
 
-    def find_car_accessibility(self, mode):
+    # experimental
+    
+    def check_speed_fields(self, layer):
+        field_names = layer.fields().names()
+        for h in range(24):
+            fname = f"fspeed_{h:02d}"
+            if fname not in field_names:
+                return False
+        return True
+    
+    def read_road_speed_default(self):
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        config_path = os.path.join(current_dir, 'config')
+        
+        self.file_path_road_speed_default = os.path.join(
+            config_path, "car_speed_by_link_type.csv")
+        
+        self.type_road_speed_default = {}
 
-        if mode == 1:
-            graph = self.parent.graph
-        else: 
-            graph = self.parent.graph_rev
+        with open(self.file_path_road_speed_default, mode='r', newline='', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                type_road = row['link_type']
+                speed_default = int(row['speed_km_h'])
+                self.type_road_speed_default[type_road] = speed_default
+    
+    def build_graph_from_layer(self, layer, hour, mode):
+
+        # ---------------------------------------------------------
+        # 1. Подготовка
+        # ---------------------------------------------------------
+        self.read_road_speed_default()
+
+        crs = layer.crs()
+        builder = QgsGraphBuilder(crs)
+
+        da = QgsDistanceArea()
+        da.setSourceCrs(crs, QgsProject.instance().transformContext())
+
+        vertex_map = {}
+
+        def get_vertex_id(pt: QgsPointXY):
+            key = (pt.x(), pt.y())
+            if key not in vertex_map:
+                vid = len(vertex_map)
+                builder.addVertex(vid, pt)
+                vertex_map[key] = vid
+            return vertex_map[key]
+
+        # Поля скоростей
+        fwd_field = f"fspeed_{hour:02d}"
+        bwd_field = f"bspeed_{hour:02d}"
+
+        fields = layer.fields().names()
+        if fwd_field not in fields or bwd_field not in fields:
+            raise Exception(f"Нет полей {fwd_field} / {bwd_field}")
+
+        # Нормализация скорости
+        def normalize_speed(v):
+            if v is None:
+                return None
+            try:
+                v = float(v)
+                return max(v, 3.6)  # минимум 3.6 км/ч
+            except:
+                return None
+
+        # ---------------------------------------------------------
+        # 2. Обработка каждого объекта слоя
+        # ---------------------------------------------------------
+        for feat in layer.getFeatures():
+            geom = feat.geometry()
+            if geom.isEmpty():
+                continue
+
+            # Универсальное извлечение линии
+            if geom.isMultipart():
+                parts = geom.asMultiPolyline()
+                if not parts:
+                    continue
+
+                merged = []
+                for part in parts:
+                    merged.extend(part)
+
+                if len(merged) < 2:
+                    continue
+
+                line = merged
+                line_geom = QgsGeometry.fromPolylineXY(line)
+
+            else:
+                line = geom.asPolyline()
+
+                if not line:
+                    curve = geom.constGet()
+                    if hasattr(curve, "curveToLine"):
+                        line_geom = QgsGeometry(curve.curveToLine())
+                        line = line_geom.asPolyline()
+                    else:
+                        continue
+                else:
+                    line_geom = geom
+
+                if len(line) < 2:
+                    continue
+
+            # Начальная и конечная точки
+            p1 = QgsPointXY(*line[0])
+            p2 = QgsPointXY(*line[-1])
+
+            # Длина линии
+            length = da.measureLength(line_geom)
+            if length <= 0:
+                continue
+
+            # Скорости
+            speed_fwd = normalize_speed(feat[fwd_field])
+            speed_bwd = normalize_speed(feat[bwd_field])
+
+            # Сравнение со скоростью в 12:00
+            fwd_field_12 = "fspeed_12"
+            bwd_field_12 = "bspeed_12"
+
+            speed_fwd_12 = normalize_speed(feat[fwd_field_12]) if fwd_field_12 in fields else None
+            speed_bwd_12 = normalize_speed(feat[bwd_field_12]) if bwd_field_12 in fields else None
+
+            if speed_fwd is not None and speed_fwd_12 is not None:
+                if speed_fwd < speed_fwd_12 / 2:
+                    speed_fwd = speed_fwd_12 / 2
+
+            if speed_bwd is not None and speed_bwd_12 is not None:
+                if speed_bwd < speed_bwd_12 / 2:
+                    speed_bwd = speed_bwd_12 / 2
+
+            # Если обе скорости отсутствуют → default
+            if speed_fwd is None and speed_bwd is None:
+                fclass = feat["FCLASS"]
+                if fclass in self.type_road_speed_default:
+                    default_speed = float(self.type_road_speed_default[fclass])
+                    speed_fwd = default_speed
+                    speed_bwd = default_speed
+
+            has_fwd = speed_fwd is not None and speed_fwd > 0
+            has_bwd = speed_bwd is not None and speed_bwd > 0
+
+            if not has_fwd and not has_bwd:
+                continue
+
+            # Вершины графа
+            v1 = get_vertex_id(p1)
+            v2 = get_vertex_id(p2)
+
+            # -----------------------------------------------------
+            # 2.6 Добавление рёбер (cost + speed)
+            # -----------------------------------------------------
+            if has_fwd:
+                cost_fwd = length / (speed_fwd / 3.6)
+                if mode == 2:
+                    builder.addEdge(v2, p2, v1, p1, [cost_fwd, speed_fwd])
+                else:
+                    builder.addEdge(v1, p1, v2, p2, [cost_fwd, speed_fwd])
+
+            if has_bwd:
+                cost_bwd = length / (speed_bwd / 3.6)
+                if mode == 2:
+                    builder.addEdge(v1, p1, v2, p2, [cost_bwd, speed_bwd])
+                else:
+                    builder.addEdge(v2, p2, v1, p1, [cost_bwd, speed_bwd])
+
+        # ---------------------------------------------------------
+        # 3. Построение графа
+        # ---------------------------------------------------------
+        graph = builder.graph()
+
+        # ----------------------------------------------------------------------
+        # Сохранение графа в CSV
+        # ----------------------------------------------------------------------
+        prefix = os.path.basename(self.parent.path_to_pkl)
+
+        nodes_file = os.path.join(self.parent.path_to_pkl,
+                                f"{prefix}_graph_hour{hour:02d}_nodes.csv")
+        edges_file = os.path.join(self.parent.path_to_pkl,
+                                f"{prefix}_graph_hour{hour:02d}_edges.csv")
+
+        # --- Сохраняем вершины ---
+        with open(nodes_file, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["id", "x", "y"])
+            for vid in range(graph.vertexCount()):
+                pt = graph.vertex(vid).point()
+                writer.writerow([vid, pt.x(), pt.y()])
+
+        # --- Сохраняем рёбра ---
+        with open(edges_file, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([
+                "edge_id", "source_id", "target_id",
+                "x1", "y1", "x2", "y2",
+                "cost", "speed", "wkt"
+            ])
+
+            for eid in range(graph.edgeCount()):
+                edge = graph.edge(eid)
+                src = edge.fromVertex()
+                dst = edge.toVertex()
+
+                p1 = graph.vertex(src).point()
+                p2 = graph.vertex(dst).point()
+
+                cost = edge.cost(0)
+                speed = edge.cost(1)
+
+                wkt = f"LINESTRING({p1.x()} {p1.y()}, {p2.x()} {p2.y()})"
+
+                writer.writerow([
+                    eid, src, dst,
+                    p1.x(), p1.y(), p2.x(), p2.y(),
+                    cost, speed, wkt
+                ])
+
+        print(f"Файлы сохранены:\n{nodes_file}\n{edges_file}")
+
+        return graph
+
+
+
+
+    def find_car_accessibility(self):
+        
+        graph = self.graph
 
         self.f_list = []
         
         count = len(self.parent.points)
         self.parent.progressBar.setMaximum(count)
-        self.parent.setMessage("Loading pkl...")
-        QApplication.processEvents()
+        
 
 
         self.parent.progressBar.setValue(1)
         i = 0
 
+        ########################
+
+        # --- ЭКСПЕРИМЕНТАЛЬНЫЙ БЛОК  ---
+               
+        self.road_layer = iface.activeLayer()
+        if self.check_speed_fields(self.road_layer):
+            print(f' use {self.road_layer.name()}')
+            graph = self.build_graph_from_layer(self.road_layer, self.hour, self.parent.mode)
+            self.factor_speed = 1
+        
+        
+        # --- КОНЕЦ ЭКСПЕРИМЕНТА ---
+
+        #################################
         
         for source in self.parent.points:
 
@@ -120,7 +366,6 @@ class car_accessibility:
                 continue
 
             (self.tree, self.costs) = QgsGraphAnalyzer.dijkstra(graph,  idStart, 0)
-
             self.calc_min_cost()
 
 
@@ -475,18 +720,22 @@ class car_accessibility:
                     with open(self.f[field], 'w') as filetowrite:
                         filetowrite.write(protocol_header)
 
-    def run(self, begin_computation_time, mode, hour, write_info):
+    def run(self, begin_computation_time, hour, graph, write_info):
 
         self.begin_computation_time = begin_computation_time
 
         self.factor_speed = self.factor_speed_by_hour[hour]
 
+        self.hour = hour
+
+        self.graph = graph
+
         self.create_head_files()
 
         if self.parent.mode == 1:
-            table_header = f"{self.cols["star"]},{self.cols["hash"]},Veh_legs,Duration\n"
+            table_header = f'{self.cols["star"]},{self.cols["hash"]},Veh_legs,Duration\n'
         else:
-            table_header = f"{self.cols["hash"]},{self.cols["star"]},Veh_legs,Duration\n"
+            table_header = f'{self.cols["hash"]},{self.cols["star"]},Veh_legs,Duration\n'
         
         if self.parent.protocol_type == 2:
             self.f = f'{self.parent.folder_name}//{self.parent.file_name}.csv'
@@ -496,7 +745,7 @@ class car_accessibility:
         if self.parent.RunOnAir:
             self.find_car_accessibility_onAIR()
         else:    
-            self.find_car_accessibility(mode)
+            self.find_car_accessibility()
         if self.parent.protocol_type == 2 and len(self.parent.points) > 1:
             self.f, self.short_result = self.make_service_area_report(self.parent.folder_name, self.parent.file_name)    
         QApplication.processEvents()

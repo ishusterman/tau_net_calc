@@ -1,17 +1,14 @@
 import os
 #import cProfile
 #import pstats
-#import io
+
 import webbrowser
 import re
 import configparser
-from datetime import datetime
-#import pickle
-#import time
-#from collections import Counter
+from datetime import datetime, timedelta
+
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QGuiApplication
 
 from qgis.core import QgsProject
 
@@ -58,7 +55,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     
 
-    def __init__(self, parent, mode, protocol_type, title, timetable_mode):
+    def __init__(self, 
+                 parent, 
+                 mode, 
+                 protocol_type, 
+                 title, 
+                 timetable_mode, 
+                 roundtrip = False):
         super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
@@ -77,30 +80,30 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.splitter.setSizes(
             [int(self.width() * 0.75), int(self.width() * 0.25)])
 
-        fix_size = 15* self.txtMinTransfers.fontMetrics().width('x')
+        self.fix_size = 15* self.txtMinTransfers.fontMetrics().width('x')
 
-        self.txtMinTransfers.setFixedWidth(fix_size)
-        self.txtMaxTransfers.setFixedWidth(fix_size)
-        self.txtMaxWalkDist1.setFixedWidth(fix_size)
-        self.txtMaxWalkDist2.setFixedWidth(fix_size)
-        self.txtMaxWalkDist3.setFixedWidth(fix_size)
+        self.txtMinTransfers.setFixedWidth(self.fix_size)
+        self.txtMaxTransfers.setFixedWidth(self.fix_size)
+        self.txtMaxWalkDist1.setFixedWidth(self.fix_size)
+        self.txtMaxWalkDist2.setFixedWidth(self.fix_size)
+        self.txtMaxWalkDist3.setFixedWidth(self.fix_size)
 
-        self.dtStartTime.setFixedWidth(fix_size)
+        self.dtStartTime.setFixedWidth(self.fix_size)
+        self.dtEndTime.setFixedWidth(self.fix_size)
         
-        self.txtMaxExtraTime.setFixedWidth(fix_size)
-        self.txtSpeed.setFixedWidth(fix_size)
-        self.txtMaxWaitTime.setFixedWidth(fix_size)
+        self.txtMaxExtraTime.setFixedWidth(self.fix_size)
+        self.txtSpeed.setFixedWidth(self.fix_size)
+        self.txtMaxWaitTime.setFixedWidth(self.fix_size)
 
-        self.txtMaxWaitTimeTransfer.setFixedWidth(fix_size)
-        self.txtMaxTimeTravel.setFixedWidth(fix_size)
-        self.txtTimeInterval.setFixedWidth(fix_size)
+        self.txtMaxWaitTimeTransfer.setFixedWidth(self.fix_size)
+        self.txtMaxTimeTravel.setFixedWidth(self.fix_size)
+        self.txtTimeInterval.setFixedWidth(self.fix_size)
 
-        self.cmbFields_ch.setFixedWidth(fix_size)
+        self.cmbFields_ch.setFixedWidth(self.fix_size)
         
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
-        self.config_add = configparser.ConfigParser()
-
+        
         self.break_on = False
         self.shift_ctrl_mode =  False
 
@@ -109,39 +112,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.protocol_type = protocol_type
         self.title = title
         self.timetable_mode = timetable_mode
+        self.roundtrip = roundtrip
         # self.change_time = 1
 
         self.progressBar.setValue(0)
-
-        if self.protocol_type == 2:
-            self.txtTimeInterval.setVisible(False)
-            self.lblTimeInterval.setVisible(False)
-            parent_layout = self.horizontalLayout_16.parent()
-            parent_layout.removeItem(self.horizontalLayout_16)
-
-        if self.protocol_type == 2:
-            self.cmbFields_ch.setVisible(False)
-            self.lblFields.setVisible(False)
-
-            parent_layout = self.horizontalLayout_6.parent()
-            parent_layout.removeItem(self.horizontalLayout_6)
-
-        if not timetable_mode:
-
-            self.lblMaxExtraTime.setVisible(False)
-            self.txtMaxExtraTime.setVisible(False)
-                        
-            parent_layout = self.horizontalLayout_11.parent()
-            parent_layout.removeItem(self.horizontalLayout_11)
-
-        if timetable_mode:
-            self.lblMaxWaitTime.setVisible(False)
-            self.txtMaxWaitTime.setVisible(False)
-            parent_layout = self.horizontalLayout_13.parent()
-            parent_layout.removeItem(self.horizontalLayout_13)
+        
         
         if self.mode == 2:
-            self.label_21.setText("Arrive before (hh:mm:ss)")
+            self.lblStartTime1.setText("Arrive before (hh:mm:ss)")
             self.label_17.setText("Layer of origins")
             self.label_5.setText("Layer of facilities")
         
@@ -153,12 +131,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         
         if timetable_mode and self.mode == 1:
-            self.label_21.setText("Earliest start time")
+            self.lblStartTime1.setText("Trip can start:")
             self.lblMaxExtraTime.setText("Latest start time is T minutes later, T =")
             
         if timetable_mode and self.mode == 2:
-
-            self.label_21.setText("Earliest arrival time")
+            self.lblStartTime1.setText("Trip can end:")
             self.lblMaxExtraTime.setText(
                 "Latest arrival time is T minutes later, T = ")
             
@@ -179,6 +156,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         showAllLayersInCombo_Polygon(self.cmbVizLayers)
         self.cmbVizLayers.installEventFilter(self)
         self.dtStartTime.installEventFilter(self)
+        self.dtEndTime.installEventFilter(self)
 
         self.cmbLayers_fields.installEventFilter(self)
         self.cmbLayersDest_fields.installEventFilter(self)
@@ -243,6 +221,54 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                 self.timetable_mode, 
                                 full_prefix=False)
         
+        if not (self.roundtrip):
+            widgets_to_hide = [
+                self.dtRoundtripStartTime1, self.dtRoundtripStartTime2,
+                self.dtRoundtripStartTime3, self.dtRoundtripStartTime4,
+                self.txtRountrip_timedelta1, self.txtRountrip_timedelta2,
+                self.lblRoundtrip1, self.lblRoundtrip2, self.lblRoundtrip3,
+                self.lblRoundtrip4, self.lblRoundtrip5, self.lblRoundtrip6,
+                self.lblRoundtrip7, self.lblRoundtrip8, self.lblRoundtrip9,
+                self.lblRoundtrip10
+            ]
+         
+            for widget in widgets_to_hide:
+                widget.setVisible(False)
+            
+            parent_layout = self.horizontalLayout_10.parent()
+            parent_layout.removeItem(self.horizontalLayout_10)
+            parent_layout = self.horizontalLayout_23.parent()
+            parent_layout.removeItem(self.horizontalLayout_23)
+
+        if not (timetable_mode and self.roundtrip):
+            
+            self.lblMaxExtraTime.setVisible(False)
+            self.txtMaxExtraTime.setVisible(False)
+            parent_layout = self.horizontalLayout_11.parent()
+            parent_layout.removeItem(self.horizontalLayout_11)
+        
+        if self.protocol_type == 2:
+            self.txtTimeInterval.setVisible(False)
+            self.lblTimeInterval.setVisible(False)
+            parent_layout = self.horizontalLayout_16.parent()
+            parent_layout.removeItem(self.horizontalLayout_16)
+
+            self.cmbFields_ch.setVisible(False)
+            self.lblFields.setVisible(False)
+            parent_layout = self.horizontalLayout_6.parent()
+            parent_layout.removeItem(self.horizontalLayout_6)
+
+        if not timetable_mode:
+            self.dtEndTime.setVisible(False)
+            self.lblStartTime2.setVisible(False)
+            self.lblStartTime3.setVisible(False)
+            
+        if timetable_mode:
+            self.lblMaxWaitTime.setVisible(False)
+            self.txtMaxWaitTime.setVisible(False)
+            parent_layout = self.horizontalLayout_13.parent()
+            parent_layout.removeItem(self.horizontalLayout_13)
+                    
         self.ParametrsShow()
         self.show_info()
 
@@ -335,13 +361,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     def on_run_button_clicked(self):
 
-        modifiers = QGuiApplication.keyboardModifiers()
-        #if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.protocol_type == 2 and self.mode == 1 :
-        #    self.shift_ctrl_mode = True    
-
-        if modifiers == (Qt.ShiftModifier | Qt.ControlModifier) and self.mode == 2:
-            self.shift_ctrl_mode = True    
-
         self.run_button.setEnabled(False)
         self.break_on = False
 
@@ -422,11 +441,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.textLog.append(f"<a> Maximum waiting time at the transfer stop: {self.config['Settings']['maxwaittimetransfer']} min</a>")
 
-        if not self.timetable_mode and not self.shift_ctrl_mode:
-            if self.mode == 1:
-                self.textLog.append(f"<a> Start at (hh:mm:ss): {self.config['Settings']['time']}</a>")
-            else:
-                self.textLog.append(f"<a> Arrive before (hh:mm:ss): {self.config['Settings']['time']}</a>")
+        if not (self.roundtrip):
+            if not self.timetable_mode and not self.shift_ctrl_mode:
+                if self.mode == 1:
+                    self.textLog.append(f"<a> Start at (hh:mm:ss): {self.config['Settings']['time']}</a>")
+                else:
+                    self.textLog.append(f"<a> Arrive before (hh:mm:ss): {self.config['Settings']['time']}</a>")
         self.textLog.append(f"<a> Maximum travel time: {self.config['Settings']['maxtimetravel']} min</a>")
         if self.protocol_type == 1:  # MAP mode
             self.textLog.append("<a style='font-weight:bold;'>[Aggregation]</a>")
@@ -444,18 +464,47 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 print_fields = "NONE"
             self.textLog.append(f'<a> Additional buildings characteristics for accessibility assessment: {print_fields}</a>')
 
+        self.MaxExtraTime = 0
         if self.timetable_mode :
             self.textLog.append("<a style='font-weight:bold;'>[Time schedule]</a>")
+    
+
+            t1 = datetime.strptime(self.config['Settings']['EndTime'], "%H:%M:%S")
+            t2 = datetime.strptime(self.config['Settings']['Time'], "%H:%M:%S")
+            # Если конец меньше начала — значит переход через полночь
+            if t1 < t2:
+                    t1 += timedelta(days=1)
+            delta = t1 - t2
+            self.MaxExtraTime = int(delta.total_seconds())
+            MaxExtraTime_min = int (self.MaxExtraTime /60)
+                
+        if self.roundtrip and self.timetable_mode:
+            self.MaxExtraTime = int(self.config['Settings']['MaxExtraTime'])*60
+            MaxExtraTime_min = int (self.MaxExtraTime /60)
+            
+
+        if self.timetable_mode :
 
             if self.mode == 1:
-                if not self.shift_ctrl_mode:
-                    self.textLog.append(f"<a> Earliest start time: {self.config['Settings']['time']}</a>")
-                self.textLog.append(f"<a> Latest start time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
-                
+                #if not self.shift_ctrl_mode:
+                #    self.textLog.append(f"<a> Earliest start time: {self.config['Settings']['time']}</a>")
+                #self.textLog.append(f"<a> Latest start time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
+                if not self.roundtrip:
+                    str_from = f'<a>Trip can start: between {self.config['Settings']['TIME']} and {self.config['Settings']['EndTime']}</a>'
+                else:
+                    str_from = (f"<a> Latest start time is T minutes later, T = {MaxExtraTime_min} min</a>")
+                self.textLog.append(str_from)
+
             if self.mode == 2:
-                if not self.shift_ctrl_mode:
-                    self.textLog.append(f"<a> Earliest arrival time: {self.config['Settings']['time']}</a>")
-                self.textLog.append(f"<a> Latest arrival time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
+                #if not self.shift_ctrl_mode:
+                #    self.textLog.append(f"<a> Earliest arrival time: {self.config['Settings']['time']}</a>")
+                #self.textLog.append(f"<a> Latest arrival time is T minutes later, T = {self.config['Settings']['maxextratime']} min</a>")
+                if not self.roundtrip:
+                    str_to = f'<a>Trip can end: between {self.config['Settings']['TIME']} and {self.config['Settings']['EndTime']}</a>'
+                else:
+                    str_to = (f"<a> Latest arrival time is T minutes later, T = {MaxExtraTime_min} min</a>")
+
+                self.textLog.append(str_to)
                 
         self.textLog.append("<a style='font-weight:bold;'>[Visualization]</a>")
         self.textLog.append(f'<a> Visualization layer: {self.layer_visualization_path}</a>')
@@ -494,7 +543,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             obj.setText(obj.text())
         
      
-
     def readParameters(self):
 
         def is_valid_time(t): 
@@ -502,8 +550,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 datetime.strptime(t, "%H:%M:%S") 
                 return True 
             except Exception: 
-                return False   
-        
+                return False 
+
         project_path = QgsProject.instance().fileName()
         project_directory = os.path.dirname(project_path)
         project_name = os.path.splitext(os.path.basename(project_path))[0]
@@ -513,16 +561,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         file_path = os.path.join(
             project_directory, 'parameters_accessibility.txt')
         
-        file_path_add = os.path.join(
-            project_directory, 'roundtrip_additional_parameters.txt')
-        
         self.config.read(file_path)
-
-        
-
         if 'PathToPKL' not in self.config['Settings'] or self.config['Settings']['PathToPKL'] == "С:/":
             self.config['Settings']['PathToPKL'] = self.config['Settings']['PathToProtocols_pkl']
-        
         self.config['Settings']['PathToPKL'] = get_initial_directory(self.config['Settings']['PathToPKL'])
             
         if 'Layer_field' not in self.config['Settings']:
@@ -541,28 +582,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.config['Settings']['PathToProtocols'] = PathToProtocols      
         self.config['Settings']['PathToProtocols'] = os.path.normpath(self.config['Settings']['PathToProtocols'])
 
-        self.config_add.read(file_path_add)
-
-        value = self.config_add['Settings'].get('time_delta')
-        if not value or not str(value).isdigit():
-            self.config_add['Settings']['time_delta'] = '900'
-
-        value = self.config_add['Settings'].get('from_time_start')
+        value = self.config['Settings'].get('EndTIME')
         if not value or not is_valid_time(value): 
-            self.config_add['Settings']['from_time_start'] = '16:00:00'
+            self.config['Settings']['EndTIME'] = '14:00:00'
 
-        value = self.config_add['Settings'].get('from_time_end')
-        if not value or not is_valid_time(value): 
-            self.config_add['Settings']['from_time_end'] = '18:00:00'
-        
-        value = self.config_add['Settings'].get('to_time_start')
-        if not value or not is_valid_time(value): 
-            self.config_add['Settings']['to_time_start'] = '08:00:00'
-
-        value = self.config_add['Settings'].get('to_time_end')
-        if not value or not is_valid_time(value): 
-            self.config_add['Settings']['to_time_end'] = '10:00:00'
-       
 
     # update config file
 
@@ -597,8 +620,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.config['Settings']['MaxWalkDist1'] = self.txtMaxWalkDist1.text()
         self.config['Settings']['MaxWalkDist2'] = self.txtMaxWalkDist2.text()
         self.config['Settings']['MaxWalkDist3'] = self.txtMaxWalkDist3.text()
-        self.config['Settings']['TIME'] = self.dtStartTime.dateTime().toString(
-            "HH:mm:ss")
+        self.config['Settings']['TIME'] = self.dtStartTime.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['EndTIME'] = self.dtEndTime.dateTime().toString("HH:mm:ss")
         self.config['Settings']['Speed'] = self.txtSpeed.text()
         self.config['Settings']['MaxWaitTime'] = self.txtMaxWaitTime.text()
         self.config['Settings']['MaxWaitTimeTransfer'] = self.txtMaxWaitTimeTransfer.text()
@@ -623,20 +646,16 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.count_layer_origins = layer.selectedFeatureCount()
                   
         
-        layer = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['LayerDest'])[0]
+        layer = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerDest'])[0]
         self.layer_destinations_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         if self.mode == 2:
-            layer = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['Layer'])[0]
+            layer = QgsProject.instance().mapLayersByName(self.config['Settings']['Layer'])[0]
         self.count_layer_destinations = layer.featureCount()
 
         if self.cbSelectedOnly2.isChecked():
             self.count_layer_destinations = layer.selectedFeatureCount()    
-
         
-        layer = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['LayerViz'])[0]
+        layer = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerViz'])[0]
         self.layer_visualization_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
 
         
@@ -672,6 +691,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         datetime = QDateTime.fromString(
             self.config['Settings']['TIME'], "HH:mm:ss")
         self.dtStartTime.setDateTime(datetime)
+
+        datetime = QDateTime.fromString(
+            self.config['Settings']['EndTIME'], "HH:mm:ss")
+        self.dtEndTime.setDateTime(datetime)
 
         self.txtSpeed.setText(self.config['Settings']['Speed'])
         self.txtMaxWaitTime.setText(self.config['Settings']['MaxWaitTime'])
@@ -900,20 +923,32 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                        )
             
             #analyzer_time = 0.0
-            if self.shift_ctrl_mode:
+
+            MaxExtraTime  = self.MaxExtraTime
+           
+            if self.roundtrip:
+
+                self.shift_mode = True
                 
                 begin_computation_time = datetime.now()
                 begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
                 self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
                                 
-                time_delta = int(self.config_add['Settings']['time_delta'])
+                time_delta_to_min = int(self.config['Settings']['time_delta_to']) 
+                time_delta_from_min = int(self.config['Settings']['time_delta_from']) 
+                time_delta_to  = time_delta_to_min * 60
+                time_delta_from  = time_delta_to_min * 60
 
-                from_time_start = time_to_seconds(self.config_add['Settings']['from_time_start'])
-                from_time_end = time_to_seconds(self.config_add['Settings']['from_time_end'])
-                to_time_start = time_to_seconds(self.config_add['Settings']['to_time_start'])
-                to_time_end = time_to_seconds(self.config_add['Settings']['to_time_end'])
+                from_time_start = time_to_seconds(self.config['Settings']['from_time_start'])
+                from_time_end = time_to_seconds(self.config['Settings']['from_time_end'])
+                to_time_start = time_to_seconds(self.config['Settings']['to_time_start'])
+                to_time_end = time_to_seconds(self.config['Settings']['to_time_end'])
 
-                self.textLog.append(f'<a>Time step: {self.config_add['Settings']['time_delta']} sec</a>')
+                str_to = f'<a>Home -> Facilities trip start: between {seconds_to_time(to_time_start)} and {seconds_to_time(to_time_end)} test every {time_delta_to_min} minutes</a>'
+                self.textLog.append(str_to)
+                str_from = f'<a>Facilities -> Home trip start: between {seconds_to_time(from_time_start)} and {seconds_to_time(from_time_end)} test every {time_delta_from_min} minutes</a>'
+                self.textLog.append(str_from)
+
                 self.textLog.append(f"<a style='font-weight:bold;'> Calculating roundtrip accessibility</a>")
 
                 raptor_mode = 1    
@@ -929,7 +964,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         raptor_mode,
                         RunOnAir,
                         )
-                
                 
                 ###########################
                 #  First From + First TO
@@ -953,14 +987,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                         field_hash = cols["hash"]
                                         )
 
-                START_TIME = from_time_start
-
                 self.textLog.append(f"<a style='font-weight:bold;'> Calculating first from accessibility</a>")
                 self.mode = 1
                 raptor_mode = 1 
-                D_TIME = START_TIME
-                    
-                D_TIME_str = seconds_to_time(D_TIME)
+                D_TIME_str = seconds_to_time(from_time_start)
                 if self.timetable_mode:
                         self.textLog.append(f"<a style='font-weight:bold;'> Earliest start time: {D_TIME_str}</a>")
                 else:
@@ -975,14 +1005,15 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   raptor_mode,
                                   protocol_type,
                                   timetable_mode,
-                                  D_TIME,
+                                  from_time_start,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
                                   dictionary_from,
-                                  self.shift_ctrl_mode,
+                                  self.shift_mode,
                                   layer_dest,
                                   layer_origin,
-                                  PathToNetwork                                  
+                                  PathToNetwork,
+                                  MaxExtraTime                                  
                                   )
                 
                 if not(self.break_on):
@@ -994,19 +1025,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 # #########################
                 # First to
                 # #########################
-                START_TIME = to_time_start
-                                
                 self.textLog.append(f"<a style='font-weight:bold;'> Calculating first to accessibility</a>")
-                
                 self.mode = 2
                 raptor_mode = 2    
-                
                 self.folder_name_to = os.path.join(self.folder_name_copy, "to")
                 os.makedirs(self.folder_name_to, exist_ok=True)
-
-                D_TIME = START_TIME
-                                 
-                D_TIME_str = seconds_to_time(D_TIME)
+                 
+                D_TIME_str = seconds_to_time(to_time_start)
                                            
                 if self.timetable_mode:
                        self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
@@ -1022,14 +1047,15 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   raptor_mode,
                                   protocol_type,
                                   timetable_mode,
-                                  D_TIME,
+                                  to_time_start,
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
                                   dictionary_to,
-                                  self.shift_ctrl_mode,
+                                  self.shift_mode,
                                   layer_dest,
                                   layer_origin,
-                                  PathToNetwork                                  
+                                  PathToNetwork,
+                                  MaxExtraTime                                  
                                   )
                 
                 if not(self.break_on):
@@ -1055,11 +1081,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 i = 1
                 while True:
                 
-                    D_TIME = START_TIME + i * time_delta 
+                    D_TIME = START_TIME + i * time_delta_from 
                     #if D_TIME > Tf:
                     #        break 
                     
-                    if D_TIME > Tf + time_delta / 2: 
+                    if D_TIME > Tf + time_delta_from / 2: 
                         break
 
                     D_TIME_str = seconds_to_time(D_TIME)
@@ -1080,10 +1106,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
                                   dictionary_from,
-                                  self.shift_ctrl_mode,
+                                  self.shift_mode,
                                   layer_dest,
                                   layer_origin,
-                                  PathToNetwork
+                                  PathToNetwork,
+                                  MaxExtraTime
                                   )
                     
                     if not(self.break_on):
@@ -1119,12 +1146,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 i = 1
 
                 while True:
-                    D_TIME = START_TIME + i * time_delta 
+                    D_TIME = START_TIME + i * time_delta_to 
                     
                     #if D_TIME > Tf:
                     #        break
                                         
-                    if D_TIME > Tf + time_delta / 2: 
+                    if D_TIME > Tf + time_delta_to / 2: 
                         break
                    
                     D_TIME_str = seconds_to_time(D_TIME)
@@ -1147,10 +1174,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.cbSelectedOnly1.isChecked(),
                                   self.cbSelectedOnly2.isChecked(),
                                   dictionary_to,
-                                  self.shift_ctrl_mode,
+                                  self.shift_mode,
                                   layer_dest,
                                   layer_origin,
-                                  PathToNetwork
+                                  PathToNetwork,
+                                  MaxExtraTime
                                   )
                     
                     if not(self.break_on):
@@ -1212,7 +1240,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
                 
 
-            if not (self.shift_ctrl_mode):
+            if not (self.roundtrip):
                 
                 self.run_button.setEnabled(False)
                 D_TIME = time_to_seconds(self.config['Settings']['TIME'])
@@ -1232,7 +1260,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   False,
                                   layer_dest,
                                   layer_origin,
-                                  PathToNetwork
+                                  PathToNetwork,
+                                  MaxExtraTime
                                   )
                 
                 #pr.disable()

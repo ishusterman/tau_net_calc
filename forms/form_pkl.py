@@ -3,8 +3,15 @@ import webbrowser
 import configparser
 import csv
 from pathlib import Path
+import pandas as pd
+import io
+import re
 
-from PyQt5.QtWidgets import QSizePolicy
+from PyQt5.QtWidgets import (QSizePolicy,
+                            QTableWidget,
+                            QTableWidgetItem,
+                            QHeaderView)
+
 from qgis.core import (QgsProject,
                        QgsWkbTypes,
                        QgsVectorLayer,
@@ -63,6 +70,7 @@ class form_pkl(QDialog, FORM_CLASS):
         fix_size = 15* self.txtMaxPathRoad.fontMetrics().width('x')
         self.txtMaxPathRoad.setFixedWidth(fix_size)
         self.txtMaxPathAir.setFixedWidth(fix_size)
+        self.calendar.setFixedWidth(fix_size)
 
         # [1-600]
         #regex = QRegExp(r"^(?:[1-9]|[1-9][0-9]|[1-5][0-9]{2}|600)$")
@@ -88,9 +96,6 @@ class form_pkl(QDialog, FORM_CLASS):
         self.toolButtonRoads.clicked.connect(lambda: self.open_file_dialog (type = "roads"))
         self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog (type = "buildings"))
 
-        self.toolButtonExcludeRoutes.clicked.connect(lambda: self.open_file_dialog_ExcludeRoutes())
-        
-
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
@@ -99,9 +104,6 @@ class form_pkl(QDialog, FORM_CLASS):
         self.toolButton_protocol.clicked.connect(
             lambda: self.showFoldersDialog(self.txtPathToProtocols))
         
-        self.toolButtonAddRoutes.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtAddRoutes))
-
         self.layer_road = self.get_layer_road()
         self.layer_building = self.get_layer_building()
 
@@ -136,20 +138,22 @@ class form_pkl(QDialog, FORM_CLASS):
         self.show_info()
 
         self.label_9.setWordWrap(True)
+        self.setLabelDayGTFS()
+        
+    def setLabelDayGTFS (self):
         min_str, max_str, result = self.get_gtfs_date_range()
-        msg = f"Choose a day for constructing a modified GTFS dataset"
+        msg = f"Choose a day for constructing GTFS dataset"
         if min_str and max_str:
             min_date = QDate.fromString(min_str, "yyyyMMdd")
             max_date = QDate.fromString(max_str, "yyyyMMdd")
             self.calendar.setMinimumDate(min_date)
             self.calendar.setMaximumDate(max_date)
             date_info = f"Initial GTFS dataset covers {min_date.toString('dd.MM.yyyy')} - {max_date.toString('dd.MM.yyyy')}. " if result else ""
-            msg = f"{date_info}  \n{msg}"
-        
+            if date_info:
+                msg = f"{date_info}  \n{msg}"
         self.label_9.setText(msg)
         self.label_9.setEnabled(result)
         self.calendar.setEnabled(result)
-                
 
     def get_gtfs_date_range(self):
         gtfs_path = self.txtPathToGTFS.text()
@@ -224,19 +228,6 @@ class form_pkl(QDialog, FORM_CLASS):
             else:
                 layer_building = None  
         return layer_building
-
-    def open_file_dialog_ExcludeRoutes(self):
-        
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Choose a File",
-            self.txtExcludeRoutes.text(),
-            "Routes description (*.txt);"
-        )
-
-        if file_path:
-            self.txtExcludeRoutes.setText(os.path.normpath(file_path))
-            
 
     def open_file_dialog(self, type):
         
@@ -331,17 +322,7 @@ class form_pkl(QDialog, FORM_CLASS):
         if not (self.check_type_layer_road()):
             self.run_button.setEnabled(True)
             return 0
-        
-        if self.txtExcludeRoutes.text():
-            if not (self.CheckFileExcludeRourtes(self.txtExcludeRoutes.text())):
-                self.run_button.setEnabled(True)
-                return 0
-            
-        if self.txtAddRoutes.text():
-            if not (self.CheckGtfsDirectory(self.txtAddRoutes.text())):
-                self.run_button.setEnabled(True)
-                return 0
-
+       
         self.saveParameters()
         self.readParameters()
 
@@ -370,10 +351,6 @@ class form_pkl(QDialog, FORM_CLASS):
         self.textLog.append(f"<a> Maximal walking path on air: {self.config['Settings']['MaxPathAir_pkl']}</a>")
         self.textLog.append(f"<a> The folder of the initial GTFS dataset: {self.config['Settings']['PathToGTFS_pkl']}</a>")
         self.textLog.append(f"<a> The day for constructing a modified GTFS dataset : {QDate.fromString(self.config['Settings']['Date_pkl'], 'yyyyMMdd').toString('dd.MM.yyyy')}</a>")
-        if self.config['Settings']['DeleteLines_pkl']:
-            self.textLog.append(f"<a> Select lines to delete from the GTFS dataset: {self.config['Settings']['DeleteLines_pkl']} </a>")
-        if self.config['Settings']['AddLines_pkl']:
-            self.textLog.append(f"<a> The folder of the GTFS dataset of the additional lines: {self.config['Settings']['AddLines_pkl']} </a>")
         self.textLog.append(f"<a> Folder to store transit database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
 
         self.prepare()
@@ -393,27 +370,18 @@ class form_pkl(QDialog, FORM_CLASS):
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):
+
+        print ('showFoldersDialog')
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
             obj.setText(os.path.normpath(folder_path))
+                        
         else:
             obj.setText(obj.text())
         
         if obj == self.txtPathToGTFS:
-            min_str, max_str, result = self.get_gtfs_date_range()
-            msg = f"Choose a day for constructing a modified GTFS dataset"
-            if min_str and max_str:
-                min_date = QDate.fromString(min_str, "yyyyMMdd")
-                max_date = QDate.fromString(max_str, "yyyyMMdd")
-                self.calendar.setMinimumDate(min_date)
-                self.calendar.setMaximumDate(max_date)
-                date_info = f"Initial GTFS dataset covers {min_date.toString('dd.MM.yyyy')} - {max_date.toString('dd.MM.yyyy')}. " if result else ""
-                msg = f"{date_info}  \n{msg}"
-            
-            self.label_9.setText(msg)
-            self.label_9.setEnabled(result)
-            self.calendar.setEnabled(result)
+            self.setLabelDayGTFS()
 
     def readParameters(self):
         project_path = QgsProject.instance().fileName()
@@ -451,13 +419,6 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'Date_pkl' not in self.config['Settings']:
             self.config['Settings']['Date_pkl'] = '20000101'  
 
-        if 'DeleteLines_pkl' not in self.config['Settings']:
-            self.config['Settings']['DeleteLines_pkl'] = "C:/"
-        
-        if 'AddLines_pkl' not in self.config['Settings']:
-            self.config['Settings']['AddLines_pkl'] = "C:/"
-
-
     def saveParameters(self):
 
         project_directory = os.path.dirname(QgsProject.instance().fileName())
@@ -472,10 +433,6 @@ class form_pkl(QDialog, FORM_CLASS):
         self.config['Settings']['MaxPathAir_pkl'] = self.txtMaxPathAir.text()
         selected_date = self.calendar.date()
         self.config['Settings']['Date_pkl'] = selected_date.toString("yyyyMMdd")
-
-        self.config['Settings']['DeleteLines_pkl'] = self.txtExcludeRoutes.text()
-        self.config['Settings']['AddLines_pkl'] = self.txtAddRoutes.text()
-
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
@@ -503,115 +460,9 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_pkl'])
 
-        
-        val = self.config['Settings']['DeleteLines_pkl']
-        self.txtExcludeRoutes.setText(os.path.normpath(val) if val else "")
-        val = self.config['Settings']['AddLines_pkl']
-        self.txtAddRoutes.setText(os.path.normpath(val) if val else "")
-
         date_string = self.config['Settings']['Date_pkl']
         qdate_object = QDate.fromString(date_string, "yyyyMMdd")
         self.calendar.setDate(qdate_object)
-
-
-    def CheckFileExcludeRourtes(self, file_path):
-        """
-        Checks if the file exists, is a file, and contains the required 'route_id' column.
-        Returns (True, "") if valid, or (False, "error message") otherwise.
-        """
-        path = Path(file_path)
-        
-        # 1. Check if path exists
-        if not path.exists():
-            self.setMessage(f"File not found: {path.name}")
-            return False
-        
-        # 2. Check if it's a file and not a directory
-        if not path.is_file():
-            self.setMessage(f"The provided path {file_path} is a directory, not a file")
-            return False
-
-        # 3. Check CSV content and headers
-        try:
-            # Using utf-8-sig to handle potential Byte Order Mark (BOM)
-            with open(path, mode='r', encoding='utf-8-sig') as f:
-                reader = csv.reader(f)
-                headers = next(reader, None)
-                
-                if not headers:
-                    self.setMessage(f"The file {path.name} is empty")
-                    return False
-                
-                # Clean headers from whitespace and quotes
-                headers = [h.strip().replace('"', '') for h in headers]
-                
-                if 'route_id' not in headers:
-                    self.setMessage(f"Invalid GTFS format: 'route_id' column is missing in {path.name}")
-                    return False
-                    
-        except UnicodeDecodeError:
-            return False 
-        except Exception as e:
-            return False
-
-        return True, ""
-
-    def CheckGtfsDirectory(self, directory_path):
-        """
-        Checks if the directory exists and contains valid mandatory GTFS files.
-        Interrupts execution and sets an error message at the first sign of trouble.
-        """
-        path = Path(directory_path)
-        
-        # 1. Check if path exists and is a directory
-        if not path.exists():
-            self.setMessage(f"Directory {directory_path} not found")
-            return False
-        
-        if not path.is_dir():
-            self.setMessage(f"The provided path is not to a directory: {directory_path}")
-            return False
-
-        # 2. Define mandatory files and their required key columns
-        required_files = {
-            "routes.txt": "route_id",
-            "stops.txt": "stop_id",
-            "stop_times.txt": "trip_id",
-            "trips.txt": "trip_id"
-             }
-
-        # 3. Check each file one by one
-        for filename, required_column in required_files.items():
-            file_path = path / filename
-            
-            # Immediate exit if file is missing
-            if not file_path.exists():
-                self.setMessage(f"GTFS dataset validation in '{directory_path}' failed: Mandatory file '{filename}' is missing")
-                return False
-                
-            try:
-                with open(file_path, mode='r', encoding='utf-8-sig') as f:
-                    reader = csv.reader(f)
-                    headers = next(reader, None)
-                    
-                    # Immediate exit if file is empty
-                    if not headers:
-                        self.setMessage(f"GTFS validation in '{directory_path}' failed: File '{filename}' is empty")
-                        return False
-                    
-                    # Clean headers
-                    headers = [h.strip().replace('"', '') for h in headers]
-                    
-                    # Immediate exit if required column is missing
-                    if required_column not in headers:
-                        self.setMessage(f"GTFS validation in '{directory_path}' failed: Field '{required_column}' is missing in the {filename} file")
-                        return False
-                        
-            except Exception as e:
-                self.setMessage(f"GTFS validation in '{directory_path}' failed: Error reading {filename}")
-                return False
-        
-        return True
 
     def check_folder_and_file(self):
 
@@ -678,42 +529,56 @@ class form_pkl(QDialog, FORM_CLASS):
 
         layer = self.layer_road
         try:
-            features = layer.getFeatures()
-        except:
-            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
+            features = list(layer.getFeatures())
+        except Exception:
+            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty or unreadable")
             return 0
 
-        for feature in features:
-            feature_geometry = feature.geometry()
-            feature_geometry_type = feature_geometry.type()
-            break
+        if not features:
+            self.setMessage(f"Layer '{self.cbRoads.currentText()}' has no features")
+            return 0
 
-        if (feature_geometry_type != QgsWkbTypes.LineGeometry):
-            self.setMessage(f"Features of the layer '{self.cbRoads.currentText()}' must be polylines")
+        feature_geometry = features[0].geometry()
+        feature_geometry_type = feature_geometry.type()
+
+        if feature_geometry_type != QgsWkbTypes.LineGeometry:
+            self.setMessage(
+                f"Features of the layer '{self.cbRoads.currentText()}' must be polylines"
+            )
             return 0
 
         return 1
+
 
     def check_feature_from_layer(self):
 
         layer = self.layer_building
-        if layer == "":
-            self.setMessage(f"Layer is empty")
+        if layer is None:
+            self.setMessage("Layer is not selected")
             return 0
-        
+
+
         try:
-            features = layer.getFeatures()
-        except:
-            self.setMessage(f'Layer {layer} is empty')
+            features = list(layer.getFeatures())
+        except Exception:
+            self.setMessage(f"Layer '{self.cmbLayers.currentText()}' is unreadable")
             return 0
-        
+
+        if not features:
+            self.setMessage(f"Layer '{self.cmbLayers.currentText()}' has no features")
+            return 0
+
         geometryType = layer.geometryType()
-        if (geometryType != QgsWkbTypes.PointGeometry and geometryType != QgsWkbTypes.PolygonGeometry):
-            self.setMessage(f'Features of the layer {self.cmbLayers.currentText()} must be polylines or points')
+        if geometryType not in (QgsWkbTypes.PointGeometry, QgsWkbTypes.PolygonGeometry):
+            self.setMessage(
+                f"Features of the layer '{self.cmbLayers.currentText()}' "
+                f"must be points or polygons"
+            )
             return 0
 
         return 1
 
+    
     def prepare(self):
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
@@ -738,33 +603,8 @@ class form_pkl(QDialog, FORM_CLASS):
         check_date = self.config['Settings']['Date_pkl']
 
         run_ok = True
-        if self.txtExcludeRoutes.text():
-
-            self.setMessage(f'Deleting lines ...')
-            QApplication.processEvents()
-            out1 = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_DeleteLinesOK')
-            out2 = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_DeletedLines')
-            cleaner = GTFSExcludeRoutes(gtfs_path = path_to_GTFS, 
-                                        exclude_file_path = self.txtExcludeRoutes.text(), 
-                                        output_path = out1,
-                                        excluded_data_path = out2)
-            run_ok = cleaner.run()
-            path_to_GTFS = out1
-
         
-        if run_ok and self.txtAddRoutes.text():
-
-            self.setMessage(f'Adding lines ...')
-            QApplication.processEvents()
-            
-            out = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS_AddLinesOK')
-            cleaner = GTFSAddRoutes(gtfs_path1 = path_to_GTFS, 
-                                    gtfs_path2 = self.txtAddRoutes.text(), 
-                                    output_path = out)
-            run_ok = cleaner.run()
-            path_to_GTFS = out
-
-        if run_ok:
+        if True:
             path_to_file = os.path.join(self.config['Settings']['PathToProtocols_pkl'], 'GTFS')
             calc_GTFS = GTFS(self,
                                  path_to_file,
@@ -788,7 +628,7 @@ class form_pkl(QDialog, FORM_CLASS):
                                    layer_buildings = self.layer_building,
                                    building_id_field = layer_origins_field
                                    )
-            calc_PKL.create_files()
+            run_ok = calc_PKL.create_files()
 
             zip_directory(path_to_file)
 
@@ -817,10 +657,10 @@ class form_pkl(QDialog, FORM_CLASS):
                 self.setMessage(f'Finished')
 
         if not (run_ok):
-            self.run_button.setEnabled(True)
-            self.close_button.setEnabled(True)
-            self.textLog.clear()
-            self.tabWidget.setCurrentIndex(0)
+            #self.run_button.setEnabled(True)
+            #self.close_button.setEnabled(True)
+            #self.textLog.clear()
+            #self.tabWidget.setCurrentIndex(0)
             self.setMessage("")
 
     # if the combobox is in focus, we ignore the mouse wheel scroll event

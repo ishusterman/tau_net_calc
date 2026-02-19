@@ -1,6 +1,0 @@
-[Settings]
-to_time_start = 08:00:00
-to_time_end = 10:00:00
-from_time_start = 16:00:00
-from_time_end = 18:00:00
-time_delta = 900
