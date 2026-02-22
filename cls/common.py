@@ -7,8 +7,58 @@ import pandas as pd
 from zipfile import ZipFile
 from datetime import datetime
 import shutil
+import csv
+from PyQt5.QtCore import QDate
 
 from pathlib import Path
+
+
+def get_gtfs_date_range(gtfs_path):
+        if not os.path.isdir(gtfs_path):
+            return None, None, False
+
+        calendar_path = os.path.join(gtfs_path, 'calendar.txt')
+        calendar_dates_path = os.path.join(gtfs_path, 'calendar_dates.txt')
+        
+        
+        dates_found = False
+        
+        min_date_qdate = QDate(9999, 12, 31) 
+        max_date_qdate = QDate(1, 1, 1)      
+        
+        if os.path.exists(calendar_path):
+            with open(calendar_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    for key in ['start_date', 'end_date']:
+                        date_str = row.get(key)
+                        if date_str:
+                            d = QDate.fromString(date_str, "yyyyMMdd")
+                            if d.isValid():
+                                dates_found = True
+                                if d < min_date_qdate: min_date_qdate = d
+                                if d > max_date_qdate: max_date_qdate = d
+
+        # 2. Читаем calendar_dates.txt
+        if os.path.exists(calendar_dates_path):
+            with open(calendar_dates_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    date_str = row.get('date')
+                    if date_str:
+                        d = QDate.fromString(date_str, "yyyyMMdd")
+                        if d.isValid():
+                            dates_found = True
+                            if d < min_date_qdate: min_date_qdate = d
+                            if d > max_date_qdate: max_date_qdate = d
+
+        # Итоговая проверка
+        if not dates_found:
+            # Если ни в одном файле дат нет — возвращаем текущую дату и False
+            today = QDate.currentDate().toString("yyyyMMdd")
+            return today, today, False
+        
+        return min_date_qdate.toString("yyyyMMdd"), max_date_qdate.toString("yyyyMMdd"), True
 
 def get_name_columns():
 

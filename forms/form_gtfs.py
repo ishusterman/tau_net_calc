@@ -5,8 +5,6 @@ import csv
 from pathlib import Path
 import pandas as pd
 import re
-import shutil
-
 from PyQt5.QtWidgets import (QTableWidget,
                             QTableWidgetItem,
                             QHeaderView)
@@ -37,6 +35,7 @@ from common import (get_qgis_info,
                     getDateTime, 
                     check_file_parameters_accessibility, 
                     get_documents_path,
+                    get_gtfs_date_range
                     )
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -44,7 +43,7 @@ FORM_CLASS, _ = uic.loadUiType(
 )
 
 class form_gtfs(QDialog, FORM_CLASS):
-    def __init__(self, title):
+    def __init__(self, title, mode):
         super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setupUi(self)
@@ -61,6 +60,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.config = configparser.ConfigParser()
         self.break_on = False
         self.title = title
+        self.mode = mode
         self.progressBar.setValue(0)
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
@@ -85,6 +85,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
         self.help_button.clicked.connect(self.on_help_button_clicked)
+        self.init_table()
 
         self.ParametrsShow()
         self.show_info()
@@ -92,20 +93,37 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.table1.setSelectionBehavior(QTableWidget.SelectRows) 
         self.table2.setSelectionBehavior(QTableWidget.SelectRows)
         self.btnSearch.clicked.connect(self.btnSearch_on_click)
-        self.init_table()
+        
         self.btnAdd.clicked.connect(self.btnAdd_on_click) 
         self.btnRemove.clicked.connect(self.btnRemove_on_click)
         
         self.table1.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table2.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.btnSearch.setEnabled(False)
-        self.txtSearch.textChanged.connect(self.on_txtSearch_textChanged)
     
+        self.txtPathToGTFS.textChanged.connect(self.on_path_changed)
 
-    def on_txtSearch_textChanged(self, text):
-        text = text.strip()
-        self.btnSearch.setEnabled(bool(text))
+        self.txtAddRoutes.textChanged.connect(lambda: self.btnSearch_on_click(show_all=True))
+        self.on_path_changed()
 
+        if self.mode == 2:
+            self.txtAddRoutes.hide() 
+            self.toolButtonAddRoutes.hide() 
+            self.lblAddLines.hide()
+            parent_layout = self.horizontalLayout_11.parent()
+            parent_layout.removeItem(self.horizontalLayout_11)
+            
+    
+    
+    def on_path_changed (self):
+        
+        if self.CheckGtfsDirectory(self.txtPathToGTFS.text()):
+            search_enable = True
+        else:
+            search_enable = False 
+        self.txtSearch.setEnabled(search_enable)
+        self.btnSearch.setEnabled(search_enable)
+        self.layout_tables.setEnabled(search_enable)
+            
     def detect_best_description_column(self,df):
         first = df.iloc[0]
         lengths = {}
@@ -114,16 +132,26 @@ class form_gtfs(QDialog, FORM_CLASS):
             lengths[col] = len(val)
         return max(lengths, key=lengths.get)
 
-    def btnSearch_on_click(self):
+    def btnSearch_on_click(self, show_all=False):
+        
+        # --- 1. Получаем текст поиска ---
         search_text = self.txtSearch.text().strip()
-        if not search_text:
+
+        if not show_all and not search_text:
             return
 
-        gtfs_path = self.txtPathToGTFS.text().strip()
+        # --- 2. Определяем путь к GTFS ---
+        gtfs_path = (
+            self.txtPathToGTFS.text().strip()
+            if self.mode == 2
+            else self.txtAddRoutes.text().strip()
+        )
+
         filename = os.path.join(gtfs_path, "routes.txt")
-        if not self.CheckFileExcludeRourtes(filename):
-            return
+        #if not self.CheckFileExcludeRourtes(filename):
+        #    return
 
+        # --- 3. Загружаем routes.txt ---
         try:
             df = pd.read_csv(
                 filename,
@@ -133,50 +161,46 @@ class form_gtfs(QDialog, FORM_CLASS):
                 keep_default_na=False
             )
 
-            required_cols = {"route_id", "route_short_name"}
-            if not required_cols.issubset(df.columns):
+            if not {"route_id", "route_short_name"}.issubset(df.columns):
                 return
 
-            # Автоматически выбираем колонку с самым длинным текстом
+            # Определяем лучшую колонку описания
             best_desc_col = self.detect_best_description_column(df)
 
-            # --- НОВЫЙ ПОИСК С НЕСКОЛЬКИМИ РАЗДЕЛИТЕЛЯМИ ---
-            # Разделители: запятая, точка с запятой, пробелы
-            parts = re.split(r"[,\s;]+", search_text)
-            search_values = [p.strip().lower() for p in parts if p.strip()]
+            # --- 4. Фильтрация ---
+            if show_all:
+                routes = df.loc[:, ["route_id", "route_short_name", best_desc_col]].copy()
+            else:
+                parts = re.split(r"[,\s;]+", search_text)
+                search_values = [p.lower() for p in parts if p.strip()]
+                mask = df["route_short_name"].str.lower().isin(search_values)
+                routes = df[mask].loc[:, ["route_id", "route_short_name", best_desc_col]].copy()
 
-            # Фильтрация по точному совпадению (без учета регистра)
-            mask = df["route_short_name"].str.lower().isin(search_values)
-
-            df = df[mask].reset_index(drop=True)
-            routes = df[["route_id", "route_short_name", best_desc_col]]
+            # ПРИНУДИТЕЛЬНЫЙ СБРОС ДЛЯ ВСЕХ ВАРИАНТОВ
+            routes = routes.reset_index(drop=True)
 
         except Exception as e:
             print("Error:", e)
             return
 
-        # --- ОТОБРАЖЕНИЕ В ТАБЛИЦЕ ---
-        self.table1.clear()
+        # --- 5. Отображение в таблице ---
+        print(routes)
+
+        # Очищаем только содержимое
+        self.table1.clearContents()
+        self.table1.setRowCount(0)
+        # Структура таблицы
         self.table1.setColumnCount(3)
         self.table1.setHorizontalHeaderLabels(["ID", "Name", "Description"])
+        # Добавляем строки
+        # Добавляем строки
         self.table1.setRowCount(len(routes))
-
-        for r, row in routes.iterrows():
-            self.table1.setItem(r, 0, QTableWidgetItem(row["route_id"]))
-            self.table1.setItem(r, 1, QTableWidgetItem(row["route_short_name"]))
-            self.table1.setItem(r, 2, QTableWidgetItem(row[best_desc_col]))
-
-        self.table1.setColumnHidden(0, True)
-        self.table1.setSelectionBehavior(self.table1.SelectRows)
-        self.table1.setWordWrap(True)
-        self.table1.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-        header = self.table1.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.Stretch)
-
-        self.table1.resizeRowsToContents()
+        for i, (_, row) in enumerate(routes.iterrows()): # Используем i как счетчик от 0 до N
+            self.table1.setItem(i, 0, QTableWidgetItem(str(row["route_id"])))
+            self.table1.setItem(i, 1, QTableWidgetItem(str(row["route_short_name"])))
+            self.table1.setItem(i, 2, QTableWidgetItem(str(row[best_desc_col])))
+            print ("added")
+            
 
     def CheckFileExcludeRourtes(self, file_path):
         """
@@ -298,31 +322,6 @@ class form_gtfs(QDialog, FORM_CLASS):
 
         self.table2.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
-
-    def open_file_dialog(self, type):
-        
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Choose a File",
-            "",
-            "Shapefile (*.shp);"
-        )
-
-        if file_path:
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            layer = QgsVectorLayer(file_path, file_name, "ogr")
-            if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
-
-                if type == "roads":
-                    self.cbRoads.addItem(file_path, file_path)
-                    index = self.cbRoads.findText(file_path)
-                    self.cbRoads.setCurrentIndex(index)
-                else:
-                    self.cmbLayers.addItem(file_path, file_path)
-                    index = self.cmbLayers.findText(file_path)
-                    self.cmbLayers.setCurrentIndex(index)
-
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
 
@@ -334,18 +333,30 @@ class form_gtfs(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
+
+
+        if not (self.CheckGtfsDirectory(self.txtPathToGTFS.text())):
+            self.run_button.setEnabled(True)
+            return 0
         
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
-            
-        if self.txtAddRoutes.text():
-            if not (self.CheckGtfsDirectory(self.txtAddRoutes.text())):
+
+        if self.mode == 1:    
+            if self.txtAddRoutes.text():
+                if not (self.CheckGtfsDirectory(self.txtAddRoutes.text())):
+                    self.run_button.setEnabled(True)
+                    return 0
+            else:
                 self.run_button.setEnabled(True)
-                return 0
+                return 0 
+        
+        
+            
             
         self.route_ids = self.get_route_ids_from_table2()     
-        if not self.route_ids and not self.txtAddRoutes.text():
+        if not self.route_ids: #and not self.txtAddRoutes.text():
             self.run_button.setEnabled(True)
             self.setMessage("")
             return 0
@@ -381,8 +392,11 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
         self.textLog.append(f"<a> The folder of the initial GTFS dataset: {self.config['Settings']['PathToGTFS_gtfs']}</a>")
         
-        if self.route_ids:
-            self.textLog.append(f"<a> Selected lines to delete from the GTFS dataset: {self.route_ids} </a>")
+        
+        if self.mode == 2:
+            self.textLog.append(f"<a> Delete lines from GTFS: {self.route_ids} </a>")
+        else: 
+            self.textLog.append(f"<a> Add lines to GTFS: {self.route_ids} </a>")
         if self.config['Settings']['AddLines_gtfs']:
             self.textLog.append(f"<a> The folder of the GTFS dataset of the additional lines: {self.config['Settings']['AddLines_gtfs']} </a>")
         self.textLog.append(f"<a> Folder to store modified dataset: {self.config['Settings']['PathToProtocols_gtfs']}</a>")
@@ -404,22 +418,24 @@ class form_gtfs(QDialog, FORM_CLASS):
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):
-
-        print ('showFoldersDialog')
         folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder", obj.text())
+            self, "Select Folder", obj.text()
+        )
         if folder_path:
             obj.setText(os.path.normpath(folder_path))
-            self.table1.clear() 
-            self.table1.setRowCount(0) 
-            self.table1.setColumnCount(0)
-            self.table2.clear() 
-            self.table2.setRowCount(0) 
-            self.table2.setColumnCount(0)
-            self.init_table()
+
+            # Очищаем только содержимое, НЕ структуру
             
+            #self.table1.clearContents()
+            #self.table1.setRowCount(0)
+
+            #self.table2.clearContents()
+            #self.table2.setRowCount(0)
+
+            #self.init_table()
         else:
             obj.setText(obj.text())
+
                
 
     def readParameters(self):
@@ -476,8 +492,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         """
         
         path = Path(directory_path)
-        
-        # 1. Check if path exists and is a directory
+        self.setMessage("")
         if not path.exists():
             self.setMessage(f"Directory {directory_path} not found")
             return False
@@ -485,7 +500,6 @@ class form_gtfs(QDialog, FORM_CLASS):
         if not path.is_dir():
             self.setMessage(f"The provided path is not to a directory: {directory_path}")
             return False
-        print ('test2') 
         # 2. Define mandatory files and their required key columns
         required_files = {
             "routes.txt": "route_id",
@@ -532,24 +546,7 @@ class form_gtfs(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         path = self.txtPathToProtocols.text()
-        
-        if not os.path.exists(self.txtPathToGTFS.text()):
-            self.setMessage(f"Folder '{self.txtPathToGTFS.text()}' does not exist")
-            return False
-
-        required_files = ['stops.txt', 'trips.txt',
-                          'routes.txt', 'stop_times.txt']
-        missing_files = [file for file in required_files if not os.path.isfile(
-            os.path.join(self.txtPathToGTFS.text(), file))]
-
-        if missing_files:
-            limited_files = missing_files[:2]
-            missing_files_message = ", ".join(limited_files)
-            self.setMessage(f"Files are missing in the '{self.txtPathToGTFS.text()}' forlder: {missing_files_message}")
-            return False
-
         os.makedirs(path, exist_ok=True)
-            
         try:
             tmp_prefix = "write_tester"
             filename = f'{path}//{tmp_prefix}'
@@ -559,9 +556,6 @@ class form_gtfs(QDialog, FORM_CLASS):
         except Exception as e:
             self.setMessage(f"Access to the folder '{path}' is denied")
             return False
-
-        
-
         return True
 
     def setMessage(self, message):
@@ -593,39 +587,48 @@ class form_gtfs(QDialog, FORM_CLASS):
 
         route_ids = self.get_route_ids_from_table2() 
 
+        if self.mode == 2:
 
-        if route_ids:
-            self.setMessage(f'Deleting lines ...')
-            QApplication.processEvents()
-            out1 = os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_DeleteLinesOK')
-            out2 = os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_DeletedLines')
-            cleaner = GTFSExcludeRoutes(gtfs_path = path_to_GTFS, 
-                                        #exclude_file_path = self.txtExcludeRoutes.text(), 
-                                        exclude_ids_list = route_ids,
-                                        output_path = out1,
-                                        excluded_data_path = out2)
-            run_ok = cleaner.run()
-            path_to_GTFS = out1
+            if route_ids:
+                self.setMessage(f'Deleting lines ...')
+                QApplication.processEvents()
+                out1 = path_to_GTFS_mod #os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_DeleteLinesOK')
+                out2 = os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_DeletedLines')
+                cleaner = GTFSExcludeRoutes(gtfs_path = path_to_GTFS, 
+                                            #exclude_file_path = self.txtExcludeRoutes.text(), 
+                                            exclude_ids_list = route_ids,
+                                            output_path = out1,
+                                            excluded_data_path = out2)
+                run_ok = cleaner.run()
+                path_to_GTFS = out1
             
 
-        
-        if run_ok and self.txtAddRoutes.text():
+        if self.mode == 1:
+            if run_ok and self.txtAddRoutes.text():
 
-            self.setMessage(f'Adding lines ...')
-            QApplication.processEvents()
-            
-            out = os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_AddLinesOK')
-            cleaner = GTFSAddRoutes(gtfs_path1 = path_to_GTFS, 
-                                    gtfs_path2 = self.txtAddRoutes.text(), 
-                                    output_path = out)
-            run_ok = cleaner.run()
-            path_to_GTFS = out
+                self.setMessage(f'Adding lines ...')
+                QApplication.processEvents()
+                
+                out = path_to_GTFS_mod #os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_AddLinesOK')
+                cleaner = GTFSAddRoutes(gtfs_path1 = path_to_GTFS, 
+                                        gtfs_path2 = self.txtAddRoutes.text(), 
+                                        output_path = out)
+                
+                min_str, max_str, _ = get_gtfs_date_range(self.txtPathToGTFS.text())
+                gtfs_add = GTFSAddRoutes(gtfs_path1 = path_to_GTFS, 
+                                            gtfs_path2= self.txtAddRoutes.text(), 
+                                            output_path = out, 
+                                            routes_to_add = None, 
+                                            start_date = min_str, 
+                                            end_date =  max_str)
 
-        if run_ok:
-            shutil.copytree(path_to_GTFS, path_to_GTFS_mod, dirs_exist_ok=True)
 
-        
+                run_ok = gtfs_add.run()
+                path_to_GTFS = out
 
+        #if run_ok:
+        #    shutil.copytree(path_to_GTFS, path_to_GTFS_mod, dirs_exist_ok=True)
+       
         QApplication.processEvents()
         if self.break_on:
                 return 0

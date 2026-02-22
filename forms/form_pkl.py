@@ -46,7 +46,8 @@ from common import (get_qgis_info,
                     check_file_parameters_accessibility, 
                     get_documents_path,
                     showAllLayersInCombo_Line,
-                    showAllLayersInCombo_Point_and_Polygon)
+                    showAllLayersInCombo_Point_and_Polygon,
+                    get_gtfs_date_range)
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl.ui')
@@ -141,7 +142,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.setLabelDayGTFS()
         
     def setLabelDayGTFS (self):
-        min_str, max_str, result = self.get_gtfs_date_range()
+        min_str, max_str, result = get_gtfs_date_range(self.txtPathToGTFS.text())
         msg = f"Choose a day for constructing GTFS dataset"
         if min_str and max_str:
             min_date = QDate.fromString(min_str, "yyyyMMdd")
@@ -155,53 +156,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.label_9.setEnabled(result)
         self.calendar.setEnabled(result)
 
-    def get_gtfs_date_range(self):
-        gtfs_path = self.txtPathToGTFS.text()
-        if not os.path.isdir(gtfs_path):
-            return None, None, False
-
-        calendar_path = os.path.join(gtfs_path, 'calendar.txt')
-        calendar_dates_path = os.path.join(gtfs_path, 'calendar_dates.txt')
-        
-        
-        dates_found = False
-        
-        min_date_qdate = QDate(9999, 12, 31) 
-        max_date_qdate = QDate(1, 1, 1)      
-        
-        if os.path.exists(calendar_path):
-            with open(calendar_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    for key in ['start_date', 'end_date']:
-                        date_str = row.get(key)
-                        if date_str:
-                            d = QDate.fromString(date_str, "yyyyMMdd")
-                            if d.isValid():
-                                dates_found = True
-                                if d < min_date_qdate: min_date_qdate = d
-                                if d > max_date_qdate: max_date_qdate = d
-
-        # 2. Читаем calendar_dates.txt
-        if os.path.exists(calendar_dates_path):
-            with open(calendar_dates_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    date_str = row.get('date')
-                    if date_str:
-                        d = QDate.fromString(date_str, "yyyyMMdd")
-                        if d.isValid():
-                            dates_found = True
-                            if d < min_date_qdate: min_date_qdate = d
-                            if d > max_date_qdate: max_date_qdate = d
-
-        # Итоговая проверка
-        if not dates_found:
-            # Если ни в одном файле дат нет — возвращаем текущую дату и False
-            today = QDate.currentDate().toString("yyyyMMdd")
-            return today, today, False
-        
-        return min_date_qdate.toString("yyyyMMdd"), max_date_qdate.toString("yyyyMMdd"), True
+    
 
     def get_layer_road(self):
         selected_item = self.cbRoads.currentText()

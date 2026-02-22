@@ -58,7 +58,8 @@ class AccessibilityTools(QWidget):
 
         group2 = QTreeWidgetItem(self.tree_widget, ['Transit accessibility'])
         group2.setExpanded(True)
-        self.item27 = QTreeWidgetItem(group2, ['Modify GTFS'])
+        self.item27 = QTreeWidgetItem(group2, ['Add lines to GTFS'])
+        self.item28 = QTreeWidgetItem(group2, ['Delete lines from GTFS'])
         self.item3 = QTreeWidgetItem(group2, ['Transit routing database'])
         group3 = QTreeWidgetItem(group2, ['Service area maps'])
         self.item4 = QTreeWidgetItem(
@@ -160,7 +161,8 @@ class AccessibilityTools(QWidget):
                        "Data preprocessing. Clean layer of buildings", 
                        "Data preprocessing. Prepare visualisation layers",
                        "Transit accessibility. Transit routing database", 
-                       "Transit accessibility. Modify GTFS", 
+                       "Transit accessibility. Add lines to GTFS", 
+                       "Transit accessibility. Delete lines from GTFS", 
                        "Car accessibility. Car routing database", 
                        "Transit accessibility. Service area maps. From service locations – Fixed-time departure",
                        "Transit accessibility. Service area maps. From service locations – Schedule-based departure", 
@@ -242,10 +244,17 @@ class AccessibilityTools(QWidget):
                 visualization_clean.exec_()    
 
         if item == self.item27:
-            title="Transit accessibility. Modify GTFS"
+            title="Transit accessibility. Add lines to GTFS"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
-                gtfs = form_gtfs(title = title)
+                gtfs = form_gtfs(title = title, mode = 1)
+                gtfs.show()
+        
+        if item == self.item28:
+            title="Transit accessibility. Delete lines from GTFS"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                gtfs = form_gtfs(title = title, mode = 2)
                 gtfs.show()
 
         if item == self.item3:

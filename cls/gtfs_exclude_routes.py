@@ -4,7 +4,7 @@ import shutil
 from PyQt5.QtWidgets import QApplication
 
 class GTFSExcludeRoutes:
-    def __init__(self, gtfs_path, exclude_file_path=None, output_path=None,
+    def __init__(self, gtfs_path, output_path=None,
                  excluded_data_path=None, exclude_ids_list=None):
         """
         Arguments:
@@ -16,7 +16,6 @@ class GTFSExcludeRoutes:
         """
         
         self.gtfs_path = gtfs_path
-        self.exclude_file_path = exclude_file_path
         self.output_path = output_path
         self.excluded_data_path = excluded_data_path
 
@@ -31,14 +30,7 @@ class GTFSExcludeRoutes:
         if self.exclude_ids_list is not None:
             self.exclude_ids = [str(x) for x in self.exclude_ids_list]
             return
-
-        if self.exclude_file_path is not None:
-            df = pd.read_csv(self.exclude_file_path)
-            self.exclude_ids = df['route_id'].astype(str).unique().tolist()
-            return
-
         self.exclude_ids = []
-
 
     def _prepare_dirs(self):
         for path in [self.output_path, self.excluded_data_path]:

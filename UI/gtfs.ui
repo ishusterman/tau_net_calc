@@ -84,7 +84,7 @@
              <x>0</x>
              <y>0</y>
              <width>447</width>
-             <height>425</height>
+             <height>432</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -139,19 +139,22 @@
                 </item>
                </layout>
               </item>
-              <item row="13" column="0" colspan="2">
+              <item row="14" column="0" colspan="2">
                <widget class="QLabel" name="label_10">
                 <property name="text">
                  <string>Enter numbers of lines to delete (comma separated)</string>
                 </property>
                </widget>
               </item>
-              <item row="15" column="0" colspan="2">
+              <item row="16" column="0" colspan="2">
                <layout class="QVBoxLayout" name="verticalLayout_main">
                 <item>
                  <layout class="QHBoxLayout" name="layout_search">
                   <item>
                    <widget class="QLineEdit" name="txtSearch">
+                    <property name="readOnly">
+                     <bool>false</bool>
+                    </property>
                     <property name="placeholderText">
                      <string/>
                     </property>
@@ -232,35 +235,14 @@
                 </item>
                </layout>
               </item>
-              <item row="16" column="0">
-               <widget class="QLabel" name="label_11">
-                <property name="text">
-                 <string>The folder of the GTFS dataset of the additional lines</string>
-                </property>
-               </widget>
-              </item>
-              <item row="17" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_11">
-                <item>
-                 <widget class="QLineEdit" name="txtAddRoutes"/>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="toolButtonAddRoutes">
-                  <property name="text">
-                   <string>...</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="18" column="0">
+              <item row="19" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Folder to store modified dataset</string>
                 </property>
                </widget>
               </item>
-              <item row="19" column="0" colspan="2">
+              <item row="20" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols">
@@ -283,6 +265,31 @@
                 </item>
                 <item>
                  <widget class="QToolButton" name="toolButton_protocol">
+                  <property name="text">
+                   <string>...</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="12" column="0">
+               <widget class="QLabel" name="lblAddLines">
+                <property name="text">
+                 <string>The folder of the GTFS dataset of the additional lines</string>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_11">
+                <item>
+                 <widget class="QLineEdit" name="txtAddRoutes">
+                  <property name="readOnly">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QToolButton" name="toolButtonAddRoutes">
                   <property name="text">
                    <string>...</string>
                   </property>

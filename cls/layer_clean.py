@@ -13,10 +13,12 @@ from qgis.core import (
     QgsFields,
     QgsTask,
     QgsProject,
-    QgsField,
-    edit
+    QgsField
     )
-from qgis.PyQt.QtCore import QVariant, QObject, pyqtSignal
+
+from PyQt5.QtWidgets import QApplication
+from qgis.PyQt.QtCore import Qt, QVariant, QObject, pyqtSignal
+
 from common import convert_meters_to_degrees, create_and_check_field, get_unique_path
 
 class TaskSignals(QObject):
@@ -140,13 +142,16 @@ class cls_clean_roads(QgsTask):
 
             # === PREPARE SORTED LAYER BEFORE DELETING DUPLICATES ===
             fields = [f.name() for f in clean1_layer.fields()]
-            if "FCLASS" in fields:
+            has_fclass = any(f.lower() == "fclass" for f in fields)
+
+            if has_fclass:
                 self.signals.set_message.emit('Sorting by priority...')
                 sorted_layer = self.prepare_layer_sorted_by_priority(clean1_layer)
                 self.signals.set_message.emit('Preparing clean layer for GRASS...')
                 clean_for_grass_path = self.prepare_clean_layer_for_grass(sorted_layer)
             else:
-                clean_for_grass_path = clean1_layer  
+                clean_for_grass_path = clean1_layer
+
 
             
             # second clean
@@ -199,9 +204,9 @@ class cls_clean_roads(QgsTask):
             orig_fields = QgsFields()
             for f in self.layer.fields():
                 orig_fields.append(f)
-            if "FCLASS" in fields:    
+            if any(f.lower() == "fclass" for f in fields):
                 orig_fields.append(QgsField("priority", QVariant.Int))
-
+                
             filtered_provider.addAttributes(orig_fields)
             filtered_layer.updateFields()
 
@@ -260,6 +265,7 @@ class cls_clean_roads(QgsTask):
             self.saved_layer_count = saved_layer.featureCount()
 
             self.list_layer.append((self.unique_output_path, self.layer_name))
+            
                         
             self.write_finish_info()
 
@@ -269,7 +275,10 @@ class cls_clean_roads(QgsTask):
 
         except Exception as e:
             self.exception = e
+            QApplication.setOverrideCursor(Qt.ArrowCursor)
             print (self.exception)
+            self.signals.log.emit(f'<a>Error: {self.exception}</a>')
+            self.signals.set_message.emit(f'<a>Error: {self.exception}</a>')
             return False
     
     def prepare_layer_sorted_by_priority(self, input_layer):
@@ -296,14 +305,26 @@ class cls_clean_roads(QgsTask):
             input_layer.updateFields()
 
         # === FILL PRIORITY VALUES ===
-        provider = input_layer.dataProvider()
-        priority_idx = input_layer.fields().indexFromName(priority_field_name)
-        changes = {}
-        for feat in input_layer.getFeatures():
-            fclass = feat["FCLASS"]
-            pr = priority_map.get(fclass, 0)
-            changes[feat.id()] = {priority_idx: pr}
-        provider.changeAttributeValues(changes)
+        # Находим имя поля FCLASS без учёта регистра
+        fclass_field = None
+        for f in input_layer.fields():
+            if f.name().lower() == "fclass":
+                fclass_field = f.name()
+                break
+
+        # Если поле найдено — заполняем приоритеты
+        if fclass_field:
+            provider = input_layer.dataProvider()
+            priority_idx = input_layer.fields().indexFromName(priority_field_name)
+            changes = {}
+
+            for feat in input_layer.getFeatures():
+                fclass_value = feat[fclass_field]   # <-- безопасно
+                pr = priority_map.get(fclass_value, 0)
+                changes[feat.id()] = {priority_idx: pr}
+
+            provider.changeAttributeValues(changes)
+
 
         # === SORT FEATURES BY PRIORITY DESC ===
         sorted_layer = QgsVectorLayer(
@@ -323,8 +344,6 @@ class cls_clean_roads(QgsTask):
         )
         sorted_provider.addFeatures(features_sorted)
         sorted_layer.updateExtents()
-        # === ADD SORTED LAYER TO PROJECT === 
-        
         #QgsProject.instance().addMapLayer(sorted_layer)
         return sorted_layer
     

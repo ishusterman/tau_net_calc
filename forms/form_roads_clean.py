@@ -5,8 +5,6 @@ from datetime import datetime
 import glob
 import re
 
-from PyQt5.QtGui import QImage
-
 from qgis.core import (QgsApplication,
                        QgsProject,
                        QgsWkbTypes,
@@ -34,14 +32,10 @@ from common import (get_qgis_info,
                     getDateTime, 
                     insert_layer_ontop,
                     showAllLayersInCombo_Line,
-                    get_initial_directory)
-
-#from road_layer_processor import RoadLayerProcessor
+                    )
 
 from layer_clean import cls_clean_roads
 
-#FORM_CLASS, _ = uic.loadUiType(os.path.join(
-#    os.path.dirname(__file__), 'roads_clean.ui'))
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'roads_clean.ui')
@@ -210,12 +204,6 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.layer_road = QgsProject.instance().mapLayersByName(self.cmbLayersRoad.currentText())[0]
         self.layer_road_name = self.cmbLayersRoad.currentText()
         
-        #self.processor_road = RoadLayerProcessor(self.layer_road, self.layer_road_name, mode = "clean")
-        #self.processor_road.signals.start.connect(self.start_analizing_laeyers)
-        #self.processor_road.signals.finish_clean.connect(self.finish_analizing_laeyers)
-        #QgsApplication.taskManager().addTask(self.processor_road)
-        
-        
         self.setMessage("Cleaning layer of roads ...")
         self.folder_name = f'{self.txtPathToProtocols.text()}'
         self.close_button.setEnabled(False)
@@ -288,26 +276,6 @@ class form_roads_clean(QDialog, FORM_CLASS):
             text = self.textLog.toPlainText()
             with open(filelog_name, "w") as file:
                 file.write(text)
-
-        """
-        message = self.processor_road.get_message1()
-        if message != "":
-            msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Information)
-            msgBox.setWindowTitle("Information")
-            msgBox.setText(message)
-            msgBox.setStandardButtons(QMessageBox.Ok)
-            msgBox.exec_()
-            
-        message = self.processor_road.get_message2()
-        if message != "":
-            msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Information)
-            msgBox.setWindowTitle("Information")
-            msgBox.setText(message)
-            msgBox.setStandardButtons(QMessageBox.Ok)
-            msgBox.exec_()
-        """        
             
     def save_project(self):
         QApplication.setOverrideCursor(Qt.ArrowCursor)
@@ -411,20 +379,6 @@ class form_roads_clean(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
-
-        #if not os.path.exists(self.txtPathToProtocols.text()):
-        #    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-        #    return False
-
-        """
-        # check for the presence of .shp files in the folder
-        if os.path.isdir(self.txtPathToProtocols.text()):
-        
-            for file in os.listdir(self.txtPathToProtocols.text()):
-                if file.lower().endswith('.shp'):
-                    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' is not empty")
-                    return False
-        """
 
         try:
             tmp_prefix = "write_tester"
