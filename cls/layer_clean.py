@@ -1,9 +1,7 @@
 import os
 import processing
 from datetime import datetime
-
-from PyQt5.QtCore import Qt
-
+import csv
 from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerJoinInfo,
@@ -18,13 +16,8 @@ from qgis.core import (
     QgsField,
     edit
     )
-
 from qgis.PyQt.QtCore import QVariant, QObject, pyqtSignal
-
-from PyQt5.QtWidgets import QMessageBox
-
 from common import convert_meters_to_degrees, create_and_check_field, get_unique_path
-
 
 class TaskSignals(QObject):
     log = pyqtSignal(str)
@@ -109,13 +102,12 @@ class cls_clean_roads(QgsTask):
             self.signals.progress.emit(1) 
 
             # Добавляем в проект
-            # Добавляем в проект
-            snapped_layer = QgsVectorLayer(snapped_layer_path, f"{name}_snap", "ogr")
-            QgsProject.instance().addMapLayer(snapped_layer)
+            #snapped_layer = QgsVectorLayer(snapped_layer_path, f"{name}_snap", "ogr")
+            #QgsProject.instance().addMapLayer(snapped_layer)
 
-            errors0_path = result0['error']
-            errors0_layer = QgsVectorLayer(errors0_path, f"{name}_snap_errors", "ogr")
-            QgsProject.instance().addMapLayer(errors0_layer)
+            #errors0_path = result0['error']
+            #errors0_layer = QgsVectorLayer(errors0_path, f"{name}_snap_errors", "ogr")
+            #QgsProject.instance().addMapLayer(errors0_layer)
                                     
             #######################################################
             # first clean
@@ -141,16 +133,26 @@ class cls_clean_roads(QgsTask):
             cleaned_layer_path1 = result1['output']
 
             clean1_layer = QgsVectorLayer(cleaned_layer_path1, f"{name}_break", "ogr")
-            QgsProject.instance().addMapLayer(clean1_layer)
-            errors1_path = result1['error']
-            errors1_layer = QgsVectorLayer(errors1_path, f"{name}_break_errors", "ogr")
-            QgsProject.instance().addMapLayer(errors1_layer)
+            #QgsProject.instance().addMapLayer(clean1_layer)
+            #errors1_path = result1['error']
+            #errors1_layer = QgsVectorLayer(errors1_path, f"{name}_break_errors", "ogr")
+            #QgsProject.instance().addMapLayer(errors1_layer)
+
+            # === PREPARE SORTED LAYER BEFORE DELETING DUPLICATES ===
+            fields = [f.name() for f in clean1_layer.fields()]
+            if "FCLASS" in fields:
+                self.signals.set_message.emit('Sorting by priority...')
+                sorted_layer = self.prepare_layer_sorted_by_priority(clean1_layer)
+                self.signals.set_message.emit('Preparing clean layer for GRASS...')
+                clean_for_grass_path = self.prepare_clean_layer_for_grass(sorted_layer)
+            else:
+                clean_for_grass_path = clean1_layer  
 
             
             # second clean
             self.signals.set_message.emit('Cleaning layer of roads, step 3 of 3, deleting duplicated links...')
             result2 = processing.run("grass:v.clean", {
-                'input': cleaned_layer_path1,
+                'input': clean_for_grass_path, #cleaned_layer_path1,
                 'type': [1],
                 'tool': [6],
                 'threshold': [0.0],
@@ -172,10 +174,8 @@ class cls_clean_roads(QgsTask):
             error_count = len(list(errors_layer_2.getFeatures()))
             self.signals.log.emit(f'<a>Number of errors: {error_count}</a>')
 
-
-            QgsProject.instance().addMapLayer(cleaned_layer_2)
-            QgsProject.instance().addMapLayer(errors_layer_2)
-
+            #QgsProject.instance().addMapLayer(cleaned_layer_2)
+            #QgsProject.instance().addMapLayer(errors_layer_2)
 
             # join errors
 
@@ -196,14 +196,20 @@ class cls_clean_roads(QgsTask):
             filtered_provider = filtered_layer.dataProvider()
 
             # 3. Копировать только поля из оригинального слоя (без виртуальных e_*)
-            #orig_fields = cleaned_layer_2.fields()
-            orig_fields = self.layer.fields()
+            orig_fields = QgsFields()
+            for f in self.layer.fields():
+                orig_fields.append(f)
+            if "FCLASS" in fields:    
+                orig_fields.append(QgsField("priority", QVariant.Int))
+
             filtered_provider.addAttributes(orig_fields)
             filtered_layer.updateFields()
 
             # 4. Отобрать только фичи, у которых нет ошибок (т.е. не присоединилось по cat)
             expression = QgsExpression('"e_fid" IS NULL')
             request = QgsFeatureRequest(expression)
+
+            self.signals.progress.emit(4)
 
             # 5. Копировать геометрию и атрибуты
             new_features = []
@@ -219,97 +225,6 @@ class cls_clean_roads(QgsTask):
                         
             self.signals.progress.emit(5)
             
-            
-            #####
-            # Список требуемых полей и их характеристик
-            """
-            required_fields = {
-                'FCLASS': (QVariant.String, 28, 'unclassified'), 
-                'ONEWAY': (QVariant.String, 1, 'B'),
-                'maxspeed': (QVariant.Int, 10, 30) 
-                }
-            
-            provider = filtered_layer.dataProvider()
-
-
-            # Проверка поля ONEWAY, только если это исходное имя без суффиксов
-            for field in filtered_layer.fields():
-                if field.name().lower() == 'oneway':
-                    base_name = field.name()
-                    oneway_field_index = filtered_layer.fields().indexOf(base_name)
-                    found_invalid = False
-
-                    for feature in filtered_layer.getFeatures():
-                        val = feature[oneway_field_index]
-                        if val not in ('T', 'F', 'B'):
-                            found_invalid = True
-                            break
-
-                    if found_invalid:
-                        # Все текущие имена
-                        existing_names = [f.name().lower() for f in filtered_layer.fields()]
-                        new_name = base_name + "_1"
-                        counter = 1
-                        while new_name.lower() in existing_names:
-                            counter += 1
-                            new_name = f"{base_name}_{counter}"
-
-                        provider.renameAttributes({oneway_field_index: new_name})
-                        filtered_layer.updateFields()
-                        self.signals.log.emit(f'<b>The "{field.name()}" field of the "{self.layer_name}" table contains irregular values and is renamed to "{new_name}"</b>')
-                        self.signals.log.emit(f'<b>A new field "ONEWAY" with the default values of "B" is created</b>')
-                        
-                    break
-
-
-            existing_field_names = [field.name() for field in filtered_layer.fields()]
-            existing_field_names_lower = [name.lower() for name in existing_field_names]
-
-            list_field_added = []
-            new_fields = []
-
-            for field_name, (field_type, length, default_value) in required_fields.items():
-                if field_name.lower() not in existing_field_names_lower:
-                    new_field = QgsField(field_name, field_type)
-                    new_field.setLength(length)
-                    new_fields.append(new_field)
-                    list_field_added.append(field_name)
-
-            if new_fields:
-                provider.addAttributes(new_fields)
-                filtered_layer.updateFields()
-
-                field_indexes = {f.name(): i for i, f in enumerate(filtered_layer.fields())}
-                new_field_indexes = {name: field_indexes[name] for name in list_field_added}
-
-                attr_updates = {}
-
-                for feature in filtered_layer.getFeatures():
-                    fid = feature.id()
-                    attrs = feature.attributes()
-
-                    updated_fields = {}
-                    for field_name in list_field_added:
-                        idx = new_field_indexes[field_name]
-                        _, _, default_value = required_fields[field_name]
-                        if attrs[idx] is None and default_value is not None:
-                            updated_fields[idx] = default_value
-
-                    if updated_fields:
-                        attr_updates[fid] = updated_fields
-
-                if attr_updates:
-                    with edit(filtered_layer):
-                        # Массовое обновление атрибутов
-                        success = provider.changeAttributeValues(attr_updates)
-                        if not success:
-                            print("Failed to update attributes via provider")
-
-                added_fields_str = ", ".join(list_field_added)
-                self.signals.log.emit(f'<b>Fields {added_fields_str} have been added and default values assigned</b>')
-
-            #####
-            """
             if self.osm_id_field == "":
                 self.osm_id_field = "link_id"
 
@@ -357,6 +272,83 @@ class cls_clean_roads(QgsTask):
             print (self.exception)
             return False
     
+    def prepare_layer_sorted_by_priority(self, input_layer):
+        
+        # === LOAD PRIORITY TABLE ===
+        plugin_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        csv_path = os.path.join(plugin_root, "config", "car_speed_by_link_type_priority.csv")
+
+        priority_map = {}
+        with open(csv_path, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                lt = row["link_type"].strip()
+                pr = row["priority"].strip()
+                if pr.isdigit():
+                    priority_map[lt] = int(pr)
+
+        # === ADD PRIORITY FIELD IF NOT EXISTS ===
+        priority_field_name = "priority"
+        provider = input_layer.dataProvider()
+
+        if priority_field_name not in [f.name() for f in input_layer.fields()]:
+            provider.addAttributes([QgsField(priority_field_name, QVariant.Int)])
+            input_layer.updateFields()
+
+        # === FILL PRIORITY VALUES ===
+        provider = input_layer.dataProvider()
+        priority_idx = input_layer.fields().indexFromName(priority_field_name)
+        changes = {}
+        for feat in input_layer.getFeatures():
+            fclass = feat["FCLASS"]
+            pr = priority_map.get(fclass, 0)
+            changes[feat.id()] = {priority_idx: pr}
+        provider.changeAttributeValues(changes)
+
+        # === SORT FEATURES BY PRIORITY DESC ===
+        sorted_layer = QgsVectorLayer(
+            f"{QgsWkbTypes.displayString(input_layer.wkbType())}?crs={input_layer.crs().authid()}",
+            "sorted_by_priority",
+            "memory"
+        )
+        sorted_provider = sorted_layer.dataProvider()
+
+        sorted_provider.addAttributes(input_layer.fields())
+        sorted_layer.updateFields()
+        
+        features_sorted = sorted(
+            list(input_layer.getFeatures()),
+            key=lambda f: f[priority_field_name],
+            reverse=True
+        )
+        sorted_provider.addFeatures(features_sorted)
+        sorted_layer.updateExtents()
+        # === ADD SORTED LAYER TO PROJECT === 
+        
+        #QgsProject.instance().addMapLayer(sorted_layer)
+        return sorted_layer
+    
+    def prepare_clean_layer_for_grass(self, input_layer):
+        provider = input_layer.dataProvider()
+        fields_to_delete = []
+        for f in input_layer.fields():
+            name = f.name()
+            if name in ("cat", "cat_", "fid") or name.endswith("_cat") or name.startswith("e_"):
+                fields_to_delete.append(input_layer.fields().indexFromName(name))
+
+        if fields_to_delete:
+            provider.deleteAttributes(fields_to_delete)
+            input_layer.updateFields()
+
+        result = processing.run(
+            "native:savefeatures",
+            {
+                'INPUT': input_layer,
+                'OUTPUT': 'TEMPORARY_OUTPUT'
+            }
+        )
+        return result['OUTPUT']
+
     def write_finish_info(self):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
@@ -374,6 +366,8 @@ class cls_clean_roads(QgsTask):
 
         self.signals.set_message.emit(f'Finished')
         self.signals.add_layers.emit(self.list_layer)
+
+
 
 
     def cancel(self):
