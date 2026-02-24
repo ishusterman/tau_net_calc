@@ -94,11 +94,12 @@ class car_accessibility:
     
     def check_speed_fields(self, layer):
         field_names = layer.fields().names()
-        for h in range(24):
+        for h in range(5, 24):  # от 05 до 23
             fname = f"fspeed_{h:02d}"
             if fname not in field_names:
                 return False
         return True
+
     
     def read_road_speed_default(self):
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -341,8 +342,7 @@ class car_accessibility:
             print(f' use {self.road_layer.name()}')
             graph = self.build_graph_from_layer(self.road_layer, self.hour, self.parent.mode)
             self.factor_speed = 1
-        
-        
+                
         # --- КОНЕЦ ЭКСПЕРИМЕНТА ---
 
         #################################

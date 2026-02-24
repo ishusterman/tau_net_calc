@@ -5,6 +5,8 @@ import csv
 from pathlib import Path
 import pandas as pd
 import re
+from PyQt5.QtCore import QTimer
+
 from PyQt5.QtWidgets import (QTableWidget,
                             QTableWidgetItem,
                             QHeaderView)
@@ -73,6 +75,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.toolButtonAddRoutes.clicked.connect(
             lambda: self.showFoldersDialog(self.txtAddRoutes))
 
+        self.break_on = False
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
         self.run_button = self.buttonBox.addButton(
@@ -85,8 +88,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
         self.help_button.clicked.connect(self.on_help_button_clicked)
-        self.init_table()
-
+        
         self.ParametrsShow()
         self.show_info()
 
@@ -100,10 +102,12 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.table1.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table2.setEditTriggers(QTableWidget.NoEditTriggers)
     
-        self.txtPathToGTFS.textChanged.connect(self.on_path_changed)
+        self.txtPathToGTFS.textChanged.connect(self.on_PathToGTFS_changed)
 
-        self.txtAddRoutes.textChanged.connect(lambda: self.btnSearch_on_click(show_all=True))
-        self.on_path_changed()
+        self.txtAddRoutes.textChanged.connect(self.on_txtAddRoutes_changed)
+        self.InitTable1()
+        self.InitTable2()
+        self.UpdateTable1(show_all=True)
 
         if self.mode == 2:
             self.txtAddRoutes.hide() 
@@ -111,18 +115,25 @@ class form_gtfs(QDialog, FORM_CLASS):
             self.lblAddLines.hide()
             parent_layout = self.horizontalLayout_11.parent()
             parent_layout.removeItem(self.horizontalLayout_11)
-            
+
+        self.progressBar.setMaximum(5)
+
+        #self.table1.setSelectionBehavior(QTableWidget.SelectRows) 
+        #self.table1.setSelectionMode(QTableWidget.MultiSelection)
     
-    
-    def on_path_changed (self):
+    def on_PathToGTFS_changed (self):
+        if self.mode == 2:
+            self.InitTable1()      
+            self.InitTable2()      
+        self.UpdateTable1(show_all=True)
+
+    def on_txtAddRoutes_changed (self):
         
-        if self.CheckGtfsDirectory(self.txtPathToGTFS.text()):
-            search_enable = True
-        else:
-            search_enable = False 
-        self.txtSearch.setEnabled(search_enable)
-        self.btnSearch.setEnabled(search_enable)
-        self.layout_tables.setEnabled(search_enable)
+        self.InitTable1()      
+        self.InitTable2()      
+        self.UpdateTable1(show_all=True)
+
+  
             
     def detect_best_description_column(self,df):
         first = df.iloc[0]
@@ -131,26 +142,39 @@ class form_gtfs(QDialog, FORM_CLASS):
             val = str(first[col]) if col in df.columns else ""
             lengths[col] = len(val)
         return max(lengths, key=lengths.get)
+    
+    def UpdateTable1(self, show_all=False):
 
-    def btnSearch_on_click(self, show_all=False):
+        self.InitTable1()
+        #self.InitTable2()
+
+        # --- 2. Определяем путь к GTFS --- txtPathToGTFS vs txtAddRoutes
+        gtfs_path = (self.txtPathToGTFS.text().strip() if self.mode == 2  else self.txtAddRoutes.text().strip())
+
+        if self.CheckGtfsDirectory(gtfs_path):
+            search_enable = True
+        else:
+            search_enable = False
+
+        self.txtSearch.setEnabled(search_enable)
+        self.btnSearch.setEnabled(search_enable)
+        self.layout_tables.setEnabled(search_enable)
+
+        if not search_enable:
+            #self.InitTable1()
+            return
         
         # --- 1. Получаем текст поиска ---
         search_text = self.txtSearch.text().strip()
 
+        if not search_text:
+            show_all = True
+
         if not show_all and not search_text:
             return
 
-        # --- 2. Определяем путь к GTFS ---
-        gtfs_path = (
-            self.txtPathToGTFS.text().strip()
-            if self.mode == 2
-            else self.txtAddRoutes.text().strip()
-        )
-
         filename = os.path.join(gtfs_path, "routes.txt")
-        #if not self.CheckFileExcludeRourtes(filename):
-        #    return
-
+      
         # --- 3. Загружаем routes.txt ---
         try:
             df = pd.read_csv(
@@ -184,144 +208,100 @@ class form_gtfs(QDialog, FORM_CLASS):
             return
 
         # --- 5. Отображение в таблице ---
-        print(routes)
-
-        # Очищаем только содержимое
-        self.table1.clearContents()
-        self.table1.setRowCount(0)
-        # Структура таблицы
-        self.table1.setColumnCount(3)
-        self.table1.setHorizontalHeaderLabels(["ID", "Name", "Description"])
-        # Добавляем строки
-        # Добавляем строки
+        self.InitTable1()
         self.table1.setRowCount(len(routes))
         for i, (_, row) in enumerate(routes.iterrows()): # Используем i как счетчик от 0 до N
             self.table1.setItem(i, 0, QTableWidgetItem(str(row["route_id"])))
             self.table1.setItem(i, 1, QTableWidgetItem(str(row["route_short_name"])))
             self.table1.setItem(i, 2, QTableWidgetItem(str(row[best_desc_col])))
-            print ("added")
-            
 
-    def CheckFileExcludeRourtes(self, file_path):
-        """
-        Checks if the file exists, is a file, and contains the required 'route_id' column.
-        Returns (True, "") if valid, or (False, "error message") otherwise.
-        """
-        path = Path(file_path)
-        
-        # 1. Check if path exists
-        if not path.exists():
-            self.setMessage(f"File not found: {path.name}")
-            return False
-        
-        # 2. Check if it's a file and not a directory
-        if not path.is_file():
-            self.setMessage(f"The provided path {file_path} is a directory, not a file")
-            return False
+        QTimer.singleShot(0, self.adjust_table1_rows) 
+    
+    def adjust_table1_rows(self): 
+        for row in range(self.table1.rowCount()): 
+            self.table1.resizeRowToContents(row)  
 
-        # 3. Check CSV content and headers
-        try:
-            # Using utf-8-sig to handle potential Byte Order Mark (BOM)
-            with open(path, mode='r', encoding='utf-8-sig') as f:
-                reader = csv.reader(f)
-                headers = next(reader, None)
+    def btnSearch_on_click(self):
+        self.UpdateTable1()
                 
-                if not headers:
-                    self.setMessage(f"The file {path.name} is empty")
-                    return False
-                
-                # Clean headers from whitespace and quotes
-                headers = [h.strip().replace('"', '') for h in headers]
-                
-                if 'route_id' not in headers:
-                    self.setMessage(f"Invalid GTFS format: 'route_id' column is missing in {path.name}")
-                    return False
-                    
-        except UnicodeDecodeError:
-            return False 
-        except Exception as e:
-            return False
-
-        return True, ""
 
     def btnAdd_on_click(self):
+
         def is_route_in_table2(route_id):
             for r in range(self.table2.rowCount()):
                 if self.table2.item(r, 0).text() == route_id:
                     return True
             return False
 
-        row = self.table1.currentRow()
-        if row < 0:
-            return  # ничего не выбрано
+        # получаем ВСЕ выделенные строки
+        selected_rows = sorted(set(idx.row() for idx in self.table1.selectedIndexes()))
 
-        # читаем данные из table1
-        route_id = self.table1.item(row, 0).text()
-        name = self.table1.item(row, 1).text()
-        desc = self.table1.item(row, 2).text()
-
-        if is_route_in_table2(route_id): 
+        if not selected_rows:
             return
 
-        # добавляем строку в table2
-        new_row = self.table2.rowCount()
-        self.table2.insertRow(new_row)
+        for row in selected_rows:
+            route_id = self.table1.item(row, 0).text()
+            name = self.table1.item(row, 1).text()
+            desc = self.table1.item(row, 2).text()
 
-        self.table2.setItem(new_row, 0, QTableWidgetItem(route_id))
-        self.table2.setItem(new_row, 1, QTableWidgetItem(name))
-        self.table2.setItem(new_row, 2, QTableWidgetItem(desc))
+            if is_route_in_table2(route_id):
+                continue
+
+            new_row = self.table2.rowCount()
+            self.table2.insertRow(new_row)
+
+            self.table2.setItem(new_row, 0, QTableWidgetItem(route_id))
+            self.table2.setItem(new_row, 1, QTableWidgetItem(name))
+            self.table2.setItem(new_row, 2, QTableWidgetItem(desc))
+        
+        self.table2.resizeRowsToContents()
+        for row in range(self.table2.rowCount()): 
+            self.table2.resizeRowToContents(row) 
+        
  
     def btnRemove_on_click(self):
-        row = self.table2.currentRow()
-        if row < 0:
-            return
 
-        # Отключаем сортировку, чтобы не было скачков
+        selected_rows = sorted(
+            set(idx.row() for idx in self.table2.selectedIndexes()),
+            reverse=True
+        )
+        if not selected_rows:
+            return
         sorting = self.table2.isSortingEnabled()
         self.table2.setSortingEnabled(False)
-
-        # Удаляем строку
-        self.table2.removeRow(row)
-        print ("remove")
-
-        # Возвращаем сортировку
+        for row in selected_rows:
+            self.table2.removeRow(row)
         self.table2.setSortingEnabled(sorting)
-
-        # Обновляем высоту строк
         self.table2.resizeRowsToContents()
 
 
-    def init_table(self):
 
+    def InitTable1(self):
+        self.table1.clear()
+        self.table1.setRowCount(0)
         self.table1.setColumnCount(3)
         self.table1.setHorizontalHeaderLabels(["ID", "Name", "Description"])
         self.table1.setColumnHidden(0, True)
-
         self.table1.setSelectionBehavior(self.table2.SelectRows)
         self.table1.setWordWrap(True)
-
         header = self.table1.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
-
-        self.table2.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-
+        
+    def InitTable2(self):
+        self.table2.clear()
+        self.table2.setRowCount(0)
         self.table2.setColumnCount(3)
         self.table2.setHorizontalHeaderLabels(["ID", "Name", "Description"])
         self.table2.setColumnHidden(0, True)
-
         self.table2.setSelectionBehavior(self.table2.SelectRows)
         self.table2.setWordWrap(True)
-
         header = self.table2.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
-
-        self.table2.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
+        
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
 
@@ -423,19 +403,8 @@ class form_gtfs(QDialog, FORM_CLASS):
         )
         if folder_path:
             obj.setText(os.path.normpath(folder_path))
-
-            # Очищаем только содержимое, НЕ структуру
-            
-            #self.table1.clearContents()
-            #self.table1.setRowCount(0)
-
-            #self.table2.clearContents()
-            #self.table2.setRowCount(0)
-
-            #self.init_table()
         else:
             obj.setText(obj.text())
-
                
 
     def readParameters(self):
@@ -590,11 +559,12 @@ class form_gtfs(QDialog, FORM_CLASS):
         if self.mode == 2:
 
             if route_ids:
-                self.setMessage(f'Deleting lines ...')
+                self.setMessage(f'Deleting lines form GTFS ...')
                 QApplication.processEvents()
                 out1 = path_to_GTFS_mod #os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_DeleteLinesOK')
                 out2 = os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_DeletedLines')
-                cleaner = GTFSExcludeRoutes(gtfs_path = path_to_GTFS, 
+                cleaner = GTFSExcludeRoutes(parent = self,
+                                            gtfs_path = path_to_GTFS, 
                                             #exclude_file_path = self.txtExcludeRoutes.text(), 
                                             exclude_ids_list = route_ids,
                                             output_path = out1,
@@ -606,19 +576,17 @@ class form_gtfs(QDialog, FORM_CLASS):
         if self.mode == 1:
             if run_ok and self.txtAddRoutes.text():
 
-                self.setMessage(f'Adding lines ...')
+                self.setMessage(f'Adding lines to GTFS ...')
                 QApplication.processEvents()
                 
-                out = path_to_GTFS_mod #os.path.join(self.config['Settings']['PathToProtocols_gtfs'], 'GTFS_AddLinesOK')
-                cleaner = GTFSAddRoutes(gtfs_path1 = path_to_GTFS, 
-                                        gtfs_path2 = self.txtAddRoutes.text(), 
-                                        output_path = out)
-                
+                out = path_to_GTFS_mod 
+                                
                 min_str, max_str, _ = get_gtfs_date_range(self.txtPathToGTFS.text())
-                gtfs_add = GTFSAddRoutes(gtfs_path1 = path_to_GTFS, 
+                gtfs_add = GTFSAddRoutes(parent = self,
+                                            gtfs_path1 = path_to_GTFS, 
                                             gtfs_path2= self.txtAddRoutes.text(), 
                                             output_path = out, 
-                                            routes_to_add = None, 
+                                            routes_to_add = route_ids, 
                                             start_date = min_str, 
                                             end_date =  max_str)
 

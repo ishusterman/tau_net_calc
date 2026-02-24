@@ -59,11 +59,11 @@ class pkl_car ():
         ###
         # experiment
         
-        #self.parent.setMessage('Converting multilines into lines ...')
-        #self.converter = MultiLineStringToLineStringConverter(
-        #    self.parent, self.parent.layer_road)
-        #self.layer_roads = self.converter.execute()
-        self.layer_roads = self.parent.layer_road
+        self.parent.setMessage('Converting multilines into lines ...')
+        self.converter = MultiLineStringToLineStringConverter(
+            self.parent, self.parent.layer_road)
+        self.layer_roads = self.converter.execute()
+        #self.layer_roads = self.parent.layer_road
         ###
         # experiment
 
@@ -147,7 +147,7 @@ class pkl_car ():
             return 0
 
         # experiment
-        #self.converter.remove_temp_layer()
+        self.converter.remove_temp_layer()
         # experiment
         self.parent.progressBar.setValue(8)
         QApplication.processEvents()
