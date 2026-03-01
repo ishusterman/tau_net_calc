@@ -45,9 +45,7 @@ from common import (get_qgis_info,
 
 from AnalyzerFromTo_incremental import roundtrip_analyzer
 
-FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'car.ui')
-)
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'car.ui'))
 
 class CarAccessibility(QDialog, FORM_CLASS):
     def __init__(self,
@@ -65,8 +63,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
-        self.splitter.setSizes(
-            [int(self.width() * 0.75), int(self.width() * 0.25)])
+        self.splitter.setSizes([int(self.width() * 0.75), int(self.width() * 0.25)])
 
         fix_size = 15 * self.txtTimeInterval.fontMetrics().width('x')
 
@@ -94,10 +91,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
-        self.toolButton_protocol.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToProtocols))
-        self.toolButtonPKL.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToPKL))
+        self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
+        self.toolButtonPKL.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToPKL))
 
         showAllLayersInCombo_Point_and_Polygon(self.cmbLayers)
         showAllLayersInCombo_Point_and_Polygon(self.cmbLayersDest)
@@ -112,12 +107,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        self.run_button = self.buttonBox.addButton(
-            "Run", QDialogButtonBox.ActionRole)
-        self.close_button = self.buttonBox.addButton(
-            "Close", QDialogButtonBox.RejectRole)
-        self.help_button = self.buttonBox.addButton(
-            "Help", QDialogButtonBox.HelpRole)
+        self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
+        self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
+        self.help_button = self.buttonBox.addButton("Help", QDialogButtonBox.HelpRole)
 
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
@@ -175,51 +167,18 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.cmbFields_ch.setVisible(False)
             self.label.setVisible(False)
 
-            parent_layout = self.horizontalLayout_6.parent()
+            parent_layout = self.horizontalLayout_7.parent()
             parent_layout.removeItem(self.horizontalLayout_7)
+            parent_layout = self.horizontalLayout_13.parent()
+            parent_layout.removeItem(self.horizontalLayout_13)
         
-        self.default_alias = get_prefix_alias(False, 
-                                self.protocol_type, 
-                                self.mode, 
-                                full_prefix=False)
-
         self.ParametrsShow()
-
-        if mode == 2:
-            self.label_17.setText("Layer of origins")
-            self.label_5.setText("Layer of facilities")
-            self.label_11.setText("Arrive at (hh:mm:ss)")
+        """
         
-        if self.protocol_type == 1:    
-            if self.mode == 2:
-                self.label_5.setText("Layer of all destinations in the region")
-            if self.mode == 1:    
-                self.label_17.setText("Layer of all origins in the region")
+        """
+        
         
         self.show_info()
-
-
-        if not (self.roundtrip):
-            
-            widgets_to_hide = [
-                self.dtRoundtripStartTime1, self.dtRoundtripStartTime2,
-                self.dtRoundtripStartTime3, self.dtRoundtripStartTime4,
-                self.txtRountrip_timedelta1, self.txtRountrip_timedelta2,
-                self.lblRoundtrip1, self.lblRoundtrip2, self.lblRoundtrip3,
-                self.lblRoundtrip4, self.lblRoundtrip5, self.lblRoundtrip6,
-                self.lblRoundtrip7, self.lblRoundtrip8, self.lblRoundtrip9,
-                self.lblRoundtrip10
-            ]
-         
-            for widget in widgets_to_hide:
-                widget.setVisible(False)
-                        
-        else:
-            # remove item time start
-            self.label_11.setVisible(False)
-            self.dtStartTime.setVisible(False)
-            parent_layout = self.horizontalLayout_12.parent()
-            parent_layout.removeItem(self.horizontalLayout_12)
         
         regex = QRegExp(r"\d*")
         int_validator = QRegExpValidator(regex)
@@ -243,8 +202,68 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.dict_building_vertex = {} 
         self.dict_vertex_buildings = {}
-  
 
+        self.rbFrom.toggled.connect(self.on_radio_button_changed)
+        self.rbTo.toggled.connect(self.on_radio_button_changed)
+        self.rbRound.toggled.connect(self.on_radio_button_changed)
+        self.changeInterface()
+        self.rbFrom.setText("FROM Facility")
+        self.rbTo.setText("TO Facility")
+        self.rbRound.setText("ROUNDTRIP")
+
+    def on_radio_button_changed(self):
+        if self.rbFrom.isChecked():
+            self.mode = 1
+            self.roundtrip = False
+        elif self.rbTo.isChecked():
+            self.mode = 2
+            self.roundtrip = False
+        elif self.rbRound.isChecked():
+            self.mode = 2
+            self.roundtrip = True
+        self.changeInterface()
+        
+    def changeInterface (self):
+        
+        if self.mode == 2:
+            self.label_17.setText("Layer of origins")
+            self.label_5.setText("Layer of facilities")
+            self.label_11.setText("Arrive at (hh:mm:ss)")
+        
+        if self.mode == 1:
+            self.label_17.setText("Layer of facilities")
+            self.label_5.setText("Layer of destinations")
+            self.label_11.setText("Start at (hh:mm:ss)")
+        
+        if self.protocol_type == 1:    
+            if self.mode == 2:
+                self.label_5.setText("Layer of all destinations in the region")
+            if self.mode == 1:    
+                self.label_17.setText("Layer of all origins in the region")
+            
+        widgets_to_hide = [
+                self.dtRoundtripStartTime1, self.dtRoundtripStartTime2,
+                self.dtRoundtripStartTime3, self.dtRoundtripStartTime4,
+                self.txtRountrip_timedelta1, self.txtRountrip_timedelta2,
+                self.lblRoundtrip1, self.lblRoundtrip2, self.lblRoundtrip3,
+                self.lblRoundtrip4, self.lblRoundtrip5, self.lblRoundtrip6,
+                self.lblRoundtrip7, self.lblRoundtrip8, self.lblRoundtrip9,
+                self.lblRoundtrip10
+            ]
+         
+        for widget in widgets_to_hide:
+                widget.setEnabled(self.roundtrip)
+        # remove item time start
+        self.label_11.setEnabled(not self.roundtrip)
+        self.dtStartTime.setEnabled(not self.roundtrip)
+
+        self.default_alias = get_prefix_alias(False, 
+                                self.protocol_type, 
+                                self.mode, 
+                                full_prefix=False)
+        
+        self.txtAlias.setText(self.default_alias)
+            
     def fillComboBoxWithLayerFields2(self):
         self.cmbFields_ch.clear()
         selected_layer_name = self.cmbLayersDest.currentText()
@@ -546,6 +565,10 @@ class CarAccessibility(QDialog, FORM_CLASS):
         if not value or not is_valid_time(value): 
             self.config['Settings']['to_time_end'] = '10:00:00'
 
+        value = self.config['Settings'].get('radio_button_type_car') 
+        if not value:
+            self.config['Settings']['radio_button_type_car'] = "to"
+
         
 
     # update config file
@@ -598,6 +621,15 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['from_time_end'] = self.dtRoundtripStartTime4.dateTime().toString("HH:mm:ss")
         self.config['Settings']['time_delta_to'] = self.txtRountrip_timedelta1.text()
         self.config['Settings']['time_delta_from'] = self.txtRountrip_timedelta2.text()
+
+        if self.rbFrom.isChecked():
+            rb_state = "from"
+        elif self.rbTo.isChecked():
+            rb_state = "to"
+        elif self.rbRound.isChecked():
+            rb_state = "round"
+        
+        self.config['Settings']['radio_button_type_car'] = rb_state
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
@@ -667,8 +699,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.cmbVisLayers_fields.setCurrentText(
             self.config['Settings']['VisLayer_field_car'])
         
-        self.txtAlias.setText(self.default_alias)
-
         if 'Field_ch_car' not in self.config['Settings']:
             self.config['Settings']['Field_ch_car'] = ''
 
@@ -682,13 +712,10 @@ class CarAccessibility(QDialog, FORM_CLASS):
                     i, Qt.Unchecked, role=Qt.CheckStateRole)
 
         self.txtWalkToCAR.setText(self.config['Settings']['Walk_to_car_car'])
-        self.txtWalkToDestination.setText(
-            self.config['Settings']['Walk_to_destination_car'])
-        self.txtWalkingSpeed.setText(
-            self.config['Settings']['Walking_speed_car'])
+        self.txtWalkToDestination.setText(self.config['Settings']['Walk_to_destination_car'])
+        self.txtWalkingSpeed.setText(self.config['Settings']['Walking_speed_car'])
 
-        datetime = QDateTime.fromString(
-            self.config['Settings']['Start_time_car'], "HH:mm:ss")
+        datetime = QDateTime.fromString(self.config['Settings']['Start_time_car'], "HH:mm:ss")
         self.dtStartTime.setDateTime(datetime)
 
         RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
@@ -698,18 +725,30 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.txtRountrip_timedelta1.setText(self.config['Settings']['time_delta_to'])
         self.txtRountrip_timedelta2.setText(self.config['Settings']['time_delta_from'])
 
-        datetime = QDateTime.fromString(
-            self.config['Settings']['to_time_start'], "HH:mm:ss")
+        datetime = QDateTime.fromString(self.config['Settings']['to_time_start'], "HH:mm:ss")
         self.dtRoundtripStartTime1.setDateTime(datetime)
-        datetime = QDateTime.fromString(
-            self.config['Settings']['to_time_end'], "HH:mm:ss")
+        datetime = QDateTime.fromString(self.config['Settings']['to_time_end'], "HH:mm:ss")
         self.dtRoundtripStartTime2.setDateTime(datetime)
-        datetime = QDateTime.fromString(
-            self.config['Settings']['from_time_start'], "HH:mm:ss")
+        datetime = QDateTime.fromString(self.config['Settings']['from_time_start'], "HH:mm:ss")
         self.dtRoundtripStartTime3.setDateTime(datetime)
-        datetime = QDateTime.fromString(
-            self.config['Settings']['from_time_end'], "HH:mm:ss")
+        datetime = QDateTime.fromString(self.config['Settings']['from_time_end'], "HH:mm:ss")
         self.dtRoundtripStartTime4.setDateTime(datetime)
+
+        radio_button_type_state = self.config['Settings']['radio_button_type_car']
+        if radio_button_type_state == "from":
+            self.rbFrom.setChecked(True)
+            self.mode = 1
+        if radio_button_type_state == "to":
+            self.rbTo.setChecked(True)
+            self.mode = 2
+        if radio_button_type_state == "round":
+            self.rbRound.setChecked(True)
+
+        self.default_alias = get_prefix_alias(False, 
+                                self.protocol_type, 
+                                self.mode, 
+                                full_prefix=False)  
+        self.txtAlias.setText(self.default_alias)  
 
     def check_folder_and_file(self):
 
@@ -935,9 +974,10 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.folder_name_from = os.path.join(self.folder_name_copy, "from")
             os.makedirs(self.folder_name_from, exist_ok=True)
 
+            duration_max = max_time_minutes * 60 * 1.5
             analyzer = roundtrip_analyzer(
                                         report_path = os.path.dirname(self.folder_name_from), 
-                                        duration_max=3600, 
+                                        duration_max = duration_max, 
                                         alias = self.alias,
                                         field_star = cols["star"],
                                         field_hash = cols["hash"]

@@ -222,7 +222,7 @@
                </widget>
               </item>
               <item row="18" column="0" colspan="2">
-               <widget class="QLineEdit" name="txtAliase">
+               <widget class="QLineEdit" name="txtAlias">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                   <horstretch>0</horstretch>

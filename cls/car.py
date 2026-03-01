@@ -211,6 +211,7 @@ class car_accessibility:
             speed_fwd = normalize_speed(feat[fwd_field])
             speed_bwd = normalize_speed(feat[bwd_field])
 
+            """
             # Сравнение со скоростью в 12:00
             fwd_field_12 = "fspeed_12"
             bwd_field_12 = "bspeed_12"
@@ -225,6 +226,7 @@ class car_accessibility:
             if speed_bwd is not None and speed_bwd_12 is not None:
                 if speed_bwd < speed_bwd_12 / 2:
                     speed_bwd = speed_bwd_12 / 2
+            """
 
             # Если обе скорости отсутствуют → default
             if speed_fwd is None and speed_bwd is None:
@@ -266,6 +268,7 @@ class car_accessibility:
         # ---------------------------------------------------------
         graph = builder.graph()
 
+        """
         # ----------------------------------------------------------------------
         # Сохранение графа в CSV
         # ----------------------------------------------------------------------
@@ -313,6 +316,7 @@ class car_accessibility:
                 ])
 
         print(f"Файлы сохранены:\n{nodes_file}\n{edges_file}")
+        """
 
         return graph
 
@@ -339,7 +343,7 @@ class car_accessibility:
                
         self.road_layer = iface.activeLayer()
         if self.check_speed_fields(self.road_layer):
-            print(f' use {self.road_layer.name()}')
+            self.parent.textLog.append (f'Use layer of roads {self.road_layer.name()}, calculating on hour')
             graph = self.build_graph_from_layer(self.road_layer, self.hour, self.parent.mode)
             self.factor_speed = 1
                 
@@ -501,12 +505,17 @@ class car_accessibility:
                     continue
              
                 # If the pair does not exist in the dictionary, add it with the current cost_res and veh_legs
+                """
                 if pair not in self.min_costs:
                     self.min_costs[pair] = (cost_res, veh_legs)
                 else:
                     # If the new cost_res is less than the stored one, update it
                     if cost_res < self.min_costs[pair][0]:
-                        self.min_costs[pair] = (cost_res, veh_legs)    
+                        self.min_costs[pair] = (cost_res, veh_legs)
+                """
+                existing = self.min_costs.get(pair)
+                if existing is None or cost_res < existing[0]:
+                    self.min_costs[pair] = (cost_res, veh_legs)    
 
     def makeProtocolArea(self):
                

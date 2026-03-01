@@ -993,7 +993,7 @@ class GTFS ():
                     close_pairs.append(
                         (stops.iloc[j]['stop_id'], stop_id1, round(distance)))
 
-        filename = os.path.join(self.__path_to_file,'footpath_AIR.txt')
+        filename = os.path.join(self.__path_to_file,'footpath_air.txt')
         with open(filename, 'w') as file:
             file.write(f'from_stop_id,to_stop_id,min_transfer_time\n')
             for pair in close_pairs:

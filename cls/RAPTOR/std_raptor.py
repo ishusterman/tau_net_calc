@@ -26,6 +26,8 @@ def raptor(SOURCE,
            first_step = None
            ) -> list:
     
+    
+
     list_stops = set()
 
     (marked_stop,

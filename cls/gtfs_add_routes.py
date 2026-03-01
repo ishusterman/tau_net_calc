@@ -173,6 +173,9 @@ class GTFSAddRoutes:
                     QApplication.processEvents()
 
                 # Теперь добавляем df1 (основной GTFS)
+                if self.verify_break():
+                        return 0
+                
                 if df1 is not None:
                     df1.to_csv(out_path, mode='a', index=False, header=first_write)
 

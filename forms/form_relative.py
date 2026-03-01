@@ -178,8 +178,8 @@ class form_relative(QDialog, FORM_CLASS):
 
         self.break_on = False
 
-        if not (is_valid_folder_name(self.txtAliase.text())):
-            self.setMessage(f"'{self.txtAliase.text()}' is not a valid  directory/file name")
+        if not (is_valid_folder_name(self.txtAlias.text())):
+            self.setMessage(f"'{self.txtAlias.text()}' is not a valid  directory/file name")
             self.run_button.setEnabled(True)
             return 0
 
@@ -262,7 +262,7 @@ class form_relative(QDialog, FORM_CLASS):
                 )
                 return 0
 
-        self.folder_name = f'{self.txtPathToOutput.text()}//{self.txtAliase.text()}'
+        self.folder_name = f'{self.txtPathToOutput.text()}//{self.txtAlias.text()}'
 
         if not os.path.exists(self.folder_name):
             os.makedirs(self.folder_name)
@@ -318,7 +318,7 @@ class form_relative(QDialog, FORM_CLASS):
             self.config['Settings']['VisLayer_relative'])[0]
         self.layer_vis_path = layer.dataProvider().dataSourceUri().split("|")[
             0]
-        self.alias = self.txtAliase.text()
+        self.alias = self.txtAlias.text()
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
         self.textLog.append(f'<a> Scenario name: {self.alias}</a>')
@@ -423,7 +423,7 @@ class form_relative(QDialog, FORM_CLASS):
         cols_to_save1 = [c for c in [field_name1, field_name2, df1.columns[-1]] if c in df1.columns]
         df1_only = df1_only[cols_to_save1]
         # Сохранение и карта для DF1
-        path1 = os.path.join(self.folder_name, f"{self.txtAliase.text()}_{self.file_name1}_only.csv")
+        path1 = os.path.join(self.folder_name, f"{self.txtAlias.text()}_{self.file_name1}_only.csv")
         df1_only.to_csv(path1, index=False, na_rep='NaN')
         vis2.add_thematic_map(path1, f"{self.alias}_{self.file_name1}_only", type_compare="CompareFirstOnly")
         list_file_name.append(path1)
@@ -444,7 +444,7 @@ class form_relative(QDialog, FORM_CLASS):
         cols_to_save2 = [c for c in [field_name1, field_name2, df2.columns[-1]] if c in df2.columns]
         df2_only = df2_only[cols_to_save2]
         # Сохранение и карта для DF2
-        path2 = os.path.join(self.folder_name, f"{self.txtAliase.text()}_{self.file_name2}_only.csv")
+        path2 = os.path.join(self.folder_name, f"{self.txtAlias.text()}_{self.file_name2}_only.csv")
         df2_only.to_csv(path2, index=False, na_rep='NaN')
         vis3.add_thematic_map(path2, f"{self.alias}_{self.file_name2}_only", type_compare="CompareSecondOnly")
         list_file_name.append(path2)
@@ -580,7 +580,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.cbVisLayers_fields.setCurrentText(
             self.config['Settings']['VisLayers_fields_relative'])
 
-        self.txtAliase.setText(self.default_aliase)
+        self.txtAlias.setText(self.default_aliase)
 
         self.fill_combobox_with_csv_files(
             self.cmbListFiles1, self.config['Settings']['PathToPT_relative'])
@@ -751,7 +751,7 @@ class form_relative(QDialog, FORM_CLASS):
 
         if run:
 
-            self.path_output = f'{self.folder_name}//{self.mode_calc}_{self.txtAliase.text()}.csv'
+            self.path_output = f'{self.folder_name}//{self.mode_calc}_{self.txtAlias.text()}.csv'
 
             self.file1 = os.path.join(
                 self.txtPathToPT.text(), self.cmbListFiles1.currentText())

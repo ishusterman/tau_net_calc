@@ -16,7 +16,7 @@ class roundtrip_analyzer:
                  path_from: str = None, 
                  path_to: str = None, 
                  report_path: str = None, 
-                 duration_max: int = 3600, 
+                 duration_max: int = 3600 * 3,  # !!!! exp
                  alias = "",
                  field_star =  "Origin_id",
                  field_hash = "Destination_id"):

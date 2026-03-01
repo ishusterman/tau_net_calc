@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>750</width>
-    <height>626</height>
+    <height>785</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -51,23 +51,23 @@
           <widget class="QWidget" name="scrollAreaWidgetContents_2">
            <property name="geometry">
             <rect>
-             <x>-186</x>
-             <y>-462</y>
+             <x>0</x>
+             <y>0</y>
              <width>642</width>
-             <height>925</height>
+             <height>991</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
             <item>
              <layout class="QFormLayout" name="formLayout">
-              <item row="0" column="0">
+              <item row="2" column="0">
                <widget class="QLabel" name="label_19">
                 <property name="text">
                  <string>Transit routing database folder</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="0" colspan="2">
+              <item row="5" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_17">
                 <item>
                  <widget class="QLineEdit" name="txtPathToPKL"/>
@@ -81,14 +81,14 @@
                 </item>
                </layout>
               </item>
-              <item row="3" column="0">
+              <item row="7" column="0">
                <widget class="QLabel" name="label_13">
                 <property name="text">
                  <string>Output folder</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="0" colspan="2">
+              <item row="8" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_21">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols"/>
@@ -102,7 +102,7 @@
                 </item>
                </layout>
               </item>
-              <item row="6" column="0">
+              <item row="12" column="0">
                <widget class="QLabel" name="label_7">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -115,8 +115,8 @@
                 </property>
                </widget>
               </item>
-              <item row="7" column="0" colspan="2">
-               <widget class="QLineEdit" name="txtAliase">
+              <item row="13" column="0" colspan="2">
+               <widget class="QLineEdit" name="txtAlias">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                   <horstretch>0</horstretch>
@@ -125,14 +125,14 @@
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
+              <item row="14" column="0">
                <widget class="QLabel" name="label_17">
                 <property name="text">
                  <string>Layer of facilities</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0" colspan="2">
+              <item row="15" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_19">
                 <property name="spacing">
                  <number>10</number>
@@ -185,14 +185,14 @@
                 </item>
                </layout>
               </item>
-              <item row="11" column="0">
+              <item row="17" column="0">
                <widget class="QLabel" name="label_5">
                 <property name="text">
                  <string>Layer of destinations</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="0" colspan="2">
+              <item row="18" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_18">
                 <property name="spacing">
                  <number>10</number>
@@ -238,14 +238,14 @@
                 </item>
                </layout>
               </item>
-              <item row="13" column="0">
+              <item row="19" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Visualization layer</string>
                 </property>
                </widget>
               </item>
-              <item row="14" column="0" colspan="2">
+              <item row="20" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_20">
                 <item>
                  <widget class="QComboBox" name="cmbVizLayers">
@@ -282,7 +282,7 @@
                 </item>
                </layout>
               </item>
-              <item row="17" column="0" colspan="2">
+              <item row="23" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_22">
                 <item>
                  <widget class="QCheckBox" name="cbRunOnAir">
@@ -293,7 +293,7 @@
                 </item>
                </layout>
               </item>
-              <item row="19" column="0" colspan="2">
+              <item row="25" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
                  <widget class="QLabel" name="label_15">
@@ -317,7 +317,7 @@
                 </item>
                </layout>
               </item>
-              <item row="20" column="0" colspan="2">
+              <item row="26" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <item>
                  <widget class="QLabel" name="label_16">
@@ -341,7 +341,7 @@
                 </item>
                </layout>
               </item>
-              <item row="21" column="0" colspan="2">
+              <item row="27" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
                 <item>
                  <widget class="QLabel" name="lbMaxWalkDistanceInitial">
@@ -371,7 +371,7 @@
                 </item>
                </layout>
               </item>
-              <item row="22" column="0" colspan="2">
+              <item row="28" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_7">
                 <property name="leftMargin">
                  <number>1</number>
@@ -398,7 +398,7 @@
                 </item>
                </layout>
               </item>
-              <item row="23" column="0" colspan="2">
+              <item row="29" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_8">
                 <item>
                  <widget class="QLabel" name="lbMaxWalkDistanceFinish">
@@ -428,7 +428,259 @@
                 </item>
                </layout>
               </item>
+              <item row="32" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_9">
+                <item>
+                 <layout class="QHBoxLayout" name="leftLayout_start">
+                  <item>
+                   <widget class="QLabel" name="lblStartTime1">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Start at (hh:mm:ss)</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_start">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="rightLayout_start">
+                  <item>
+                   <widget class="QLabel" name="lblStartTime2">
+                    <property name="text">
+                     <string>between</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QTimeEdit" name="dtStartTime">
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                    <property name="displayFormat">
+                     <string>hh:mm:ss</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="lblStartTime3">
+                    <property name="text">
+                     <string>and</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QTimeEdit" name="dtEndTime">
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                    <property name="displayFormat">
+                     <string>hh:mm:ss</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item row="33" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_11">
+                <item>
+                 <widget class="QLabel" name="lblMaxExtraTime">
+                  <property name="text">
+                   <string>Latest arrival time is T minutes later, T =</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtMaxExtraTime">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>20</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
               <item row="34" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_12">
+                <item>
+                 <widget class="QLabel" name="label_4">
+                  <property name="text">
+                   <string>Walking speed, km/h</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtSpeed">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>20</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="inputMethodHints">
+                   <set>Qt::ImhDialableCharactersOnly|Qt::ImhDigitsOnly|Qt::ImhPreferNumbers</set>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="35" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_13">
+                <item>
+                 <widget class="QLabel" name="lblMaxWaitTime">
+                  <property name="text">
+                   <string>Maximum waiting time at the initial stop, min</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtMaxWaitTime">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>20</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="36" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_14">
+                <item>
+                 <widget class="QLabel" name="label_23">
+                  <property name="text">
+                   <string>Maximum waiting time at the transfer stop, min</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtMaxWaitTimeTransfer">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>20</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="37" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_15">
+                <item>
+                 <widget class="QLabel" name="label_24">
+                  <property name="text">
+                   <string>Maximum travel time, min</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtMaxTimeTravel">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>20</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="38" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_16">
+                <item>
+                 <widget class="QLabel" name="lblTimeInterval">
+                  <property name="text">
+                   <string>Number of bins</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="txtTimeInterval">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>20</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="39" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QLabel" name="lblFields">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="layoutDirection">
+                   <enum>Qt::LeftToRight</enum>
+                  </property>
+                  <property name="text">
+                   <string>Additional building's characteristics for accessibility assessment</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QgsCheckableComboBox" name="cmbFields_ch">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="40" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_10">
                 <item>
                  <layout class="QHBoxLayout" name="leftLayout">
@@ -509,7 +761,7 @@
                 </item>
                </layout>
               </item>
-              <item row="35" column="0" colspan="2">
+              <item row="41" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_23">
                 <item>
                  <layout class="QHBoxLayout" name="leftLayout2">
@@ -590,262 +842,74 @@
                 </item>
                </layout>
               </item>
-              <item row="26" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout_9">
-
-        <!-- ЛЕВАЯ ЧАСТЬ -->
-        <item>
-            <layout class="QHBoxLayout" name="leftLayout_start">
-                <item>
-                    <widget class="QLabel" name="lblStartTime1">
-                        <property name="sizePolicy">
-                            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                                <horstretch>0</horstretch>
-                                <verstretch>0</verstretch>
-                            </sizepolicy>
-                        </property>
-                        <property name="text">
-                            <string>Start at (hh:mm:ss)</string>
-                        </property>
+              <item row="1" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_24">
+                <item alignment="Qt::AlignLeft">
+                 <widget class="QGroupBox" name="groupBox">
+                  <property name="font">
+                   <font>
+                    <kerning>false</kerning>
+                   </font>
+                  </property>
+                  <property name="contextMenuPolicy">
+                   <enum>Qt::CustomContextMenu</enum>
+                  </property>
+                  <property name="toolTipDuration">
+                   <number>-1</number>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QGroupBox { border: none; padding: 0px; margin: 0px; }</string>
+                  </property>
+                  <property name="title">
+                   <string/>
+                  </property>
+                  <property name="flat">
+                   <bool>false</bool>
+                  </property>
+                  <layout class="QHBoxLayout">
+                   <property name="spacing">
+                    <number>0</number>
+                   </property>
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>0</number>
+                   </property>
+                   <item>
+                    <widget class="QRadioButton" name="rbTo">
+                     <property name="text">
+                      <string>To</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
                     </widget>
-                </item>
-            </layout>
-        </item>
-
-        <!-- РАСТЯГИВАЮЩИЙ СПЕЙСЕР -->
-        <item>
-            <spacer name="horizontalSpacer_start">
-                <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                    <size>
-                        <width>40</width>
-                        <height>20</height>
-                    </size>
-                </property>
-            </spacer>
-        </item>
-
-        <!-- ПРАВАЯ ЧАСТЬ -->
-        <item>
-            <layout class="QHBoxLayout" name="rightLayout_start">
-                <item>
-                    <widget class="QLabel" name="lblStartTime2">
-                        <property name="text">
-                            <string>between</string>
-                        </property>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="rbFrom">
+                     <property name="text">
+                      <string>From</string>
+                     </property>
+                     <property name="checked">
+                      <bool>false</bool>
+                     </property>
                     </widget>
-                </item>
-                <item>
-                    <widget class="QTimeEdit" name="dtStartTime">
-                        <property name="alignment">
-                            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                        </property>
-                        <property name="displayFormat">
-                            <string>hh:mm:ss</string>
-                        </property>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="rbRound">
+                     <property name="text">
+                      <string>Round</string>
+                     </property>
                     </widget>
-                </item>
-                <item>
-                    <widget class="QLabel" name="lblStartTime3">
-                        <property name="text">
-                            <string>and</string>
-                        </property>
-                    </widget>
-                </item>
-                <item>
-                    <widget class="QTimeEdit" name="dtEndTime">
-                        <property name="alignment">
-                            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                        </property>
-                        <property name="displayFormat">
-                            <string>hh:mm:ss</string>
-                        </property>
-                    </widget>
-                </item>
-            </layout>
-        </item>
-
-    </layout>
-</item>
-
-              <item row="27" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_11">
-                <item>
-                 <widget class="QLabel" name="lblMaxExtraTime">
-                  <property name="text">
-                   <string>Maximum extra time at a first stop, min</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtMaxExtraTime">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>20</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="28" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_12">
-                <item>
-                 <widget class="QLabel" name="label_4">
-                  <property name="text">
-                   <string>Walking speed, km/h</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtSpeed">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>20</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="inputMethodHints">
-                   <set>Qt::ImhDialableCharactersOnly|Qt::ImhDigitsOnly|Qt::ImhPreferNumbers</set>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="29" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_13">
-                <item>
-                 <widget class="QLabel" name="lblMaxWaitTime">
-                  <property name="text">
-                   <string>Maximum waiting time at the initial stop, min</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtMaxWaitTime">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>20</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="30" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_14">
-                <item>
-                 <widget class="QLabel" name="label_23">
-                  <property name="text">
-                   <string>Maximum waiting time at the transfer stop, min</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtMaxWaitTimeTransfer">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>20</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="31" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_15">
-                <item>
-                 <widget class="QLabel" name="label_24">
-                  <property name="text">
-                   <string>Maximum travel time, min</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtMaxTimeTravel">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>20</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="32" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_16">
-                <item>
-                 <widget class="QLabel" name="lblTimeInterval">
-                  <property name="text">
-                   <string>Number of bins</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="txtTimeInterval">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>20</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="33" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_6">
-                <item>
-                 <widget class="QLabel" name="lblFields">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="layoutDirection">
-                   <enum>Qt::LeftToRight</enum>
-                  </property>
-                  <property name="text">
-                   <string>Additional building's characteristics for accessibility assessment</string>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QgsCheckableComboBox" name="cmbFields_ch">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
+                   </item>
+                  </layout>
                  </widget>
                 </item>
                </layout>

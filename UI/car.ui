@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>735</width>
-    <height>685</height>
+    <height>771</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -84,7 +84,7 @@
              <x>0</x>
              <y>0</y>
              <width>642</width>
-             <height>720</height>
+             <height>756</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -99,14 +99,7 @@
             </property>
             <item>
              <layout class="QFormLayout" name="formLayout">
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_14">
-                <property name="text">
-                 <string>Car routing database folder</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
+              <item row="4" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <item>
                  <widget class="QLineEdit" name="txtPathToPKL"/>
@@ -120,14 +113,14 @@
                 </item>
                </layout>
               </item>
-              <item row="4" column="0">
+              <item row="6" column="0">
                <widget class="QLabel" name="label_13">
                 <property name="text">
                  <string>Output folder</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0" colspan="2">
+              <item row="7" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols">
@@ -154,24 +147,24 @@
                 </item>
                </layout>
               </item>
-              <item row="6" column="0">
+              <item row="8" column="0">
                <widget class="QLabel" name="label_12">
                 <property name="text">
                  <string>Output alias</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="0" colspan="2">
+              <item row="9" column="0" colspan="2">
                <widget class="QLineEdit" name="txtAlias"/>
               </item>
-              <item row="10" column="0">
+              <item row="12" column="0">
                <widget class="QLabel" name="label_17">
                 <property name="text">
                  <string>Layer of facilities</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="0" colspan="2">
+              <item row="13" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
                  <widget class="QComboBox" name="cmbLayers">
@@ -221,14 +214,14 @@
                 </item>
                </layout>
               </item>
-              <item row="12" column="0">
+              <item row="14" column="0">
                <widget class="QLabel" name="label_5">
                 <property name="text">
                  <string>Layer of destinations</string>
                 </property>
                </widget>
               </item>
-              <item row="13" column="0" colspan="2">
+              <item row="15" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
                  <widget class="QComboBox" name="cmbLayersDest">
@@ -278,14 +271,14 @@
                 </item>
                </layout>
               </item>
-              <item row="15" column="0">
+              <item row="17" column="0">
                <widget class="QLabel" name="lblVusual">
                 <property name="text">
                  <string>Visualization layer</string>
                 </property>
                </widget>
               </item>
-              <item row="16" column="0" colspan="2">
+              <item row="18" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
                  <widget class="QComboBox" name="cmbVisLayers">
@@ -322,7 +315,7 @@
                 </item>
                </layout>
               </item>
-              <item row="18" column="0" colspan="2">
+              <item row="20" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_9">
                 <item>
                  <widget class="QLabel" name="label_2">
@@ -340,7 +333,7 @@
                 </item>
                </layout>
               </item>
-              <item row="19" column="0" colspan="2">
+              <item row="21" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_10">
                 <item>
                  <widget class="QLabel" name="label_4">
@@ -358,7 +351,7 @@
                 </item>
                </layout>
               </item>
-              <item row="20" column="0" colspan="2">
+              <item row="22" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_11">
                 <item>
                  <widget class="QLabel" name="label_10">
@@ -376,7 +369,7 @@
                 </item>
                </layout>
               </item>
-              <item row="23" column="0" colspan="2">
+              <item row="25" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_12">
                 <item>
                  <widget class="QLabel" name="label_11">
@@ -397,7 +390,7 @@
                 </item>
                </layout>
               </item>
-              <item row="24" column="0" colspan="2">
+              <item row="26" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_8">
                 <item>
                  <widget class="QLabel" name="label_3">
@@ -418,7 +411,7 @@
                 </item>
                </layout>
               </item>
-              <item row="25" column="0" colspan="2">
+              <item row="27" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_13">
                 <item>
                  <widget class="QLabel" name="label_6">
@@ -439,7 +432,7 @@
                 </item>
                </layout>
               </item>
-              <item row="26" column="0" colspan="2">
+              <item row="28" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_7">
                 <item>
                  <widget class="QLabel" name="label">
@@ -466,7 +459,7 @@
                 </item>
                </layout>
               </item>
-              <item row="27" column="0" colspan="2">
+              <item row="29" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_10">
                 <item>
                  <layout class="QHBoxLayout" name="leftLayout">
@@ -547,7 +540,7 @@
                 </item>
                </layout>
               </item>
-              <item row="28" column="0" colspan="2">
+              <item row="30" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_23">
                 <item>
                  <layout class="QHBoxLayout" name="leftLayout2">
@@ -628,7 +621,7 @@
                 </item>
                </layout>
               </item>
-              <item row="17" column="0" colspan="2">
+              <item row="19" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_14">
                 <item>
                  <widget class="QCheckBox" name="cbRunOnAir">
@@ -638,6 +631,85 @@
                  </widget>
                 </item>
                </layout>
+              </item>
+              <item row="2" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_24">
+                <item alignment="Qt::AlignLeft">
+                 <widget class="QGroupBox" name="groupBox">
+                  <property name="font">
+                   <font>
+                    <kerning>false</kerning>
+                   </font>
+                  </property>
+                  <property name="contextMenuPolicy">
+                   <enum>Qt::CustomContextMenu</enum>
+                  </property>
+                  <property name="toolTipDuration">
+                   <number>-1</number>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QGroupBox { border: none; padding: 0px; margin: 0px; }</string>
+                  </property>
+                  <property name="title">
+                   <string/>
+                  </property>
+                  <property name="flat">
+                   <bool>false</bool>
+                  </property>
+                  <layout class="QHBoxLayout">
+                   <property name="spacing">
+                    <number>0</number>
+                   </property>
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>0</number>
+                   </property>
+                   <item>
+                    <widget class="QRadioButton" name="rbTo">
+                     <property name="text">
+                      <string>To</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="rbFrom">
+                     <property name="text">
+                      <string>From</string>
+                     </property>
+                     <property name="checked">
+                      <bool>false</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="rbRound">
+                     <property name="text">
+                      <string>Round</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_14">
+                <property name="text">
+                 <string>Car routing database folder</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>

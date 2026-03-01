@@ -334,33 +334,39 @@ def get_unique_field_name(layer, base_name):
 
 def create_and_check_field(layer, name_field, type = 'bldg'):
 
-    insert_field = False       
-    field_exists = name_field in layer.fields().names()
+    insert_field = name_field == "Create ID"
     first_field_name = layer.fields().field(0).name()
 
     if name_field == "Create ID":
-        insert_field = True
         if type == 'bldg':
             name_field = get_unique_field_name(layer, "bldg_id")
         if type == 'link':
             name_field = get_unique_field_name(layer, "link_id")
-      
+
+    field_exists = name_field in layer.fields().names()
+
     if not field_exists or first_field_name != name_field:
         layer = insert_field_first(layer, QgsField(name_field, QVariant.Int))
         
     name_field_index = layer.fields().indexOf(name_field)
 
     existing_ids = set()
-    for f in layer.getFeatures():
-        val = f[name_field_index]
-        try:
+    if not insert_field:
+        for f in layer.getFeatures():
+            val = f[name_field_index]
             if val is not None:
-                existing_ids.add(int(val))
-        except:
-            continue
+                try: 
+                    existing_ids.add(int(val)) 
+                except: 
+                    continue
+        next_id = max(existing_ids) + 1 if existing_ids else 1
+    else:
+        if type == 'bldg':
+            next_id =  1_000_000
+        else:
+            next_id =  1
 
     layer.startEditing()
-    next_id = max(existing_ids) + 1 if existing_ids else 1
     assigned_ids = set()
     count_modified = 0
     for f in layer.getFeatures():
@@ -369,7 +375,7 @@ def create_and_check_field(layer, name_field, type = 'bldg'):
         if val is None or not val or val in assigned_ids:
             count_modified += 1
             
-            while next_id in existing_ids:
+            while next_id in assigned_ids:
                 next_id += 1
             layer.changeAttributeValue(fid, name_field_index, next_id)
             assigned_ids.add(next_id)

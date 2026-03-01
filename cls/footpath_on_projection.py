@@ -515,8 +515,6 @@ class cls_footpath_on_projection:
 
             for osm_id, dist_3, _ in list_osm:
 
-                osm_id = osm_id
-
                 if mode == "find_s":
                     if building_id == osm_id:
                         continue
@@ -533,7 +531,7 @@ class cls_footpath_on_projection:
                     dist_dict[osm_id] = res_dist
 
         # conversion to a list of tuples
-        dist_list = [(building, dist) for building, dist in dist_dict.items()]
+        dist_list = [(building, d) for building, d in dist_dict.items()]
 
         return dist_list
 

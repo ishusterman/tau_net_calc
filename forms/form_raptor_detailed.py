@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
                              QFileDialog,
                              QApplication,
-                             QMessageBox
+                             QMessageBox                             
                              )
 from PyQt5.QtCore import (Qt,
                           QRegExp,
@@ -47,14 +47,9 @@ from common import (showAllLayersInCombo_Point_and_Polygon,
                     get_initial_directory,
                     get_name_columns)
 
-FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui')
-)
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui'))
 
 class RaptorDetailed(QDialog, FORM_CLASS):
-
-    
-
     def __init__(self, 
                  parent, 
                  mode, 
@@ -77,8 +72,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.InitialNameWalk1 = "Maximum walk distance to the initial PT stop, m"
         self.InitialNameWalk2 = "Maximum walk distance at the transfer, m"
         self.InitialNameWalk3 = "Maximum walk distance from the last PT stop, m"
-        self.splitter.setSizes(
-            [int(self.width() * 0.75), int(self.width() * 0.25)])
+        self.splitter.setSizes([int(self.width() * 0.75), int(self.width() * 0.25)])
 
         self.fix_size = 15* self.txtMinTransfers.fontMetrics().width('x')
 
@@ -116,36 +110,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         # self.change_time = 1
 
         self.progressBar.setValue(0)
-        
-        
-        if self.mode == 2:
-            self.lblStartTime1.setText("Arrive before (hh:mm:ss)")
-            self.label_17.setText("Layer of origins")
-            self.label_5.setText("Layer of facilities")
-        
-        if self.protocol_type == 1:    
-            if self.mode == 2:
-                self.label_5.setText("Layer of all destinations in the region")
-            if self.mode == 1:    
-                self.label_17.setText("Layer of all origins in the region")
-
-        
-        if timetable_mode and self.mode == 1:
-            self.lblStartTime1.setText("Trip can start:")
-            self.lblMaxExtraTime.setText("Latest start time is T minutes later, T =")
-            
-        if timetable_mode and self.mode == 2:
-            self.lblStartTime1.setText("Trip can end:")
-            self.lblMaxExtraTime.setText(
-                "Latest arrival time is T minutes later, T = ")
-            
+                    
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
-        self.toolButton_PKL.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToPKL))
-        self.toolButton_protocol.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToProtocols))
+        self.toolButton_PKL.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToPKL))
+        self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
         
         self.cbRunOnAir.clicked.connect(lambda: self.handleRunOnAirClick())
 
@@ -167,25 +137,17 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             lambda: self.fillComboBoxFields_Id
             (self.cmbLayers, self.cmbLayers_fields))
 
-        self.fillComboBoxFields_Id(
-            self.cmbLayersDest, self.cmbLayersDest_fields)
-        self.cmbLayersDest.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbLayersDest, self.cmbLayersDest_fields))
+        self.fillComboBoxFields_Id(self.cmbLayersDest, self.cmbLayersDest_fields)
+        self.cmbLayersDest.currentIndexChanged.connect(lambda: self.fillComboBoxFields_Id (self.cmbLayersDest, self.cmbLayersDest_fields))
 
         self.fillComboBoxFields_Id(self.cmbVizLayers, self.cmbVizLayers_fields)
-        self.cmbVizLayers.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbVizLayers, self.cmbVizLayers_fields))
+        self.cmbVizLayers.currentIndexChanged.connect(lambda: self.fillComboBoxFields_Id (self.cmbVizLayers, self.cmbVizLayers_fields))
 
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        self.run_button = self.buttonBox.addButton(
-            "Run", QDialogButtonBox.ActionRole)
-        self.close_button = self.buttonBox.addButton(
-            "Close", QDialogButtonBox.RejectRole)
-        self.help_button = self.buttonBox.addButton(
-            "Help", QDialogButtonBox.HelpRole)
+        self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
+        self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
+        self.help_button = self.buttonBox.addButton("Help", QDialogButtonBox.HelpRole)
 
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
@@ -214,15 +176,117 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWaitTimeTransfer.setValidator(int_validator3)
         self.txtMaxTimeTravel.setValidator(int_validator3)
         self.txtMaxExtraTime.setValidator(int_validator3)
-                
-        self.default_alias = get_prefix_alias(True, 
-                                self.protocol_type, 
-                                self.mode, 
-                                self.timetable_mode, 
-                                full_prefix=False)
+
+
+        regex = QRegExp(r"\d*")
+        int_validator = QRegExpValidator(regex)
+        self.txtTimeInterval.setValidator(int_validator)
+        self.txtRountrip_timedelta1.setValidator(int_validator)
+        self.txtRountrip_timedelta2.setValidator(int_validator)
+
+        self.dtRoundtripStartTime1.installEventFilter(self)
+        self.dtRoundtripStartTime2.installEventFilter(self)
+        self.dtRoundtripStartTime3.installEventFilter(self)
+        self.dtRoundtripStartTime4.installEventFilter(self)
         
-        if not (self.roundtrip):
-            widgets_to_hide = [
+        
+        self.dtRoundtripStartTime1.setFixedWidth(self.fix_size)
+        self.dtRoundtripStartTime2.setFixedWidth(self.fix_size)
+        self.dtRoundtripStartTime3.setFixedWidth(self.fix_size)
+        self.dtRoundtripStartTime4.setFixedWidth(self.fix_size)
+        self.fix_size2 = 7* self.txtMinTransfers.fontMetrics().width('x')
+        self.txtRountrip_timedelta1.setFixedWidth(self.fix_size2)
+        self.txtRountrip_timedelta2.setFixedWidth(self.fix_size2)
+                
+        
+        if self.protocol_type == 2:
+            self.txtTimeInterval.setVisible(False)
+            self.lblTimeInterval.setVisible(False)
+            parent_layout = self.horizontalLayout_16.parent()
+            parent_layout.removeItem(self.horizontalLayout_16)
+            
+            self.cmbFields_ch.setVisible(False)
+            self.lblFields.setVisible(False)
+            parent_layout = self.horizontalLayout_6.parent()
+            parent_layout.removeItem(self.horizontalLayout_6)
+        
+        self.rbFrom.toggled.connect(self.on_radio_button_changed)
+        self.rbTo.toggled.connect(self.on_radio_button_changed)
+        self.rbRound.toggled.connect(self.on_radio_button_changed)
+                                
+        self.ParametrsShow()
+        self.show_info()
+        self.changeInterface()
+        
+        self.rbFrom.setText("FROM Facility")
+        self.rbTo.setText("TO Facility")
+        self.rbRound.setText("ROUNDTRIP")
+
+        self.dtEndTime.setVisible(self.timetable_mode)
+        self.lblStartTime2.setVisible(self.timetable_mode)
+        self.lblStartTime3.setVisible(self.timetable_mode)
+
+        self.lblMaxExtraTime.setVisible(self.timetable_mode)
+        self.txtMaxExtraTime.setVisible(self.timetable_mode)
+
+        self.lblMaxWaitTime.setVisible(not self.timetable_mode)
+        self.txtMaxWaitTime.setVisible(not self.timetable_mode)
+
+        if self.timetable_mode:
+            layout = self.horizontalLayout_13
+            parent = layout.parent()
+            parent.removeItem(layout)
+        
+        if not self.timetable_mode:
+            layout = self.horizontalLayout_11
+            parent = layout.parent()
+            parent.removeItem(layout)
+
+        
+    
+    def on_radio_button_changed(self):
+        if self.rbFrom.isChecked():
+            self.mode = 1
+            self.roundtrip = False
+        elif self.rbTo.isChecked():
+            self.mode = 2
+            self.roundtrip = False
+        elif self.rbRound.isChecked():
+            self.mode = 2
+            self.roundtrip = True
+        self.changeInterface()
+        
+    def changeInterface (self):
+
+        if self.mode == 2:
+            self.lblStartTime1.setText("Arrive before (hh:mm:ss)")
+            self.label_17.setText("Layer of origins")
+            self.label_5.setText("Layer of facilities")
+
+        if self.mode == 1:
+            self.lblStartTime1.setText("Start at (hh:mm:ss)")
+            self.label_17.setText("Layer of facilities")
+            self.label_5.setText("Layer of destinations")
+        
+        if self.protocol_type == 1:    
+            if self.mode == 2:
+                self.label_5.setText("Layer of all destinations in the region")
+            if self.mode == 1:    
+                self.label_17.setText("Layer of all origins in the region")
+
+        
+        if self.timetable_mode and self.mode == 1:
+            self.lblStartTime1.setText("Trip can start:")
+            self.lblMaxExtraTime.setText("Latest start time is T minutes later, T =")
+            
+        if self.timetable_mode and self.mode == 2:
+            self.lblStartTime1.setText("Trip can end:")
+            self.lblMaxExtraTime.setText(
+                "Latest arrival time is T minutes later, T = ")
+            
+        
+        
+        widgets_to_hide = [
                 self.dtRoundtripStartTime1, self.dtRoundtripStartTime2,
                 self.dtRoundtripStartTime3, self.dtRoundtripStartTime4,
                 self.txtRountrip_timedelta1, self.txtRountrip_timedelta2,
@@ -232,46 +296,34 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 self.lblRoundtrip10
             ]
          
-            for widget in widgets_to_hide:
-                widget.setVisible(False)
+        for widget in widgets_to_hide:
+                widget.setEnabled(self.roundtrip)
             
-            parent_layout = self.horizontalLayout_10.parent()
-            parent_layout.removeItem(self.horizontalLayout_10)
-            parent_layout = self.horizontalLayout_23.parent()
-            parent_layout.removeItem(self.horizontalLayout_23)
-
-        if not (timetable_mode and self.roundtrip):
-            
-            self.lblMaxExtraTime.setVisible(False)
-            self.txtMaxExtraTime.setVisible(False)
-            parent_layout = self.horizontalLayout_11.parent()
-            parent_layout.removeItem(self.horizontalLayout_11)
         
-        if self.protocol_type == 2:
-            self.txtTimeInterval.setVisible(False)
-            self.lblTimeInterval.setVisible(False)
-            parent_layout = self.horizontalLayout_16.parent()
-            parent_layout.removeItem(self.horizontalLayout_16)
+        self.lblMaxExtraTime.setEnabled(self.timetable_mode and self.roundtrip)
+        self.txtMaxExtraTime.setEnabled(self.timetable_mode and self.roundtrip)
+        
+        
+        
+        self.dtStartTime.setEnabled(not self.roundtrip)
+        self.dtEndTime.setEnabled(not self.roundtrip)
+        self.lblStartTime1.setEnabled(not self.roundtrip)
+        self.lblStartTime2.setEnabled(not self.roundtrip)
+        self.lblStartTime3.setEnabled(not self.roundtrip)
 
-            self.cmbFields_ch.setVisible(False)
-            self.lblFields.setVisible(False)
-            parent_layout = self.horizontalLayout_6.parent()
-            parent_layout.removeItem(self.horizontalLayout_6)
+        self.dtEndTime.setEnabled(self.timetable_mode and not self.roundtrip)
+        self.lblStartTime2.setEnabled(self.timetable_mode and not self.roundtrip)
+        self.lblStartTime3.setEnabled(self.timetable_mode and not self.roundtrip)
 
-        if not timetable_mode:
-            self.dtEndTime.setVisible(False)
-            self.lblStartTime2.setVisible(False)
-            self.lblStartTime3.setVisible(False)
-            
-        if timetable_mode:
-            self.lblMaxWaitTime.setVisible(False)
-            self.txtMaxWaitTime.setVisible(False)
-            parent_layout = self.horizontalLayout_13.parent()
-            parent_layout.removeItem(self.horizontalLayout_13)
+        self.default_alias = get_prefix_alias(True, 
+                                self.protocol_type, 
+                                self.mode, 
+                                self.timetable_mode, 
+                                full_prefix=False)
+        self.txtAlias.setText(self.default_alias)
+        
+        
                     
-        self.ParametrsShow()
-        self.show_info()
-
     def handleRunOnAirClick(self):
         self.RunOnAir = False
         if self.cbRunOnAir.isChecked():
@@ -364,8 +416,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.run_button.setEnabled(False)
         self.break_on = False
 
-        if not (is_valid_folder_name(self.txtAliase.text())):
-            self.setMessage(f"'{self.txtAliase.text()}' is not a valid directory/file name")
+        if not (is_valid_folder_name(self.txtAlias.text())):
+            self.setMessage(f"'{self.txtAlias.text()}' is not a valid directory/file name")
             self.run_button.setEnabled(True)
             return 0
 
@@ -382,8 +434,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             return 0
 
-        self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAliase.text()}'
-        self.alias = self.txtAliase.text()
+        self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAlias.text()}'
+        self.alias = self.txtAlias.text()
 
         self.saveParameters()
         self.readParameters()
@@ -586,6 +638,35 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if not value or not is_valid_time(value): 
             self.config['Settings']['EndTIME'] = '14:00:00'
 
+    
+        value = self.config['Settings'].get('time_delta_to')
+        if not value or not str(value).isdigit():
+            self.config['Settings']['time_delta_to'] = '15'
+
+        value = self.config['Settings'].get('time_delta_from')
+        if not value or not str(value).isdigit():
+            self.config['Settings']['time_delta_from'] = '15'
+
+        value = self.config['Settings'].get('from_time_start')
+        if not value or not is_valid_time(value): 
+            self.config['Settings']['from_time_start'] = '16:00:00'
+
+        value = self.config['Settings'].get('from_time_end')
+        if not value or not is_valid_time(value): 
+            self.config['Settings']['from_time_end'] = '18:00:00'
+        
+        value = self.config['Settings'].get('to_time_start')
+        if not value or not is_valid_time(value): 
+            self.config['Settings']['to_time_start'] = '08:00:00'
+
+        value = self.config['Settings'].get('to_time_end')
+        if not value or not is_valid_time(value): 
+            self.config['Settings']['to_time_end'] = '10:00:00'
+
+        value = self.config['Settings'].get('radio_button_type') 
+        if not value:
+            self.config['Settings']['radio_button_type'] = "to"
+
 
     # update config file
 
@@ -627,19 +708,32 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.config['Settings']['MaxWaitTimeTransfer'] = self.txtMaxWaitTimeTransfer.text()
         self.config['Settings']['MaxTimeTravel'] = self.txtMaxTimeTravel.text()
         self.config['Settings']['RunOnAir'] = str(self.cbRunOnAir.isChecked())
+
+        self.config['Settings']['to_time_start'] = self.dtRoundtripStartTime1.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['to_time_end'] = self.dtRoundtripStartTime2.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['from_time_start'] = self.dtRoundtripStartTime3.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['from_time_end'] = self.dtRoundtripStartTime4.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['time_delta_to'] = self.txtRountrip_timedelta1.text()
+        self.config['Settings']['time_delta_from'] = self.txtRountrip_timedelta2.text()
+
+        if self.rbFrom.isChecked():
+            rb_state = "from"
+        elif self.rbTo.isChecked():
+            rb_state = "to"
+        elif self.rbRound.isChecked():
+            rb_state = "round"
+        
+        self.config['Settings']['radio_button_type'] = rb_state
         
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
-        self.alias = self.txtAliase.text(
-        ) if self.txtAliase.text() != "" else self.default_alias
+        self.alias = self.txtAlias.text() if self.txtAlias.text() != "" else self.default_alias
 
-        layer = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['Layer'])[0]
+        layer = QgsProject.instance().mapLayersByName(self.config['Settings']['Layer'])[0]
         self.layer_origins_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         if self.mode == 2:
-            layer = QgsProject.instance().mapLayersByName(
-            self.config['Settings']['LayerDest'])[0]
+            layer = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerDest'])[0]
         self.count_layer_origins = layer.featureCount()
 
         if self.cbSelectedOnly1.isChecked():
@@ -657,8 +751,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         layer = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerViz'])[0]
         self.layer_visualization_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
-
-        
         
 
     def ParametrsShow(self):
@@ -711,7 +803,34 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         RunOnAir = self.config['Settings']['RunOnAir'].lower() == "true"
         self.cbRunOnAir.setChecked(RunOnAir)
 
-        self.txtAliase.setText(self.default_alias)
+        self.txtRountrip_timedelta1.setText(self.config['Settings']['time_delta_to'])
+        self.txtRountrip_timedelta2.setText(self.config['Settings']['time_delta_from'])
+
+        datetime = QDateTime.fromString(self.config['Settings']['to_time_start'], "HH:mm:ss")
+        self.dtRoundtripStartTime1.setDateTime(datetime)
+        datetime = QDateTime.fromString(self.config['Settings']['to_time_end'], "HH:mm:ss")
+        self.dtRoundtripStartTime2.setDateTime(datetime)
+        datetime = QDateTime.fromString(self.config['Settings']['from_time_start'], "HH:mm:ss")
+        self.dtRoundtripStartTime3.setDateTime(datetime)
+        datetime = QDateTime.fromString(self.config['Settings']['from_time_end'], "HH:mm:ss")
+        self.dtRoundtripStartTime4.setDateTime(datetime)
+
+        radio_button_type_state = self.config['Settings']['radio_button_type']
+        if radio_button_type_state == "from":
+            self.rbFrom.setChecked(True)
+            self.mode = 1
+        if radio_button_type_state == "to":
+            self.rbTo.setChecked(True)
+            self.mode = 2
+        if radio_button_type_state == "round":
+            self.rbRound.setChecked(True)
+
+        self.default_alias = get_prefix_alias(True, 
+                                self.protocol_type, 
+                                self.mode, 
+                                self.timetable_mode, 
+                                full_prefix=False)
+        self.txtAlias.setText(self.default_alias)
 
         self.handleRunOnAirClick()
 
@@ -979,9 +1098,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 cols_dict = get_name_columns()
                 cols = cols_dict[(raptor_mode_copy, protocol_type)]
 
+                MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60
+                duration_max = MaxTimeTravel * 1.5
                 analyzer = roundtrip_analyzer(
                                         report_path = os.path.dirname(self.folder_name_from), 
-                                        duration_max=3600, 
+                                        duration_max=duration_max, 
                                         alias = self.alias,
                                         field_star = cols["star"],
                                         field_hash = cols["hash"]
