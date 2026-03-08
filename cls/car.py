@@ -43,9 +43,13 @@ class car_accessibility:
 
         self.max_time_minutes = max_time_minutes
         
-        self.number_bins = time_step_minutes
-        self.time_step_minutes = self.max_time_minutes//self.number_bins
-        self.time_step_last = self.max_time_minutes%self.number_bins
+        #self.number_bins = time_step_minutes
+        #self.time_step_minutes = self.max_time_minutes//self.number_bins
+        #self.time_step_last = self.max_time_minutes%self.number_bins
+
+        self.time_step_minutes = time_step_minutes  
+        self.number_bins = int(max_time_minutes // (self.time_step_minutes ))  
+        self.time_step_last = int(max_time_minutes % (self.time_step_minutes) )
 
         self.layer_dest = layer_dest
         self.layer_orig = parent.layer_origin

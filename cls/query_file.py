@@ -149,6 +149,7 @@ def verify_break(self,
             return True
     return False
 
+"""
 def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_star, is_aggregate=False):
         
         header_parts = [cols_star]
@@ -174,6 +175,32 @@ def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_
 
         header_parts.append(f"{field}_total\n")
         return ",".join(header_parts), grades
+"""
+
+def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_star, is_aggregate=False):
+    header_parts = [cols_star]
+    grades = []
+    
+    # 1. Добавляем только ПОЛНЫЕ интервалы, которые НЕ превышают максимум
+    for i in range(1, number_bins + 1):
+        curr_top = i * time_step
+        header_parts.append(f"{curr_top}m")
+        if is_aggregate:
+            header_parts.append(f"sum({field}[{curr_top}m])")
+        grades.append([-1, curr_top])
+
+    # 2. Добавляем "хвостик" ТОЛЬКО если он реально дотягивает до MaxTime (например, до 30)
+    if time_step_last > 0:
+        # Последняя точка — это ровно ваш максимум (например, 28 + 2 = 30)
+        max_limit = (number_bins * time_step) + time_step_last
+        header_parts.append(f"{max_limit}m")
+        if is_aggregate:
+            header_parts.append(f"sum({field}[{max_limit}m])")
+        grades.append([-1, max_limit])
+
+    header_parts.append(f"{field}_total\n")
+    return ",".join(header_parts), grades
+
 
 def runRaptorWithProtocol(self,
                           sources,
@@ -221,9 +248,19 @@ def runRaptorWithProtocol(self,
     CHANGE_TIME_SEC = 1
     # time_step = int (self.config['Settings']['TimeInterval'])
 
+    """
     number_bins = int(self.config['Settings']['TimeInterval'])
     time_step = MaxTimeTravel//(number_bins*60)  # to min
     time_step_last = (MaxTimeTravel/60) % number_bins
+    """
+    time_step = int(self.config['Settings']['TimeInterval'])  # длительность интервала в минутах
+    number_bins = int(MaxTimeTravel // (time_step *60))       # сколько интервалов помещается
+    time_step_last = int((MaxTimeTravel % (time_step * 60)) / 60)
+    #if time_step_last > 0:
+    #    number_bins += 1
+
+    print (f'number_bins {number_bins} time_step {time_step} time_step_last {time_step_last}')
+
 
     Layer = self.config['Settings']['Layer']
     

@@ -49,11 +49,14 @@ class AccessibilityTools(QWidget):
         group1.setExpanded(True)
         self.item2 = QTreeWidgetItem(group1, ['Clean road network'])
         self.item20 = QTreeWidgetItem(group1, ['Clean layer of buildings'])
-        self.item19 = QTreeWidgetItem(group1, ['Prepare visualisation layers'])
-        self.item27 = QTreeWidgetItem(group1, ['Add lines to GTFS'])
-        self.item28 = QTreeWidgetItem(group1, ['Delete lines from GTFS'])
-        self.item3 = QTreeWidgetItem(group1, ['Build transit routing database'])
-        self.item17 = QTreeWidgetItem(group1, ['Build car routing database'])
+        
+        group1_1 = QTreeWidgetItem(self.tree_widget, ['Prepare databases'])
+        group1_1.setExpanded(True)
+        self.item27 = QTreeWidgetItem(group1_1, ['Add lines to GTFS'])
+        self.item28 = QTreeWidgetItem(group1_1, ['Delete lines from GTFS'])
+        self.item3 = QTreeWidgetItem(group1_1, ['Build transit routing database'])
+        self.item17 = QTreeWidgetItem(group1_1, ['Build car routing database'])
+        self.item19 = QTreeWidgetItem(group1_1, ['Build visualisation layers'])
         
 
         group2 = QTreeWidgetItem(self.tree_widget, ['Transit accessibility computations'])
@@ -71,15 +74,9 @@ class AccessibilityTools(QWidget):
         group4.setExpanded(True)
 
         group5 = QTreeWidgetItem(self.tree_widget, ['Car accessibility computations'])
-        group8 = QTreeWidgetItem(group5, ['Car service area map'])
-        self.item12 = QTreeWidgetItem(group8, ['fixed arrival/departure time'])
+        self.item12 = QTreeWidgetItem(group5, ['Car service area map'])
+        self.item14 = QTreeWidgetItem(group5, ['Car cumulative opportunities maps'])
         group5.setExpanded(True)
-        group8.setExpanded(True)
-
-        group6 = QTreeWidgetItem(group5, ['Car cumulative opportunities maps'])
-        self.item14 = QTreeWidgetItem(group6, ['fixed arrival/departure time'])
-                
-        group6.setExpanded(True)
 
         group7 = QTreeWidgetItem(self.tree_widget, ['Compare accessibility maps'])
         self.item16 = QTreeWidgetItem(group7, ['Service areas maps'])
@@ -124,19 +121,19 @@ class AccessibilityTools(QWidget):
 
         self.titles = ["Data preprocessing. Clean road network", 
                        "Data preprocessing. Clean layer of buildings", 
-                       "Data preprocessing. Prepare visualisation layers",
-                       "Data preprocessing. Build transit routing database", 
-                       "Data preprocessing. Add lines to GTFS", 
-                       "Data preprocessing. Delete lines from GTFS", 
-                       "Data preprocessing. Build car routing database", 
+                       "Prepare databases. Build visualisation layers",
+                       "Prepare databases. Build transit routing database", 
+                       "Prepare databases. Add lines to GTFS", 
+                       "Prepare databases. Delete lines from GTFS", 
+                       "Prepare databases. Build car routing database", 
 
                        "Transit accessibility computations. Transit service area map - fixed arrival/departure time",
                        "Transit accessibility computations. Transit service area map - schedule-based arrival/departure time", 
                        "Transit accessibility computations. Transit cumulative opportunities map - fixed arrival/departure time", 
                        "Transit accessibility computations. Transit cumulative opportunities map - schedule-based arrival/departure time", 
                        
-                       "Car accessibility computations. Car service area map - fixed arrival/departure time", 
-                       "Car accessibility computations. Car cumulative opportunities map - fixed arrival/departure time",
+                       "Car accessibility computations. Car service area map", 
+                       "Car accessibility computations. Car cumulative opportunities map",
                        
                        "Compare accessibility. Service areas maps",
                        "Compare accessibility. Cumulative opportunities maps",
@@ -178,35 +175,35 @@ class AccessibilityTools(QWidget):
                 buildings_clean.exec_()
 
         if item == self.item19:
-            title="Data preprocessing. Prepare visualisation layers"
+            title="Prepare databases. Build visualisation layers"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 visualization_clean = form_visualization_clean(title = title)
                 visualization_clean.exec_()    
 
         if item == self.item27:
-            title="Data preprocessing. Add lines to GTFS"
+            title="Prepare databases. Add lines to GTFS"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 gtfs = form_gtfs(title = title, mode = 1)
                 gtfs.show()
         
         if item == self.item28:
-            title="Data preprocessing. Delete lines from GTFS"
+            title="Prepare databases. Delete lines from GTFS"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 gtfs = form_gtfs(title = title, mode = 2)
                 gtfs.show()
 
         if item == self.item3:
-            title="Data preprocessing. Build transit routing database"
+            title="Prepare databases. Build transit routing database"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 pkl = form_pkl(title = title)
                 pkl.show()
 
         if item == self.item17:
-            title="Data preprocessing. Build car routing database"
+            title="Prepare databases. Build car routing database"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 pkl_car = form_pkl_car(title = title)
@@ -254,7 +251,7 @@ class AccessibilityTools(QWidget):
                 raptor_summary.show()
         
         if item == self.item12:
-            title="Car accessibility computations. Car service area map - fixed arrival/departure time"
+            title="Car accessibility computations. Car service area map"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 car_accessibility = CarAccessibility(mode=2,
@@ -263,7 +260,7 @@ class AccessibilityTools(QWidget):
                 car_accessibility.show()
 
         if item == self.item14:
-            title="Car accessibility computations. Car cumulative opportunities map - fixed arrival/departure time"
+            title="Car accessibility computations. Car cumulative opportunities map"
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 car_accessibility = CarAccessibility(mode=2,

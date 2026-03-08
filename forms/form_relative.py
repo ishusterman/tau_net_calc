@@ -59,6 +59,9 @@ class form_relative(QDialog, FORM_CLASS):
         self.break_on = False
         self.title = title
         self.mode = mode
+        
+        self.roundtrip = False
+
         self.progressBar.setValue(0)
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
@@ -220,19 +223,15 @@ class form_relative(QDialog, FORM_CLASS):
         
         cols_dict = get_name_columns()
         
-        mode_first, self.MAP_first, max_time_travel_PT, time_interval_PT, run_aggregate_PT, field_to_aggregate_PT = self.check_log(
-            self.txtPathToPT.text())
+        mode_first, mode_roundtrip_first, self.MAP_first, AccessibilityText_first = self.check_log(self.txtPathToPT.text())
         
         self.from_to_first = 1 if mode_first else 2
         protocol = 1 if self.MAP_first else 2
         cols = cols_dict[(self.from_to_first, protocol)]
         self.first_col_star = cols["star"]
         self.first_col_hash = cols["hash"]
-        
 
-
-        mode_second, self.MAP_second, max_time_travel_Car, time_interval_Car, run_aggregate_Car, field_to_aggregate_Car = self.check_log(
-            self.txtPathToCar.text())
+        mode_second, mode_roundtrip_second, self.MAP_second, AccessibilityText_second = self.check_log(self.txtPathToCar.text())
         
         self.from_to_second = 1 if mode_second else 2
         protocol = 1 if self.MAP_second else 2
@@ -240,13 +239,25 @@ class form_relative(QDialog, FORM_CLASS):
         self.second_col_star = cols["star"]
         self.second_col_hash = cols["hash"]
 
+        
+        if mode_roundtrip_first or mode_roundtrip_second:
+            if not (mode_roundtrip_first and mode_roundtrip_second):
+                self.run_button.setEnabled(True)
+                self.setMessage("First csv type: {}. Second csv type: {}. Must be type: ROUNDTRIP".format(
+                                        AccessibilityText_first,AccessibilityText_second                       
+                                        )
+                )
+                return 0
+            else:
+                self.roundtrip = True
+
         if self.mode == 1:
             if self.MAP_first or self.MAP_second:
                 self.run_button.setEnabled(True)
                 self.setMessage(
-                    "First csv type: {}. Second csv type: {}. Must be type: Service area.".format(
-                        "Region" if self.MAP_first else "Service area",
-                        "Region" if self.MAP_second else "Service area"
+                    "First csv type: {}. Second csv type: {}. Must be type: Service area".format(
+                        "Cumulative opportunities" if self.MAP_first else "Service area",
+                        "Cumulative opportunities" if self.MAP_second else "Service area"
                     )
                 )
                 return 0
@@ -255,9 +266,9 @@ class form_relative(QDialog, FORM_CLASS):
             if not (self.MAP_first) or not (self.MAP_second):
                 self.run_button.setEnabled(True)
                 self.setMessage(
-                    "First csv type: {}. Second csv type: {}. Must be type: Region.".format(
-                        "Region" if self.MAP_first else "Service area",
-                        "Region" if self.MAP_second else "Service area"
+                    "First csv type: {}. Second csv type: {}. Must be type: Cumulative opportunities.".format(
+                        "Cumulative opportunities" if self.MAP_first else "Service area",
+                        "Cumulative opportunities" if self.MAP_second else "Service area"
                     )
                 )
                 return 0
@@ -271,33 +282,7 @@ class form_relative(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             return 0
 
-        """
-        if not(MAP_Car):
-           #self.setMessage('Car protokol is not MAP')
-           self.run_button.setEnabled(True)
-           return 0
-        
-        
-        if max_time_travel_PT != max_time_travel_Car:
-           #self.setMessage(f'PT mode max time travel: {max_time_travel_PT} min. Car mode max time travel: {max_time_travel_Car} min. Must be the same.')
-           self.run_button.setEnabled(True)
-           return 0
-                
-        if time_interval_PT != time_interval_Car:
-           #self.setMessage(f'PT mode time interval: {time_interval_PT} min. Car mode time interval: {time_interval_Car} min. Must be the same.')
-           self.run_button.setEnabled(True)
-           return 0
-        
-        if run_aggregate_PT != run_aggregate_Car:
-           #self.setMessage(f'PT mode run aggregate: {run_aggregate_PT}. Car mode run aggregate: {run_aggregate_Car}. Must be the same.')
-           self.run_button.setEnabled(True)
-           return 0
-        
-        if field_to_aggregate_PT != field_to_aggregate_Car:
-           #self.setMessage(f'PT mode field to aggregate: {field_to_aggregate_PT}. Car mode field to : {field_to_aggregate_Car}. Must be the same.')
-           self.run_button.setEnabled(True)
-           return 0
-        """
+       
         self.saveParameters()
         self.readParameters()
 
@@ -338,6 +323,11 @@ class form_relative(QDialog, FORM_CLASS):
             mode_visualization = 1
         else:
             mode_visualization = 2
+        
+        #if self.roundtrip:
+        #    mode_visualization = 2 # service area
+
+        
 
         self.make_log_compare()
         vis = visualization(self,
@@ -345,7 +335,8 @@ class form_relative(QDialog, FORM_CLASS):
                             mode=mode_visualization,
                             fieldname_layer=fieldname_layer,
                             mode_compare=True,
-                            from_to = 1
+                            from_to = 1,
+                            #roundtrip = self.roundtrip
                             )
 
         begin_computation_time = datetime.now()
@@ -376,6 +367,10 @@ class form_relative(QDialog, FORM_CLASS):
                 type_compare = "DifferenceRegion"
             else:
                 type_compare = "DifferenceServiceAreas"
+
+            #if self.roundtrip:
+            #    type_compare = "DifferenceServiceAreas"
+
             vis.add_thematic_map(self.path_output, 
                                  aliase_res,
                                  type_compare = type_compare)
@@ -403,6 +398,9 @@ class form_relative(QDialog, FORM_CLASS):
         else:
             field_name1 = self.first_col_hash
             field_name2 = self.second_col_hash
+
+        #if self.roundtrip:
+        #    field_name1 = field_name2 = "Origin_ID"
 
         vis2 = visualization(self,
                              LayerVis,
@@ -679,42 +677,42 @@ class form_relative(QDialog, FORM_CLASS):
         pattern = 'log_*.txt'
         file_path = glob.glob(os.path.join(path, pattern))
         file_path = file_path[0]
-        found_forward = False
-        found_map = False
-        max_time_travel = None
-        time_interval = None
-        run_aggregate = False
-        field_to_aggregate = None
+        mode_from = False
+        mode_roundtrip = False
+        mode_cumulative = False
+        AccessibilityText = ""
+        
 
         with open(file_path, 'r') as file:
 
             for line in file:
+
+                if "Accessibility:" in line:
+
+                    AccessibilityText = line.split("Accessibility:", 1)[1].strip()
+
+                    if "FROM" in line:
+                        mode_from = True
+                    
+                    if "TO" in line:
+                        mode_from = False
+                
+                    if "ROUNDTRIP" in line:
+                        mode_roundtrip = True
+                        mode_from = True
+                
+
                 if "Mode:" in line:
-                    if "From" in line:
-                        found_forward = True
+                    if "cumulative" in line:
+                        mode_cumulative = True
 
-                    if "Region" in line:
-                        found_map = True
+                
 
-                if "Maximal time travel:" in line:
-                    max_time_travel = int(
-                        line.split(':')[1].strip().split()[0])
-
-                if "Time interval between stored maps:" in line:
-                    time_interval = int(line.split(':')[1].strip().split()[0])
-
-                if "Run aggregate:" in line:
-                    run_aggregate = line.split(':')[1].strip() == 'True'
-
-                if "Field to aggregate:" in line:
-                    field_to_aggregate = line.split(':')[1].strip()
-
-        return (found_forward,
-                found_map,
-                max_time_travel,
-                time_interval,
-                run_aggregate,
-                field_to_aggregate)
+        return (mode_from,
+                mode_roundtrip,
+                mode_cumulative,
+                AccessibilityText
+                )
 
     def check_folder_and_file(self, path):
 
@@ -821,6 +819,10 @@ class form_relative(QDialog, FORM_CLASS):
         df2 = pd.read_csv(file2)
         column_name2 = df2.columns[-1]
 
+        #if self.roundtrip:
+        #    column_name1 = column_name2 = "Mean"
+
+
         postfix1 = ""
         postfix2 = ""
         if column_name1 == column_name2:
@@ -828,16 +830,19 @@ class form_relative(QDialog, FORM_CLASS):
 
         # filtering data by the first value of Origin_ID
         
-        origin_id = df1[self.first_col_star].iloc[0]
-        
-        df1_filtered = df1[df1[self.first_col_star] == origin_id]
-        df2_filtered = df2[df2[self.second_col_star] == origin_id]
+        #origin_id = df1[self.first_col_star].iloc[0]
+                
+        #df1_filtered = df1[df1[self.first_col_star] == origin_id]
+        #df2_filtered = df2[df2[self.second_col_star] == origin_id]
+        df1_filtered = df1
+        df2_filtered = df2
         result_df = pd.DataFrame()
 
         # Saving the Destination_ID values from the first file
-        result_df[self.first_col_hash] = df1_filtered[self.first_col_hash]
+        #result_df[self.first_col_hash] = df1_filtered[self.first_col_hash]
 
         # Convert Destination_ID to numeric
+        
         df1_filtered[self.first_col_hash] = pd.to_numeric(df1_filtered[self.first_col_hash].astype(str).str.strip(), errors="coerce")
         df2_filtered[self.second_col_hash] = pd.to_numeric(df2_filtered[self.second_col_hash].astype(str).str.strip(), errors="coerce")
         

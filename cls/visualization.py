@@ -28,13 +28,13 @@ class visualization:
                  fieldname_layer = "",
                  mode_compare = False,
                  schedule_mode = False,
-                 from_to = ""
+                 from_to = "",
                  ):
 
         self.mode = mode
         self.schedule_mode = schedule_mode
         self.mode_compare = mode_compare
-        
+                
         cols_dict = get_name_columns()
         cols = cols_dict[(from_to, self.mode)]
 
@@ -48,8 +48,7 @@ class visualization:
         self.parent = parent
 
         self.layer_buildings_name = layer_buildings_name
-        self.layer_buildings = QgsProject.instance(
-        ).mapLayersByName(self.layer_buildings_name)[0]
+        self.layer_buildings = QgsProject.instance().mapLayersByName(self.layer_buildings_name)[0]
         
         self.style_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'styles')
 
@@ -125,10 +124,10 @@ class visualization:
         self.protocol_layer = QgsVectorLayer(uri, aliase, "delimitedtext")
         
         fields = self.protocol_layer.fields()
+        
         self.targetField_base = fields[-1].name()
 
         if self.mode_compare:
-
             self.add_name_field1 = fields[-3].name()
             self.add_name_field2 = fields[-2].name()
 

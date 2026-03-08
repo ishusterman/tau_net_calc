@@ -8,9 +8,30 @@ from zipfile import ZipFile
 from datetime import datetime
 import shutil
 import csv
-from PyQt5.QtCore import QDate
 
 from pathlib import Path
+
+try:
+    import qgis.core
+    import qgis.PyQt
+    import osgeo.gdal
+    from qgis.core import (QgsProject,
+                    QgsVectorLayer,
+                    QgsWkbTypes,
+                    QgsFeature,
+                    QgsFields,
+                    QgsProject,
+                    QgsField,
+                    QgsLayerTreeLayer,
+                    )
+    from qgis.PyQt.QtCore import QVariant
+    from PyQt5.QtCore import QDate
+
+    from qgis.utils import iface
+
+    IN_QGIS = True
+except ImportError:
+    IN_QGIS = False
 
 
 def get_gtfs_date_range(gtfs_path):
@@ -66,46 +87,29 @@ def get_name_columns():
         return {
             (1, 2): {
                 "star": "Facility_ID", "hash": "Destination_ID",
-                1: "Facility_ID", 2: "Destination_ID"
+                1: "Facility_ID", 2: "Destination_ID",
+                "star_short": "Facility", "hash_short": "Destinations",
             },
             (2, 2): {
                 "star": "Facility_ID", "hash": "Origin_ID",
-                1: "Origin_ID", 2: "Facility_ID"
+                1: "Origin_ID", 2: "Facility_ID",
+                "star_short": "Facility", "hash_short": "Origins",
             },
             (1, 1): {
                 "star": "Origin_ID", "hash": "Destination_ID",
-                1: "Origin_ID", 2: "Destination_ID"
+                1: "Origin_ID", 2: "Destination_ID",
+                "star_short": "Origins", "hash_short": "Destinations",
             },
             (2, 1): {
                 "star": "Destination_ID", "hash": "Origin_ID",
-                1: "Destination_ID", 2: "Origin_ID"
+                1: "Destination_ID", 2: "Origin_ID",
+                "star_short": "Destinations", "hash_short": "Origins",
             }
         }    
 
     
 
-try:
-    import qgis.core
-    import qgis.PyQt
-    import osgeo.gdal
-    from qgis.core import QgsProject
 
-    from qgis.core import (
-                    QgsVectorLayer,
-                    QgsWkbTypes,
-                    QgsFeature,
-                    QgsFields,
-                    QgsProject,
-                    QgsField,
-                    QgsLayerTreeLayer,
-                    )
-    from qgis.PyQt.QtCore import QVariant
-
-    from qgis.utils import iface
-
-    IN_QGIS = True
-except ImportError:
-    IN_QGIS = False
 
 def getDateTime():
     current_datetime = datetime.now()
@@ -157,26 +161,24 @@ def is_valid_folder_name(folder_name):
     return True
 
 
-def get_prefix_alias(PT, protocol, mode, timetable=None, field_name="", full_prefix=True):
+def get_prefix_alias(PT, protocol, mode, timetable = None, roundtrip = False):
     """
     Point/Region - P/R  (protocol 2,1)
     Forward/Backward - F/B (mode 1,2)
     Fixed/Scheduled - X/S  (false,true)
     """
     """
-    P/C (Public/Car), F/T (From/To), X/S (Fixed/Scheduled time), A/R (Service Area/Region).
+    P/C (Public/Car), F/T/R (From/To/Roundtrip), X/S (Fixed/Scheduled time), A/O (Service Area/accumulated Opportunities).
     """
     date_time = getDateTime()
     prefix = "P" if PT else "C"
-    protocol_char = "R" if protocol == 1 else "A"
+    protocol_char = "C" if protocol == 1 else "A"
     mode_char = "F" if mode == 1 else "T"
+    if roundtrip:
+        mode_char = "R"
     timetable_char = "" if timetable is None else ("S" if timetable else "X")
-
     result = f"{date_time}_{prefix}{mode_char}{timetable_char}{protocol_char}"
-    if full_prefix:
-        if field_name:
-            result = f"{result}_{field_name}"
-    
+        
     return result
 
 def zip_directory(directory):

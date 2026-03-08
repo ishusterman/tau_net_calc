@@ -4,7 +4,6 @@ import webbrowser
 from PyQt5.QtCore import (Qt,
                           QVariant,
                           QRegExp)
-from qgis.PyQt import QtCore
 from qgis.core import QgsProject
 from PyQt5.QtGui import QRegExpValidator
 
