@@ -1,5 +1,6 @@
 from scipy.spatial import KDTree
-from qgis.core import QgsWkbTypes
+from qgis.core import (QgsWkbTypes, 
+                       NULL)
 from PyQt5.QtWidgets import QApplication
 from pyproj import Geod
 
@@ -57,10 +58,14 @@ class cls_footpath_on_air_b_b:
 
         target_feature = None
         nearest_features = []
+
+        search_id = self.normalize_id(id)
         
         try:
             for feature in self.features_origins:
-                if str(feature.attribute(self.layer_origins_field_id)) == str(id):
+                feat_id = self.normalize_id(feature.attribute(self.layer_origins_field_id))
+
+                if feat_id == search_id:
                     target_feature = feature
                     break
         except KeyError:
@@ -91,14 +96,27 @@ class cls_footpath_on_air_b_b:
             feature = self.features_dest[index]
             feature_geom = feature.geometry().centroid().asPoint()
 
-            if self.crs_grad:
-                distance = self.calculate_geodesic_distance(
-                    target_feature_pt, feature_geom)
-            else:
-                distance = target_feature_pt.distance(feature_geom)
+            dest_feat_id = self.normalize_id(feature.attribute(self.layer_origins_field_id))
+
+
+            if dest_feat_id != search_id:
+                feature_geom = feature.geometry().centroid().asPoint()
+
+                if self.crs_grad:
+                    distance = self.calculate_geodesic_distance(target_feature_pt, feature_geom)
+                else:
+                    distance = target_feature_pt.distance(feature_geom)
             
-            if str(feature.attribute(self.layer_origins_field_id)) != str(id):
-                nearest_features.append(
-                ((feature.attribute(self.layer_origins_field_id)), round(distance/self.speed)))
+                nearest_features.append((dest_feat_id, round(distance / self.speed)))
+
+            
 
         return nearest_features
+    
+    def normalize_id(self, val):
+        if val is None or val == NULL:
+            return None
+        try:
+            return str(int(float(val)))
+        except (ValueError, TypeError):
+            return str(val).strip()

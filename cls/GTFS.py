@@ -11,7 +11,7 @@ from scipy.spatial import cKDTree
 from shapely.geometry import Point
 from pyproj import Geod
 
-from qgis.core import QgsVectorFileWriter, QgsProject
+from qgis.core import QgsVectorFileWriter, QgsProject, NULL
 from PyQt5.QtWidgets import QApplication
 
 
@@ -997,13 +997,21 @@ class GTFS ():
         with open(filename, 'w') as file:
             file.write(f'from_stop_id,to_stop_id,min_transfer_time\n')
             for pair in close_pairs:
-                id_from_points_layer = pair[0]
-                stop_id1 = pair[1]
+                id_from_points_layer = self.normalize_id(pair[0])
+                stop_id1 = self.normalize_id(pair[1])
                 distance = pair[2]
                 file.write(f'{id_from_points_layer},{stop_id1},{distance}\n')
                 file.write(f'{stop_id1},{id_from_points_layer},{distance}\n')
        
 
+    def normalize_id(self, val):
+        if val is None or val == NULL:
+            return None
+        try:
+            return str(int(float(val)))
+        except (ValueError, TypeError):
+            return str(val).strip()
+        
     def verify_break(self):
         if self.parent is not None:
             if self.parent.break_on:

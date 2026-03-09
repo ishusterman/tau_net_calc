@@ -5,7 +5,9 @@ from datetime import datetime
 import configparser
 import math
 
-from qgis.core import QgsProject                       
+from qgis.core import (QgsProject, 
+                       QgsMapLayerProxyModel,
+                       QgsVectorLayer)                       
                        
 from PyQt5.QtWidgets import (
                         QDialogButtonBox,
@@ -34,12 +36,13 @@ from common import (get_qgis_info,
                     is_valid_folder_name, 
                     get_prefix_alias, 
                     check_file_parameters_accessibility,
-                    showAllLayersInCombo_Point_and_Polygon,
-                    showAllLayersInCombo_Polygon,
                     get_initial_directory,
                     time_to_seconds,
                     seconds_to_time,
-                    get_name_columns)
+                    get_name_columns,
+                    FIELD_ID,
+                    check_layer
+                    )
 
 from AnalyzerFromTo_incremental import roundtrip_analyzer
 from visualization import visualization
@@ -93,14 +96,18 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
         self.toolButtonPKL.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToPKL))
 
-        showAllLayersInCombo_Point_and_Polygon(self.cmbLayers)
-        showAllLayersInCombo_Point_and_Polygon(self.cmbLayersDest)
-
         self.cmbLayers.installEventFilter(self)
         self.cmbLayersDest.installEventFilter(self)
+        self.cmbVizLayers.installEventFilter(self)
 
-        showAllLayersInCombo_Polygon(self.cmbVisLayers)
-        self.cmbVisLayers.installEventFilter(self)
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbVizLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+
+        self.toolButtonLayer1.clicked.connect(lambda: self.open_file_dialog (layer_type = "layer1"))
+        self.toolButtonLayer2.clicked.connect(lambda: self.open_file_dialog (layer_type = "layer2"))
+        self.toolButtonViz.clicked.connect(lambda: self.open_file_dialog (layer_type = "viz"))
+
 
         self.dtStartTime.installEventFilter(self)
 
@@ -131,32 +138,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.onLayerDestChanged()
         self.cmbLayersDest.currentIndexChanged.connect(self.onLayerDestChanged)
-        
-        self.fillComboBoxFields_Id(self.cmbLayers,
-                                   self.cmbLayers_fields,
-                                   "osm_id",
-                                   only_digit=True)
-
-        self.cmbLayers.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbLayers,
-             self.cmbLayers_fields,
-             "osm_id",
-             only_digit=True))
-
-        self.fillComboBoxFields_Id(self.cmbVisLayers,
-                                   self.cmbVisLayers_fields,
-                                   "osm_id",
-                                   only_digit=True)
-        self.cmbVisLayers.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbVisLayers,
-             self.cmbVisLayers_fields,
-             "osm_id",
-             only_digit=True))
 
         if self.protocol_type == 2:
-            self.fillComboBoxWithLayerFields2()
+            self.onLayerDestChanged()
 
         if self.protocol_type == 2:
 
@@ -165,7 +149,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
             self.cmbFields_ch.setVisible(False)
             self.label.setVisible(False)
-            self.widget_spacer1.setVisible(False)
+            #self.widget_spacer1.setVisible(False)
             self.widget_spacer2.setVisible(False)
 
         self.ParametrsShow()
@@ -215,6 +199,31 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.lblLayer2.setText('Layer of opportunities')
 
 
+    def open_file_dialog(self, layer_type):
+
+        project_path = QgsProject.instance().fileName()
+        initial_dir = os.path.dirname(project_path) if project_path else ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Choose a File",
+            initial_dir,
+            "Shapefile (*.shp);"
+        )
+        
+        if file_path:
+            file_name = os.path.splitext(os.path.basename(file_path))[0]
+            layer = QgsVectorLayer(file_path, file_name, "ogr")
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
+                
+                if layer_type == "layer1":
+                    self.cmbLayers.setLayer(layer)
+                elif layer_type == "layer2":
+                    self.cmbLayersDest.setLayer(layer)
+                elif layer_type == "viz":
+                    self.cmbVizLayers.setLayer(layer)
+
+
     def on_radio_button_changed(self):
         sender = self.sender()
         if not sender.isChecked():
@@ -262,14 +271,10 @@ class CarAccessibility(QDialog, FORM_CLASS):
                                 )
         
         self.txtAlias.setText(self.default_alias)
-            
-    def fillComboBoxWithLayerFields2(self):
+        
+    def onLayerDestChanged(self):
         self.cmbFields_ch.clear()
-        selected_layer_name = self.cmbLayersDest.currentText()
-        selected_layer = QgsProject.instance().mapLayersByName(selected_layer_name)
-
-        if selected_layer:
-            layer = selected_layer[0]
+        layer = self.cmbLayersDest.currentLayer()
 
         try:
             fields = [field for field in layer.fields()]
@@ -281,71 +286,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
             if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
                 self.cmbFields_ch.addItem(field.name())
 
-    def onLayerDestChanged(self):
-
-        self.fillComboBoxFields_Id(self.cmbLayersDest,
-                                   self.cmbLayersDest_fields,
-                                   "osm_id",
-                                   only_digit=True)
-
-        self.fillComboBoxWithLayerFields2()
-
-    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields, field_name_default, only_digit=True):
-        obj_layer_fields.clear()
-        selected_layer_name = obj_layers.currentText()
-        layers = QgsProject.instance().mapLayersByName(selected_layer_name)
-
-        if not layers:
-            return
-        layer = layers[0]
-
-        fields = layer.fields()
-        field_name_default_exists = False
-
-        # regular expression to check for the presence of only digits
-        digit_pattern = re.compile(r'^\d+$')
-
-        # field type and value validation
-        for field in fields:
-            field_name = field.name()
-            field_type = field.type()
-
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong):
-                # add numeric field
-                obj_layer_fields.addItem(field_name)
-                if field_name.lower() == field_name_default:
-                    field_name_default_exists = True
-            else:
-                if field_name.lower() == "osm_id":
-                    obj_layer_fields.addItem(field_name)
-                    field_name_default_exists = True
-            """
-            elif field_type == QVariant.String:
-                # check the first value of the field for digits only if only_digit = True.
-                if only_digit:
-                    first_value = None
-                    for feature in layer.getFeatures():
-                        first_value = feature[field_name]
-                        break  #  stop after the first value
-
-                    if first_value is not None and digit_pattern.match(str(first_value)):
-                        obj_layer_fields.addItem(field_name)
-                        if field_name.lower() == field_name_default:
-                            field_name_default_exists = True
-                else:
-                    # if the check is disabled, we simply add string fields
-                    obj_layer_fields.addItem(field_name)
-                    if field_name.lower() == field_name_default:
-                        field_name_default_exists = True
-            """
-
-        if field_name_default_exists:
-            # iterate through all the items in the combobox and compare them with "osm_id", 
-            # ignoring the case
-            for i in range(obj_layer_fields.count()):
-                if obj_layer_fields.itemText(i).lower() == field_name_default:
-                    obj_layer_fields.setCurrentIndex(i)
-                    break
 
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
@@ -356,20 +296,42 @@ class CarAccessibility(QDialog, FORM_CLASS):
         
     def on_run_button_clicked(self):
         self.run_button.setEnabled(False)
+        self.break_on = False
 
         if not (is_valid_folder_name(self.txtAlias.text())):
             self.setMessage(f"'{self.txtAlias.text()}' is not a valid directory/file name")
             self.run_button.setEnabled(True)
             return 0
 
-        self.break_on = False
+        
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
-        if not self.cmbLayers.currentText():
+        
+
+        self.layer1 = self.cmbLayers.currentLayer() 
+        self.layer2 = self.cmbLayersDest.currentLayer() 
+        self.layer_visualization = self.cmbVizLayers.currentLayer()
+
+        result, text = check_layer(self.layer1, FIELD_ID = FIELD_ID)
+        if not result:
             self.run_button.setEnabled(True)
-            self.setMessage("Select the layer")
+            self.setMessage(text)
             return 0
+        
+        result, text = check_layer(self.layer2, FIELD_ID = FIELD_ID)
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
+        
+        result, text = check_layer(self.layer_visualization, FIELD_ID = FIELD_ID)
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
+        
+        
         
         self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAlias.text()}'
 
@@ -577,23 +539,17 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['PathToProtocols_car'] = self.txtPathToProtocols.text()
         self.config['Settings']['PathToPKL_car'] = self.txtPathToPKL.text()
         self.path_to_pkl = self.txtPathToPKL.text()
-        self.config['Settings']['Layer_car'] = self.cmbLayers.currentText()
-        self.config['Settings']['Layer_field_car'] = self.cmbLayers_fields.currentText()
+        self.layer_field = FIELD_ID
 
-        self.layer_field = self.config['Settings']['Layer_field_car']
-
-        self.config['Settings']['LayerDest_car'] = self.cmbLayersDest.currentText()
-        self.config['Settings']['LayerDest_field_car'] = self.cmbLayersDest_fields.currentText()
-
+        self.config['Settings']['Layer_car'] = self.cmbLayers.currentLayer().id()
+        self.config['Settings']['LayerDest_car'] = self.cmbLayersDest.currentLayer().id()
+        self.config['Settings']['LayerViz_car'] = self.cmbVizLayers.currentLayer().id()
+        
         self.config['Settings']['SelectedOnly1_car'] = str(self.cbSelectedOnly1.isChecked())
-        self.config['Settings']['LayerDest_car'] = self.cmbLayersDest.currentText()
         self.config['Settings']['SelectedOnly2_car'] = str(self.cbSelectedOnly2.isChecked())
 
         self.config['Settings']['MaxTimeTravel_car'] = self.txtMaxTimeTravel.text()
         self.config['Settings']['TimeInterval_car'] = self.txtTimeInterval.text()
-
-        self.config['Settings']['LayerVis_car'] = self.cmbVisLayers.currentText()
-        self.config['Settings']['VisLayer_field_car'] = self.cmbVisLayers_fields.currentText()
 
         self.config['Settings']['Walk_to_car_car'] = self.txtWalkToCAR.text()
         self.config['Settings']['Walk_to_destination_car'] = self.txtWalkToDestination.text()
@@ -622,23 +578,21 @@ class CarAccessibility(QDialog, FORM_CLASS):
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
-       
-
         self.alias = self.txtAlias.text() if self.txtAlias.text() != "" else self.default_alias
 
-        self.layer1 = QgsProject.instance().mapLayersByName(self.config['Settings']['Layer_car'])[0]
+        self.layer1 = self.cmbLayers.currentLayer() 
         self.layer1_path = os.path.normpath(self.layer1.dataProvider().dataSourceUri().split("|")[0])
         
-        self.layer2 = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerDest_car'])[0]
+        self.layer2 = self.cmbLayersDest.currentLayer() 
         self.layer2_path = os.path.normpath(self.layer2.dataProvider().dataSourceUri().split("|")[0])
         self.count_layer_destinations = self.layer2.featureCount()
         if self.cbSelectedOnly2.isChecked():
             self.count_layer_destinations = self.layer2.selectedFeatureCount()
 
-        layer = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerVis_car'])[0]
+        layer = self.cmbVizLayers.currentLayer()
         self.layer_visualization_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
-        self.layer_vis_field = self.config['Settings']['VisLayer_field_car']
-        self.layer_visualization_name = self.config['Settings']['layervis_car']
+        self.layer_vis_field = FIELD_ID
+        self.layer_visualization_name = layer.name()
 
         
 
@@ -647,35 +601,21 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.readParameters()
 
         self.txtPathToPKL.setText(os.path.normpath(self.config['Settings']['PathToPKL_car']))
-        self.txtPathToProtocols.setText(os.path.normpath(
-            self.config['Settings']['PathToProtocols_car']))
-        self.cmbLayers.setCurrentText(self.config['Settings']['Layer_car'])
+        self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols_car']))
 
         selected_only1 = self.config['Settings']['SelectedOnly1_car'].lower() == "true"
         self.cbSelectedOnly1.setChecked(selected_only1)
-
-        self.cmbLayersDest.setCurrentText(
-            self.config['Settings']['LayerDest_car'])
-       
         selected_only2 = self.config['Settings']['SelectedOnly2_car'].lower() == "true"
         self.cbSelectedOnly2.setChecked(selected_only2)
 
-        self.txtMaxTimeTravel.setText(
-            self.config['Settings']['MaxTimeTravel_car'])
-        self.txtTimeInterval.setText(
-            self.config['Settings']['TimeInterval_car'])
+        self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer_car']))
+        self.cmbLayersDest.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerDest_car']))
+        self.cmbVizLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerViz_car']))
+       
 
-        layer = self.config.get('Settings', 'LayerVis_car', fallback=None)
-        if isinstance(layer, str) and layer.strip():
-            self.cmbVisLayers.setCurrentText(layer)
-
-        self.cmbLayers_fields.setCurrentText(
-            self.config['Settings']['Layer_field_car'])
-        self.cmbLayersDest_fields.setCurrentText(
-            self.config['Settings']['LayerDest_field_car'])
-        self.cmbVisLayers_fields.setCurrentText(
-            self.config['Settings']['VisLayer_field_car'])
-        
+        self.txtMaxTimeTravel.setText(self.config['Settings']['MaxTimeTravel_car'])
+        self.txtTimeInterval.setText(self.config['Settings']['TimeInterval_car'])
+                            
         if 'Field_ch_car' not in self.config['Settings']:
             self.config['Settings']['Field_ch_car'] = ''
 
@@ -734,10 +674,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
 
-        #if not os.path.exists(self.txtPathToPKL.text()):
-        #    self.setMessage(f"Folder '{self.txtPathToPKL.text()}' does not exist")
-        #    return False
-
         path_to_pkl = self.txtPathToPKL.text().rstrip('\\/') # Убираем слеши в конце, если они есть
         prefix = os.path.basename(path_to_pkl)
 
@@ -782,29 +718,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.lblMessages.setText(message)
 
     def get_feature_from_layer(self):
-        
-        """
-        layer = self.config['Settings']['Layer_car']
-        isChecked = self.cbSelectedOnly1.isChecked()
-        if self.mode == 2:
-            layer = self.config['Settings']['LayerDest_car']
-            isChecked = self.cbSelectedOnly2.isChecked()
-
-        layer = QgsProject.instance().mapLayersByName(layer)[0]
-        """
-
         layer = self.layer2
         isChecked = self.cbSelectedOnly2.isChecked()
 
         ids = []
         count = 0
-
-        try:
-            features = layer.getFeatures()
-        except:
-            self.setMessage(f'Layer {layer} is empty')
-
-            return 0
 
         if isChecked:
             features = layer.selectedFeatures()
@@ -840,51 +758,19 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
     def call_car_accessibility(self):
 
-        #self.layer_origins_name = self.config['Settings']['Layer_Car']
-        #if self.mode == 2:
-        #    self.layer_origins_name = self.config['Settings']['LayerDest_Car']
-        #layer_origins = QgsProject.instance().mapLayersByName(self.layer_origins_name)[0]
-
-        #layer_dest = self.config['Settings']['LayerDest_Car']
-        #if self.mode == 2:
-        #    layer_dest = self.config['Settings']['Layer_Car']
-        #layer_dest = QgsProject.instance().mapLayersByName(layer_dest)[0]
-
         self.pathtopkl = self.config['Settings']['pathtopkl_car']
-
-        #self.selected_only1 = self.config['Settings']['SelectedOnly1_car'] == "True"
-        #self.selected_only2 = self.config['Settings']['SelectedOnly2_car'] == "True"
-        #if self.mode == 2:
-        #    self.selected_only1 = self.config['Settings']['SelectedOnly2_car'] == "True"
-        #    self.selected_only2 = self.config['Settings']['SelectedOnly1_car'] == "True"
-
-        #self.layer_origin = layer_origins
-        #self.layer_dest = layer_dest
-
         self.layer_origin = self.layer2
         self.layer_dest = self.layer1
-        self.layer_origins_name = self.config['Settings']['LayerDest_Car']
+        self.layer_origins_name = self.layer2.name()
+        layer_vis = self.layer_visualization
 
         self.selected_only1 = self.config['Settings']['SelectedOnly2_car'] == "True"
         self.selected_only2 = self.config['Settings']['SelectedOnly1_car'] == "True"
 
         max_time_minutes = int(self.config['Settings']['MaxTimeTravel_car'])
         time_step_minutes = int(self.config['Settings']['TimeInterval_car'])
-
-        layer_vis = self.config['Settings']['layervis_car']
-
-        #layerdest_field = self.config['Settings']['LayerDest_field_car']
-        #layerorig_field = self.config['Settings']['Layer_field_car']
-        #if self.mode == 2:
-        #    layerdest_field = self.config['Settings']['Layer_field_car']
-        #    layerorig_field = self.config['Settings']['LayerDest_field_car']
         
-        layerdest_field = self.config['Settings']['Layer_field_car']
-        layerorig_field = self.config['Settings']['LayerDest_field_car']
-
-        self.layerorig_field = layerorig_field    
-
-        layer_vis_field = self.config['Settings']['VisLayer_field_car']
+        layer_vis_field = layerdest_field = self.layerorig_field = FIELD_ID
 
         if 'Field_ch_car' in self.config['Settings']:
             list_fields_aggregate = self.config['Settings']['Field_ch_car']
@@ -906,9 +792,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
        
         self.RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
-
-        
-        
 
         cols_dict = get_name_columns()
         cols = cols_dict[(self.mode, self.protocol_type)]
@@ -948,10 +831,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         if self.roundtrip:
             
+            """
             time_delta_to_min = int(self.config['Settings']['time_delta_to']) 
             time_delta_from_min = int(self.config['Settings']['time_delta_from'])
             time_delta_to  = time_delta_to_min * 60
             time_delta_from  = time_delta_to_min * 60
+            """
 
             from_time_start = time_to_seconds(self.config['Settings']['from_time_start'])
             from_time_end = time_to_seconds(self.config['Settings']['from_time_end'])
@@ -1109,16 +994,14 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 if not(self.break_on):
                     data_to = analyzer.get_data_for_analyzer_from_to (short_result)
                     analyzer.add_to_data(data_to)
-                        
-               
+                                       
                 i += 1
                 if self.break_on:
                     self.setMessage("Roundtrip accessibility computations are interrupted by user")
                     self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
                     self.progressBar.setValue(0)
                     return 0
-                
-                
+                                
             if not(self.break_on):
                     
                     PathToRep = analyzer.run_finalize_all()
@@ -1161,16 +1044,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 crs = self.crs
             )
 
-            
-
             return graph
 
     def prepare(self):
         self.break_on = False
 
         QApplication.processEvents()
-
-        sources = []
 
         self.points = self.get_feature_from_layer()
 

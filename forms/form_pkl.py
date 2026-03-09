@@ -1,25 +1,14 @@
 import os
 import webbrowser
 import configparser
-import csv
-from pathlib import Path
-import pandas as pd
-import io
-import re
-
-from PyQt5.QtWidgets import (QSizePolicy,
-                            QTableWidget,
-                            QTableWidgetItem,
-                            QHeaderView)
 
 from qgis.core import (QgsProject,
-                       QgsWkbTypes,
                        QgsVectorLayer,
+                       QgsMapLayerProxyModel,
                        )
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
-                          QVariant,
                           QRegExp,
                           QDate
                           )
@@ -37,17 +26,15 @@ from PyQt5 import uic
 from GTFS import GTFS
 from PKL import PKL
 from datetime import datetime
-from gtfs_exclude_routes import GTFSExcludeRoutes
-from gtfs_add_routes import GTFSAddRoutes
 
 from common import (get_qgis_info, 
                     zip_directory, 
                     getDateTime, 
                     check_file_parameters_accessibility, 
                     get_documents_path,
-                    showAllLayersInCombo_Line,
-                    showAllLayersInCombo_Point_and_Polygon,
-                    get_gtfs_date_range)
+                    get_gtfs_date_range,
+                    FIELD_ID,
+                    check_layer)
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl.ui')
@@ -82,54 +69,34 @@ class form_pkl(QDialog, FORM_CLASS):
         self.txtMaxPathRoad.setValidator(int_validator)
         self.txtMaxPathAir.setValidator(int_validator)
 
-        
-
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
 
         self.break_on = False
-
         self.title = title
-
         self.progressBar.setValue(0)
-
-        showAllLayersInCombo_Line(self.cbRoads)
+        
         self.toolButtonRoads.clicked.connect(lambda: self.open_file_dialog (type = "roads"))
         self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog (type = "buildings"))
 
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
-        self.toolButton_GTFS.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToGTFS))
-        self.toolButton_protocol.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToProtocols))
-        
-        self.layer_road = self.get_layer_road()
-        self.layer_building = self.get_layer_building()
+        self.toolButton_GTFS.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToGTFS))
+        self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
 
-        showAllLayersInCombo_Point_and_Polygon(self.cmbLayers)
         self.cmbLayers.installEventFilter(self)
-        self.cmbLayers_fields.installEventFilter(self)
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cbRoads.installEventFilter(self)
+        self.cbRoads.setFilters(QgsMapLayerProxyModel.LineLayer)
+
         self.calendar.installEventFilter(self)
-
-        self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
-
-        self.cbRoads.currentIndexChanged.connect(self.get_layer_road)
-        self.cmbLayers.currentIndexChanged.connect(self.get_layer_building)
-
-        self.cmbLayers.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbLayers, self.cmbLayers_fields))
-
+        
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        self.run_button = self.buttonBox.addButton(
-            "Run", QDialogButtonBox.ActionRole)
-        self.close_button = self.buttonBox.addButton(
-            "Close", QDialogButtonBox.RejectRole)
-        self.help_button = self.buttonBox.addButton(
-            "Help", QDialogButtonBox.HelpRole)
+        self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
+        self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
+        self.help_button = self.buttonBox.addButton("Help", QDialogButtonBox.HelpRole)
 
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
@@ -156,40 +123,15 @@ class form_pkl(QDialog, FORM_CLASS):
         self.label_9.setEnabled(result)
         self.calendar.setEnabled(result)
 
-    
-
-    def get_layer_road(self):
-        selected_item = self.cbRoads.currentText()
-
-        if os.path.isfile(selected_item):
-            layer_road = QgsVectorLayer(selected_item, "LayerRoad", "ogr")
-        else:
-            layers = QgsProject.instance().mapLayersByName(selected_item)
-            if layers:  
-                layer_road = layers[0]
-            else:
-                layer_road = None  
-
-        return layer_road
-    
-    def get_layer_building(self):
-        selected_item = self.cmbLayers.currentText()
-        if os.path.isfile(selected_item):
-            layer_building = QgsVectorLayer(selected_item, "LayerBuildings", "ogr")
-        else:
-            layers = QgsProject.instance().mapLayersByName(selected_item)
-            if layers:  
-                layer_building = layers[0]
-            else:
-                layer_building = None  
-        return layer_building
-
     def open_file_dialog(self, type):
+
+        project_path = QgsProject.instance().fileName()
+        initial_dir = os.path.dirname(project_path) if project_path else ""
         
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
-            "",
+            initial_dir,
             "Shapefile (*.shp);"
         )
 
@@ -198,53 +140,11 @@ class form_pkl(QDialog, FORM_CLASS):
             layer = QgsVectorLayer(file_path, file_name, "ogr")
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
-
+                self.cmbLayers.setLayer(layer)
                 if type == "roads":
-                    self.cbRoads.addItem(file_path, file_path)
-                    index = self.cbRoads.findText(file_path)
-                    self.cbRoads.setCurrentIndex(index)
+                    self.cbRoads.setLayer(layer)
                 else:
-                    self.cmbLayers.addItem(file_path, file_path)
-                    index = self.cmbLayers.findText(file_path)
-                    self.cmbLayers.setCurrentIndex(index)
-
-
-    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
-       
-        obj_layer_fields.clear()
-
-        self.layer = self.get_layer_building()
-        layer = self.layer
-
-        if not layer:
-            return
-        fields = layer.fields()
-        osm_id_exists = False
-
-
-        # field type and value validation
-        for field in fields:
-            
-            field_name = field.name()
-            field_type = field.type()
-
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong):
-                # add numeric fields
-                obj_layer_fields.addItem(field_name)
-                if field_name.lower() == "osm_id":
-                    osm_id_exists = True
-            else:
-                if field_name.lower() == "osm_id":
-                    obj_layer_fields.addItem(field_name)
-                    osm_id_exists = True
-            
-        if osm_id_exists:
-            # iterate through all the items in the combobox and compare them with "osm_id", 
-            # ignoring the case
-            for i in range(obj_layer_fields.count()):
-                if obj_layer_fields.itemText(i).lower() == "osm_id":
-                    obj_layer_fields.setCurrentIndex(i)
-                    break
+                    self.cmbLayers.setLayer(layer)    
 
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
@@ -258,26 +158,26 @@ class form_pkl(QDialog, FORM_CLASS):
         self.run_button.setEnabled(False)
 
         self.break_on = False
-        self.layer_road = self.get_layer_road()
-        self.layer_building = self.get_layer_building()
+        self.layer_road = self.cbRoads.currentLayer() 
+        self.layer_building = self.cmbLayers.currentLayer() 
 
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
-
-        if not self.cmbLayers.currentText():
+        
+        result, text = check_layer(self.layer_building, FIELD_ID = FIELD_ID)
+        if not result:
             self.run_button.setEnabled(True)
-            self.setMessage("Choose the layer")
+            self.setMessage(text)
             return 0
-
-        if not (self.check_feature_from_layer()):
+        
+        result, text = check_layer(self.layer_road, FIELD_ID = FIELD_ID)
+        if not result:
             self.run_button.setEnabled(True)
+            self.setMessage(text)
             return 0
-
-        if not (self.check_type_layer_road()):
-            self.run_button.setEnabled(True)
-            return 0
-       
+        
+        
         self.saveParameters()
         self.readParameters()
 
@@ -326,7 +226,6 @@ class form_pkl(QDialog, FORM_CLASS):
 
     def showFoldersDialog(self, obj):
 
-        print ('showFoldersDialog')
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
         if folder_path:
@@ -362,9 +261,6 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'Roads_pkl' not in self.config['Settings']:
             self.config['Settings']['Roads_pkl'] = ''
 
-        if 'Layer_field_pkl' not in self.config['Settings']:
-            self.config['Settings']['Layer_field_pkl'] = ''
-
         if 'MaxPathRoad_pkl' not in self.config['Settings']:
             self.config['Settings']['MaxPathRoad_pkl'] = '400'    
 
@@ -381,9 +277,9 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.config['Settings']['PathToProtocols_pkl'] = self.txtPathToProtocols.text()
         self.config['Settings']['PathToGTFS_pkl'] = self.txtPathToGTFS.text()
-        self.config['Settings']['Roads_pkl'] = self.cbRoads.currentText()
-        self.config['Settings']['Layer_pkl'] = self.cmbLayers.currentText()
-        self.config['Settings']['Layer_field_pkl'] = self.cmbLayers_fields.currentText()
+        self.config['Settings']['Roads_pkl'] = self.cbRoads.currentLayer().id()
+        self.config['Settings']['Layer_pkl'] = self.cmbLayers.currentLayer().id()
+        
         self.config['Settings']['MaxPathRoad_pkl'] = self.txtMaxPathRoad.text()
         self.config['Settings']['MaxPathAir_pkl'] = self.txtMaxPathAir.text()
         selected_date = self.calendar.date()
@@ -398,22 +294,15 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.txtPathToGTFS.setText(os.path.normpath(self.config['Settings']['PathToGTFS_pkl']))
 
-        #self.cmbLayers.setCurrentText(self.config['Settings']['Layer_pkl'])
-        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_pkl'])
         self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols_pkl']))
         self.txtMaxPathRoad.setText(self.config['Settings']['MaxPathRoad_pkl'])
         self.txtMaxPathAir.setText(self.config['Settings']['MaxPathAir_pkl'])
 
-        if os.path.isfile(self.config['Settings']['Roads_pkl']):
-            self.cbRoads.addItem(self.config['Settings']['Roads_pkl'])
+        self.cmbLayers.setCurrentText(self.config['Settings']['Layer_pkl'])        
         self.cbRoads.setCurrentText(self.config['Settings']['Roads_pkl'])
 
-
-        if os.path.isfile(self.config['Settings']['Layer_pkl']):
-            self.cmbLayers.addItem(self.config['Settings']['Layer_pkl'])
-        self.cmbLayers.setCurrentText(self.config['Settings']['Layer_pkl'])
-
-        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_pkl'])
+        self.cbRoads.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Roads_pkl']))
+        self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer_pkl']))
 
         date_string = self.config['Settings']['Date_pkl']
         qdate_object = QDate.fromString(date_string, "yyyyMMdd")
@@ -422,16 +311,6 @@ class form_pkl(QDialog, FORM_CLASS):
     def check_folder_and_file(self):
 
         path = self.txtPathToProtocols.text()
-
-        if self.cbRoads.currentText() == "":
-            self.setMessage(f"Layer of roads is empty")
-            return False
-
-        feature_count = self.layer_road.featureCount()
-        if feature_count == 0:
-            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
-            return False
-
         if not os.path.exists(self.txtPathToGTFS.text()):
             self.setMessage(f"Folder '{self.txtPathToGTFS.text()}' does not exist")
             return False
@@ -479,60 +358,6 @@ class form_pkl(QDialog, FORM_CLASS):
 
     def setMessage(self, message):
         self.lblMessages.setText(message)
-
-    def check_type_layer_road(self):
-
-        layer = self.layer_road
-        try:
-            features = list(layer.getFeatures())
-        except Exception:
-            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty or unreadable")
-            return 0
-
-        if not features:
-            self.setMessage(f"Layer '{self.cbRoads.currentText()}' has no features")
-            return 0
-
-        feature_geometry = features[0].geometry()
-        feature_geometry_type = feature_geometry.type()
-
-        if feature_geometry_type != QgsWkbTypes.LineGeometry:
-            self.setMessage(
-                f"Features of the layer '{self.cbRoads.currentText()}' must be polylines"
-            )
-            return 0
-
-        return 1
-
-
-    def check_feature_from_layer(self):
-
-        layer = self.layer_building
-        if layer is None:
-            self.setMessage("Layer is not selected")
-            return 0
-
-
-        try:
-            features = list(layer.getFeatures())
-        except Exception:
-            self.setMessage(f"Layer '{self.cmbLayers.currentText()}' is unreadable")
-            return 0
-
-        if not features:
-            self.setMessage(f"Layer '{self.cmbLayers.currentText()}' has no features")
-            return 0
-
-        geometryType = layer.geometryType()
-        if geometryType not in (QgsWkbTypes.PointGeometry, QgsWkbTypes.PolygonGeometry):
-            self.setMessage(
-                f"Features of the layer '{self.cmbLayers.currentText()}' "
-                f"must be points or polygons"
-            )
-            return 0
-
-        return 1
-
     
     def prepare(self):
         begin_computation_time = datetime.now()
@@ -543,14 +368,11 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.break_on = False
         
-        layer_origins_field = self.config['Settings']['Layer_field_pkl']
+        layer_origins_field = FIELD_ID
         MaxPathRoad = self.config['Settings']['MaxPathRoad_pkl']
         MaxPathAir = self.config['Settings']['MaxPathAir_pkl']
 
         QApplication.processEvents()
-
-        #gtfs_path = os.path.join(
-        #    self.config['Settings']['PathToProtocols_pkl'], 'GTFS')
                 
         path_to_GTFS = self.config['Settings']['PathToGTFS_pkl']
         path_to_PKL = self.config['Settings']['PathToProtocols_pkl']

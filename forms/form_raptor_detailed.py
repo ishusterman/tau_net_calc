@@ -10,7 +10,9 @@ import math
 
 from PyQt5.QtCore import Qt
 
-from qgis.core import QgsProject
+from qgis.core import (QgsProject,
+                       QgsMapLayerProxyModel,
+                       QgsVectorLayer)
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
@@ -22,7 +24,6 @@ from PyQt5.QtCore import (Qt,
                           QRegExp,
                           QDateTime,
                           QEvent,
-                          QVariant
                           )
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
@@ -34,7 +35,9 @@ from tau_net_calc.cls.common import (
                     get_prefix_alias, 
                     seconds_to_time, 
                     time_to_seconds, 
-                    check_file_parameters_accessibility
+                    check_file_parameters_accessibility,
+                    FIELD_ID,
+                    check_layer
                     )
 from visualization import visualization
 #from stat_destination import DayStat_DestinationID
@@ -43,9 +46,7 @@ from visualization import visualization
 from AnalyzerFromTo_incremental import roundtrip_analyzer
 #from TimeMarkGenerator import TimeMarkGenerator
 
-from common import (showAllLayersInCombo_Point_and_Polygon,
-                    showAllLayersInCombo_Polygon,
-                    get_initial_directory,
+from common import (get_initial_directory,
                     get_name_columns)
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui'))
@@ -119,30 +120,21 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         self.cbRunOnAir.clicked.connect(lambda: self.handleRunOnAirClick())
 
-        showAllLayersInCombo_Point_and_Polygon(self.cmbLayers)
+        self.toolButtonLayer1.clicked.connect(lambda: self.open_file_dialog (layer_type = "layer1"))
+        self.toolButtonLayer2.clicked.connect(lambda: self.open_file_dialog (layer_type = "layer2"))
+        self.toolButtonViz.clicked.connect(lambda: self.open_file_dialog (layer_type = "viz"))
+
+        
         self.cmbLayers.installEventFilter(self)
-        showAllLayersInCombo_Point_and_Polygon(self.cmbLayersDest)
         self.cmbLayersDest.installEventFilter(self)
-        showAllLayersInCombo_Polygon(self.cmbVizLayers)
         self.cmbVizLayers.installEventFilter(self)
+
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbVizLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+
         self.dtStartTime.installEventFilter(self)
         self.dtEndTime.installEventFilter(self)
-
-        self.cmbLayers_fields.installEventFilter(self)
-        self.cmbLayersDest_fields.installEventFilter(self)
-        self.cmbVizLayers_fields.installEventFilter(self)
-
-        self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
-        self.cmbLayers.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbLayers, self.cmbLayers_fields))
-
-        self.fillComboBoxFields_Id(self.cmbLayersDest, self.cmbLayersDest_fields)
-        self.cmbLayersDest.currentIndexChanged.connect(lambda: self.fillComboBoxFields_Id (self.cmbLayersDest, self.cmbLayersDest_fields))
-
-        self.fillComboBoxFields_Id(self.cmbVizLayers, self.cmbVizLayers_fields)
-        self.cmbVizLayers.currentIndexChanged.connect(lambda: self.fillComboBoxFields_Id (self.cmbVizLayers, self.cmbVizLayers_fields))
-
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
         self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
@@ -205,7 +197,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         
             self.cmbFields_ch.setVisible(False)
             self.lblFields.setVisible(False)
-            self.widget_spacer4.setVisible(False)
             self.widget_spacer5.setVisible(False)
 
                     
@@ -239,6 +230,31 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if  self.timetable_mode:
             self.lblRoundtrip_TestEvery1.setText("schedule-adjustment gap")
             self.lblRoundtrip_TestEvery2.setText("schedule-adjustment gap")
+
+    def open_file_dialog(self, layer_type):
+
+        project_path = QgsProject.instance().fileName()
+        initial_dir = os.path.dirname(project_path) if project_path else ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Choose a File",
+            initial_dir,
+            "Shapefile (*.shp);"
+        )
+        
+        if file_path:
+            file_name = os.path.splitext(os.path.basename(file_path))[0]
+            layer = QgsVectorLayer(file_path, file_name, "ogr")
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
+                
+                if layer_type == "layer1":
+                    self.cmbLayers.setLayer(layer)
+                elif layer_type == "layer2":
+                    self.cmbLayersDest.setLayer(layer)
+                elif layer_type == "viz":
+                    self.cmbVizLayers.setLayer(layer)
+
  
     def on_radio_button_changed(self):
         sender = self.sender()
@@ -354,57 +370,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2}')
             self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3}')
 
-    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
-        obj_layer_fields.clear()
-        selected_layer_name = obj_layers.currentText()
-        layers = QgsProject.instance().mapLayersByName(selected_layer_name)
-
-        if not layers:
-            return
-        layer = layers[0]
-
-        fields = layer.fields()
-        osm_id_exists = False
-
-        # regular expression to check for the presence of only digit
-        digit_pattern = re.compile(r'^\d+$')
-
-        # field type and value validation
-        for field in fields:
-            field_name = field.name()
-            field_type = field.type()
-
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong):
-                # add numeric fields
-                obj_layer_fields.addItem(field_name)
-                if field_name.lower() == "osm_id":
-                    osm_id_exists = True
-            else:
-                if field_name.lower() == "osm_id":
-                    obj_layer_fields.addItem(field_name)
-                    osm_id_exists = True
-            """
-            elif field_type == QVariant.String:
-                # check the first value of the field for digits only
-                first_value = None
-                for feature in layer.getFeatures():
-                    first_value = feature[field_name]
-                    break  # stop after the first value
-
-                if first_value is not None and digit_pattern.match(str(first_value)):
-                    obj_layer_fields.addItem(field_name)
-                    if field_name.lower() == "osm_id":
-                        osm_id_exists = True
-            """
-
-        if osm_id_exists:
-            # iterate through all the items in the combobox and compare them with "osm_id", 
-            # ignoring the case
-            for i in range(obj_layer_fields.count()):
-                if obj_layer_fields.itemText(i).lower() == "osm_id":
-                    obj_layer_fields.setCurrentIndex(i)
-                    break
-
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
 
@@ -416,7 +381,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
-
+        
         if not (is_valid_folder_name(self.txtAlias.text())):
             self.setMessage(f"'{self.txtAlias.text()}' is not a valid directory/file name")
             self.run_button.setEnabled(True)
@@ -425,11 +390,37 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
+        
+        self.layer1 = self.cmbLayers.currentLayer() 
+        self.layer2 = self.cmbLayersDest.currentLayer() 
+        self.layer_visualization = self.cmbVizLayers.currentLayer()
 
-        if not self.cmbLayers.currentText():
+        result, text = check_layer(self.layer1, FIELD_ID = FIELD_ID)
+        if not result:
             self.run_button.setEnabled(True)
-            self.setMessage("Choose layer")
+            self.setMessage(text)
             return 0
+        
+        result, text = check_layer(self.layer2, FIELD_ID = FIELD_ID)
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
+        
+        result, text = check_layer(self.layer_visualization, FIELD_ID = FIELD_ID)
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
+                
+        self.layer_path1 = os.path.normpath(self.layer1.dataProvider().dataSourceUri().split("|")[0])
+        self.layer_path2 = os.path.normpath(self.layer2.dataProvider().dataSourceUri().split("|")[0])
+        self.count_layer_destinations = self.layer2.featureCount()
+        self.layer_visualization_path = os.path.normpath(self.layer_visualization.dataProvider().dataSourceUri().split("|")[0])
+        self.layer_visualization_name = self.layer_visualization.name()
+        self.layer_vis_field = FIELD_ID
+        if self.cbSelectedOnly2.isChecked():
+            self.count_layer_destinations = self.layer2.selectedFeatureCount()  
         
         if not (self.check_max_foothpath()):
             self.run_button.setEnabled(True)
@@ -660,21 +651,17 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.config['Settings']['PathToPKL'] = self.txtPathToPKL.text()
         self.config['Settings']['PathToProtocols'] = self.txtPathToProtocols.text()
-        self.config['Settings']['Layer'] = self.cmbLayers.currentText()
-        self.config['Settings']['Layer_field'] = self.cmbLayers_fields.currentText()
+        
+        self.config['Settings']['Layer'] = self.cmbLayers.currentLayer().id()
+        self.config['Settings']['LayerDest'] = self.cmbLayersDest.currentLayer().id()
+        self.config['Settings']['LayerViz'] = self.cmbVizLayers.currentLayer().id()
+        
         if hasattr(self, 'cbSelectedOnly1'):
-            self.config['Settings']['SelectedOnly1'] = str(
-                self.cbSelectedOnly1.isChecked())
-        self.config['Settings']['LayerDest'] = self.cmbLayersDest.currentText()
-        self.config['Settings']['LayerDest_field'] = self.cmbLayersDest_fields.currentText()
-
+            self.config['Settings']['SelectedOnly1'] = str(self.cbSelectedOnly1.isChecked())
+                
         if hasattr(self, 'cbSelectedOnly2'):
-            self.config['Settings']['SelectedOnly2'] = str(
-                self.cbSelectedOnly2.isChecked())
-
-        self.config['Settings']['LayerViz'] = self.cmbVizLayers.currentText()
-        self.config['Settings']['LayerViz_field'] = self.cmbVizLayers_fields.currentText()
-
+            self.config['Settings']['SelectedOnly2'] = str(self.cbSelectedOnly2.isChecked())
+        
         self.config['Settings']['Min_transfer'] = self.txtMinTransfers.text()
         self.config['Settings']['Max_transfer'] = self.txtMaxTransfers.text()
         self.config['Settings']['MaxExtraTime'] = self.txtMaxExtraTime.text()
@@ -711,40 +698,20 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.alias = self.txtAlias.text() if self.txtAlias.text() != "" else self.default_alias
 
-        self.layer1 = QgsProject.instance().mapLayersByName(self.config['Settings']['Layer'])[0]
-        self.layer_path1 = os.path.normpath(self.layer1.dataProvider().dataSourceUri().split("|")[0])
-
-        self.layer2 = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerDest'])[0]
-        self.layer_path2 = os.path.normpath(self.layer2.dataProvider().dataSourceUri().split("|")[0])
-        self.count_layer_destinations = self.layer2.featureCount()
-
-        if self.cbSelectedOnly2.isChecked():
-            self.count_layer_destinations = self.layer2.selectedFeatureCount()    
-        
-        self.layer_visualization = QgsProject.instance().mapLayersByName(self.config['Settings']['LayerViz'])[0]
-        self.layer_visualization_path = os.path.normpath(self.layer_visualization.dataProvider().dataSourceUri().split("|")[0])
-        self.layer_visualization_name = self.config['Settings']['LayerViz']
-        self.layer_vis_field = self.config['Settings']['LayerViz_field']
-        
 
     def ParametrsShow(self):
 
         self.readParameters()
         self.txtPathToPKL.setText(os.path.normpath(self.config['Settings']['PathToPKL']))
         self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols']))
-
         
-        self.cmbLayers.setCurrentText(self.config['Settings']['Layer'])
+        self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer']))
+        self.cmbLayersDest.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerDest']))
+        self.cmbVizLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerViz']))
+        
 
         SelectedOnly1 = self.config['Settings']['SelectedOnly1'].lower() == "true"
         self.cbSelectedOnly1.setChecked(SelectedOnly1)
-
-        self.cmbLayersDest.setCurrentText(self.config['Settings']['LayerDest'])
-
-        layer = self.config.get('Settings', 'LayerViz', fallback=None)
-        if isinstance(layer, str) and layer.strip():
-            self.cmbVizLayers.setCurrentText(layer)
-
         SelectedOnly2 = self.config['Settings']['SelectedOnly2'].lower() == "true"
         self.cbSelectedOnly2.setChecked(SelectedOnly2)
 
@@ -769,11 +736,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         max_extra_time = self.config['Settings'].get('maxextratime', '30')
         self.txtMaxExtraTime.setText(max_extra_time)
-
-        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field'])
-        self.cmbLayersDest_fields.setCurrentText(self.config['Settings']['LayerDest_field'])
-        self.cmbVizLayers_fields.setCurrentText(self.config['Settings']['LayerViz_field'])
-
         RunOnAir = self.config['Settings']['RunOnAir'].lower() == "true"
         self.cbRunOnAir.setChecked(RunOnAir)
 
@@ -910,29 +872,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     def get_feature_from_layer(self):
 
-        """
-        layer = self.config['Settings']['Layer']
-        feature_id_field = self.config['Settings']['Layer_field']
-        isChecked = self.cbSelectedOnly1.isChecked()
-
-        if self.mode == 2:
-            layer = self.config['Settings']['LayerDest']
-            feature_id_field = self.config['Settings']['LayerDest_field']
-            isChecked = self.cbSelectedOnly2.isChecked()
-        """
         
-        layer_name = self.config['Settings']['LayerDest']
-        feature_id_field = self.config['Settings']['LayerDest_field']
+        feature_id_field = FIELD_ID
         isChecked = self.cbSelectedOnly2.isChecked()
-        
-        layer = self.layer2 # QgsProject.instance().mapLayersByName(layer)[0]
+        layer = self.layer2 
         ids = []
-        try:
-            features = layer.getFeatures()
-        except:
-            self.setMessage(f'Layer {layer_name} is empty')
-            return 0
-
+        
         if isChecked:
             features = layer.selectedFeatures()
             if len(features) == 0:
@@ -994,8 +939,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if run:
             PathToNetwork = self.config['Settings']['PathToPKL']
             raptor_mode = self.mode
-            raptor_mode_copy = raptor_mode
-            
+                        
             RunOnAir = self.config['Settings']['RunOnAir'] == 'True'
 
             layer_origin = self.layer2
@@ -1128,6 +1072,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.shift_mode,
                                   layer_dest,
                                   layer_origin,
+                                  self.layer_visualization,
                                   PathToNetwork,
                                   MaxExtraTime                                  
                                   )
@@ -1170,6 +1115,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.shift_mode,
                                   layer_dest,
                                   layer_origin,
+                                  self.layer_visualization,
                                   PathToNetwork,
                                   MaxExtraTime                                  
                                   )
@@ -1225,6 +1171,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.shift_mode,
                                   layer_dest,
                                   layer_origin,
+                                  self.layer_visualization,
                                   PathToNetwork,
                                   MaxExtraTime
                                   )
@@ -1293,6 +1240,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.shift_mode,
                                   layer_dest,
                                   layer_origin,
+                                  self.layer_visualization,
                                   PathToNetwork,
                                   MaxExtraTime
                                   )
@@ -1350,7 +1298,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
                     
                     vis = visualization(self, 
-                            self.layer_visualization_name,
+                            self.layer_visualization,
                             mode = protocol_type,
                             fieldname_layer=self.layer_vis_field, 
                             from_to = 1, # from
@@ -1397,6 +1345,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   False,
                                   layer_dest,
                                   layer_origin,
+                                  self.layer_visualization,
                                   PathToNetwork,
                                   MaxExtraTime
                                   )
@@ -1509,5 +1458,3 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         except ValueError:
                             pass
         return params
-        
-

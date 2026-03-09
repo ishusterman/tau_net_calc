@@ -29,10 +29,8 @@ from footpath_on_air_b_to_b import cls_footpath_on_air_b_b
 from visualization import visualization
 from common import (seconds_to_time, 
                     get_existing_path, 
-                    get_name_columns)
-
-# # Get the current directory
-#current_dir = os.path.dirname(os.path.abspath(__file__))
+                    get_name_columns,
+                    FIELD_ID)
 
 def myload_all_dict(self, PathToNetwork, mode, RunOnAir):
         path = PathToNetwork
@@ -149,34 +147,6 @@ def verify_break(self,
             return True
     return False
 
-"""
-def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_star, is_aggregate=False):
-        
-        header_parts = [cols_star]
-        grades = []
-        
-        curr_low = 0
-        
-        for _ in range(number_bins):
-            curr_top = curr_low + time_step
-            header_parts.append(f"{curr_top}m")
-            if is_aggregate:
-                header_parts.append(f"sum({field}[{curr_top}m])")
-            grades.append([curr_low, curr_top])
-            curr_low = curr_top
-
-        
-        if time_step_last != 0:
-            curr_top = curr_low + time_step_last
-            header_parts.append(f"{curr_top}m")
-            if is_aggregate:
-                header_parts.append(f"sum({field}[{curr_top}m])")
-            grades.append([curr_low, curr_top])
-
-        header_parts.append(f"{field}_total\n")
-        return ",".join(header_parts), grades
-"""
-
 def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_star, is_aggregate=False):
     header_parts = [cols_star]
     grades = []
@@ -214,6 +184,7 @@ def runRaptorWithProtocol(self,
                           shift_mode,
                           layer_dest_obj,
                           layer_origin_obj,
+                          layer_viz,
                           path_to_pkl,
                           MaxExtraTime) -> tuple:
 
@@ -226,11 +197,8 @@ def runRaptorWithProtocol(self,
 
     MAX_TRANSFER = int(self.config['Settings']['Max_transfer'])
     MIN_TRANSFER = int(self.config['Settings']['Min_transfer'])
-
         
-    Speed = float(self.config['Settings']['Speed'].replace(
-        ',', '.')) * 1000 / 3600                    # from km/h to m/sec
-
+    Speed = float(self.config['Settings']['Speed'].replace(',', '.')) * 1000 / 3600                    # from km/h to m/sec
     # dist to time
     MaxWalkDist1 = int(self.config['Settings']['MaxWalkDist1'])/Speed
     # dist to time
@@ -256,20 +224,11 @@ def runRaptorWithProtocol(self,
     time_step = int(self.config['Settings']['TimeInterval'])  # длительность интервала в минутах
     number_bins = int(MaxTimeTravel // (time_step *60))       # сколько интервалов помещается
     time_step_last = int((MaxTimeTravel % (time_step * 60)) / 60)
-    #if time_step_last > 0:
-    #    number_bins += 1
-
-    print (f'number_bins {number_bins} time_step {time_step} time_step_last {time_step_last}')
-
-
-    Layer = self.config['Settings']['Layer']
     
-    LayerDest = self.config['Settings']['LayerDest']
-    layer_dest_field = self.config['Settings']['LayerDest_field']
+    #Layer = self.config['Settings']['Layer']
+    #LayerDest = self.config['Settings']['LayerDest']
 
-    LayerViz = self.config['Settings']['LayerViz']
-    layer_vis_field = self.config['Settings']['LayerViz_field']
-    #layer_dest = QgsProject.instance().mapLayersByName(LayerDest)[0]
+    layer_dest_field = layer_vis_field = FIELD_ID
     layer_dest = layer_dest_obj
     layer_origin = layer_origin_obj
 
@@ -415,7 +374,7 @@ def runRaptorWithProtocol(self,
     
     if not (shift_mode):
         vis = visualization(self, 
-                            LayerViz, 
+                            layer_viz, 
                             mode=protocol_type,
                             fieldname_layer=layer_vis_field, 
                             schedule_mode = timetable_mode, 
@@ -442,8 +401,8 @@ def runRaptorWithProtocol(self,
         SOURCE = sources[i]
 
         if verify_break(self,
-                        Layer,
-                        LayerDest,
+                        layer_origin,
+                        layer_dest,
                         vis,
                         fields_ok,
                         files_path,
@@ -554,8 +513,8 @@ def runRaptorWithProtocol(self,
 
                 
                 if verify_break(self,
-                        Layer,
-                        LayerDest,
+                        layer_origin,
+                        layer_dest,
                         vis,
                         fields_ok,
                         f,
@@ -878,8 +837,8 @@ def runRaptorWithProtocol(self,
         add_thematic_map = False
 
     write_info(self,
-               Layer,
-               LayerDest,
+               layer_origin,
+               layer_dest,
                selected_only1,
                selected_only2,
                vis,
@@ -1030,20 +989,20 @@ def write_info(self,
             if result == QMessageBox.Yes:
                 if selected_only1:
 
-                    zip_filename1 = f'{self.folder_name}//{field_star}_{self.alias}.zip'
-                    filename1 = f'{self.folder_name}//{field_star}_{self.alias}.geojson'
+                    zip_filename1 = f'{self.folder_name}//{field_hash}_{self.alias}.zip'
+                    filename1 = f'{self.folder_name}//{field_hash}_{self.alias}.geojson'
 
-                    self.setMessage(f'Zipping the layer of {field_star} ...')
+                    self.setMessage(f'Zipping the layer of {field_hash} ...')
                     QApplication.processEvents()
 
                     save_layer_to_zip(Layer, zip_filename1, filename1)
 
                 if selected_only2:
 
-                    zip_filename2 = f'{self.folder_name}//{field_hash}_{self.alias}.zip'
-                    filename2 = f'{self.folder_name}//{field_hash}_{self.alias}.geojson'
+                    zip_filename2 = f'{self.folder_name}//{field_star}_{self.alias}.zip'
+                    filename2 = f'{self.folder_name}//{field_star}_{self.alias}.geojson'
 
-                    self.setMessage(f'Zipping the layer of {field_hash} ...')
+                    self.setMessage(f'Zipping the layer of {field_star} ...')
                     QApplication.processEvents()
 
                     save_layer_to_zip(LayerDest, zip_filename2, filename2)
@@ -1059,9 +1018,8 @@ def int1(s):
     return result
 
 
-def save_layer_to_zip(layer_name, zip_filename, filename):
+def save_layer_to_zip(layer, zip_filename, filename):
 
-    layer = QgsProject.instance().mapLayersByName(layer_name)[0]
     with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp_file:
         temp_file = tmp_file.name
 
@@ -1078,14 +1036,6 @@ def save_layer_to_zip(layer_name, zip_filename, filename):
                 QgsProject.instance().transformContext(), 
                 options)
 
-    """
-    QgsVectorFileWriter.writeAsVectorFormat(layer,
-                                            temp_file,
-                                            "utf-8",
-                                            layer.crs(),
-                                            "GeoJSON",
-                                            onlySelected=True)
-    """
     QApplication.processEvents()
 
     with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:

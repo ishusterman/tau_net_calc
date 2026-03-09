@@ -52,9 +52,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-186</y>
              <width>742</width>
-             <height>951</height>
+             <height>963</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -199,32 +199,12 @@ QGroupBox::title {
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QComboBox" name="cmbLayers">
-                       <property name="mouseTracking">
-                        <bool>false</bool>
-                       </property>
-                      </widget>
+                      <widget class="QgsMapLayerComboBox" name="cmbLayers"/>
                      </item>
                      <item>
-                      <widget class="QLabel" name="label_3">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
+                      <widget class="QToolButton" name="toolButtonLayer1">
                        <property name="text">
-                        <string>id=</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QComboBox" name="cmbLayers_fields">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
+                        <string>...</string>
                        </property>
                       </widget>
                      </item>
@@ -256,28 +236,19 @@ QGroupBox::title {
                       <number>10</number>
                      </property>
                      <item>
-                      <widget class="QComboBox" name="cmbLayersDest"/>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_2">
+                      <widget class="QgsMapLayerComboBox" name="cmbLayersDest">
                        <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                          <horstretch>0</horstretch>
                          <verstretch>0</verstretch>
                         </sizepolicy>
-                       </property>
-                       <property name="text">
-                        <string>id=</string>
                        </property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QComboBox" name="cmbLayersDest_fields">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
+                      <widget class="QToolButton" name="toolButtonLayer2">
+                       <property name="text">
+                        <string>...</string>
                        </property>
                       </widget>
                      </item>
@@ -291,16 +262,6 @@ QGroupBox::title {
                        </property>
                        <property name="text">
                         <string>Selected features only</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QWidget" name="widget_spacer4" native="true">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
                        </property>
                       </widget>
                      </item>
@@ -417,35 +378,12 @@ QGroupBox::title {
                    <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_20">
                      <item>
-                      <widget class="QComboBox" name="cmbVizLayers">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                      </widget>
+                      <widget class="QgsMapLayerComboBox" name="cmbVizLayers"/>
                      </item>
                      <item>
-                      <widget class="QLabel" name="label_6">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
+                      <widget class="QToolButton" name="toolButtonViz">
                        <property name="text">
-                        <string>  id=  </string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QComboBox" name="cmbVizLayers_fields">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
+                        <string>...</string>
                        </property>
                       </widget>
                      </item>
@@ -1129,6 +1067,11 @@ QGroupBox::title {
    <class>QgsCheckableComboBox</class>
    <extends>QComboBox</extends>
    <header>qgscheckablecombobox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsmaplayercombobox.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

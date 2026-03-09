@@ -9,13 +9,12 @@ import math
 from random import choice
 from matplotlib.colors import CSS4_COLORS
 
-from qgis.PyQt import QtCore
-
 from qgis.core import (QgsApplication,
                        QgsProject,
                        QgsWkbTypes,
                        QgsVectorLayer,
-                       QgsFillSymbol
+                       QgsFillSymbol,
+                       QgsMapLayerProxyModel
                        )
 
 from PyQt5.QtCore import (Qt,
@@ -41,7 +40,8 @@ from common import (get_qgis_info,
                    check_file_parameters_accessibility, 
                    getDateTime,
                    insert_layer_ontop,
-                   showAllLayersInCombo_Polygon
+                   FIELD_ID,
+                   check_layer
                     )
 from visualization_clean import cls_clean_visualization
 
@@ -81,32 +81,23 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.title = title
 
-        #self.progressBar.setMaximum(5)
         self.progressBar.setValue(0)
 
         self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog ())
 
-        self.toolButton_protocol.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToProtocols))
+        self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
 
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
-        showAllLayersInCombo_Polygon(self.cmbLayers)
         self.cmbLayers.installEventFilter(self)
-
-        self.cmbLayers_fields.installEventFilter(self)
-        
-        
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        self.run_button = self.buttonBox.addButton(
-            "Run", QDialogButtonBox.ActionRole)
-        self.close_button = self.buttonBox.addButton(
-            "Close", QDialogButtonBox.RejectRole)
-        self.help_button = self.buttonBox.addButton(
-            "Help", QDialogButtonBox.HelpRole)
+        self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
+        self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
+        self.help_button = self.buttonBox.addButton("Help", QDialogButtonBox.HelpRole)
 
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
@@ -117,112 +108,30 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         self.show()
         self.ParametrsShow()
-
-        file_path = self.cmbLayers.currentText()
-        if self.is_file_path(file_path):
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            layer = QgsVectorLayer(file_path, file_name, "ogr")
-            if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
-                if self.cmbLayers.findText(file_path) == -1:
-                    self.cmbLayers.addItem(file_path, file_path)
-                index = self.cmbLayers.findText(file_path)
-                self.cmbLayers.setCurrentIndex(index)
-
-                self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields) 
-        self.cmbLayers.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbLayers, self.cmbLayers_fields))
-        
-        self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
-        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_clean-visualization'])
-        #self.ParametrsShow()
-
         self.show_info()
-
-    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
-        obj_layer_fields.clear()
-        selected_layer_name = obj_layers.currentText()
-        selected_layer_name = os.path.splitext(os.path.basename(selected_layer_name))[0]
-        
-        layers = QgsProject.instance().mapLayersByName(selected_layer_name)
-        if not layers:
-            return
-        layer = layers[0]
-
-        fields = layer.fields()
-        osm_id_exists = False
-
-        # regular expression to check for the presence of only digit
-        digit_pattern = re.compile(r'^\d+$')
-
-        # field type and value validation
-        for field in fields:
-            field_name = field.name()
-            field_type = field.type()
-
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong):
-                # add numeric fields
-                obj_layer_fields.addItem(field_name)
-                if field_name.lower() == "osm_id":
-                    osm_id_exists = True
-            else:
-                if field_name.lower() == "osm_id":
-                    obj_layer_fields.addItem(field_name)
-                    osm_id_exists = True
-            """
-            elif field_type == QVariant.String:
-                # check the first value of the field for digits only
-                first_value = None
-                for feature in layer.getFeatures():
-                    first_value = feature[field_name]
-                    break  # stop after the first value
-
-                if first_value is not None and digit_pattern.match(str(first_value)):
-                    obj_layer_fields.addItem(field_name)
-                    if field_name.lower() == "osm_id":
-                        osm_id_exists = True
-            """
-
-        if osm_id_exists:
-            # iterate through all the items in the combobox and compare them with "osm_id", 
-            # ignoring the case
-            for i in range(obj_layer_fields.count()):
-                if obj_layer_fields.itemText(i).lower() == "osm_id":
-                    obj_layer_fields.setCurrentIndex(i)
-                    break    
-            
-    def get_layer_buildings(self):
-        selected_item = self.cmbLayers.currentText()
-        if os.path.isfile(selected_item):
-            layer_building = QgsVectorLayer(selected_item, "LayerBuildings", "ogr")
-        else:
-            layers = QgsProject.instance().mapLayersByName(selected_item)
-            if layers:  
-                layer_building = layers[0]
-            else:
-                layer_building = None  
-        return layer_building
     
     def open_file_dialog(self):
+
+        project_path = QgsProject.instance().fileName()
+        initial_dir = os.path.dirname(project_path) if project_path else ""
         
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
-            "",
+            initial_dir,
             "Shapefile (*.shp);"
         )
 
         if file_path:
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             layer = QgsVectorLayer(file_path, file_name, "ogr")
+            
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
-                self.cmbLayers.addItem(file_path, file_path)
-                index = self.cmbLayers.findText(file_path)
-                self.cmbLayers.setCurrentIndex(index)
+                self.cmbLayers.setLayer(layer)
+            else:
+                self.setMessage(f"Layer '{file_name}' is invalid or corrupted.")
 
-                self.fillComboBoxFields_Id(self.cmbLayers, self.cmbLayers_fields)
     
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(
@@ -255,14 +164,16 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             return 0
 
+        result, text = check_layer(self.cmbLayers.currentLayer(), FIELD_ID = FIELD_ID)
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
+        
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
-        
-        if not (self.check_type_layer_buildings()):
-            self.run_button.setEnabled(True)
-            return 0
-        
+                
         spacing = []
         if self.cb50.isChecked():
             spacing.append(50 * math.sqrt(3))
@@ -283,7 +194,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             return 0
 
 
-        self.layer_buildings  = self.get_layer_buildings()
+        self.layer_buildings  = self.cmbLayers.currentLayer()
         self.layer_buildings_path = os.path.normpath(self.layer_buildings.dataProvider().dataSourceUri().split("|")[0])
         
         self.saveParameters()
@@ -305,9 +216,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
 
-        #self.layer_buildings = QgsProject.instance().mapLayersByName(
-        #    self.config['Settings']['layer_clean-visualization'])[0]
-        
         self.add_hex = self.config['Settings']['AddHex_clean-visualization']
         self.textLog.append(f"<a>Layer of buildings: {self.layer_buildings_path}</a>")
         
@@ -323,7 +231,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         self.break_on = False
 
-        self.layer_field = self.cmbLayers_fields.currentText()
+        
         runVoronoi = self.cbVoronoi.isChecked()
 
         progress_max = (1 + (len(spacing)-1) *5)
@@ -337,7 +245,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             begin_computation_time, 
             self.layer_buildings, 
             self.folder_name, 
-            self.layer_field, 
             runVoronoi, 
             spacing)
         
@@ -406,122 +313,43 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         if 'AddHex_clean-visualization' not in self.config['Settings']:
             self.config['Settings']['AddHex_clean-visualization'] = '500'    
 
-        if 'Mode_clean-visualization' not in self.config['Settings']:
-            self.config['Settings']['Mode_clean-visualization'] = '1'   
-
-        if 'Layer_field_clean-visualization' not in self.config['Settings']:
-            self.config['Settings']['Layer_field_clean-visualization'] = ''         
-
     # update config file
 
     def saveParameters(self):
 
         project_directory = os.path.dirname(QgsProject.instance().fileName())
         f = os.path.join(project_directory, 'parameters_accessibility.txt')
-        self.config['Settings']['Layer_clean-visualization'] = self.cmbLayers.currentText()
+        self.config['Settings']['Layer_clean-visualization'] = self.cmbLayers.currentLayer().id()
         self.config['Settings']['PathToProtocols_clean-visualization'] = self.txtPathToProtocols.text()
         self.config['Settings']['AddHex_clean-visualization'] = self.txtAddHex.text()
-
-        self.config['Settings']['Layer_field_clean-visualization'] = self.cmbLayers_fields.currentText()    
 
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
-
-    def is_file_path(self, text):
-        return os.path.isfile(text) and os.path.splitext(text)[1] in ['.shp', '.geojson', '.kml', '.gpx']
-        
 
     def ParametrsShow(self):
         self.readParameters()
 
         if os.path.isfile(self.config['Settings']['Layer_clean-visualization']):
             self.cmbLayers.addItem(self.config['Settings']['Layer_clean-visualization'])
-        self.cmbLayers.setCurrentText(self.config['Settings']['Layer_clean-visualization'])
         
+        self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer_clean-visualization']))
         self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_clean-visualization'])
         self.txtAddHex.setText(self.config['Settings']['AddHex_clean-visualization'])
-        
-        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_clean-visualization'])
-
         
         
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
-    def check_type_layer_buildings(self):
-
-        selected_item = self.cmbLayers.currentText()
-
-        if selected_item == "":
-            self.setMessage("There are no open polygon layers")
-            return 0
-
-        # Попытка найти слой в проекте по его имени
-        layers = QgsProject.instance().mapLayersByName(selected_item)
-
-        if layers:
-            # Если список слоёв не пуст, используем первый найденный слой
-            layer = layers[0]
-        else:
-            # Если слой по имени не найден, проверяем, является ли это путём к файлу
-            if os.path.isfile(selected_item):
-                layer = QgsVectorLayer(selected_item, "temp_layer", "ogr")
-                # Дополнительная проверка на валидность загруженного слоя
-                if not layer.isValid():
-                    self.setMessage(f"Could not load file '{selected_item}'")
-                    return 0
-            else:
-                # Если не найдено ни слоя в проекте, ни файла
-                self.setMessage(f"Could not find layer or file '{selected_item}'")
-                return 0
-        
-        # Теперь у нас есть валидный объект слоя, можно продолжить проверку
-        try:
-            # Более безопасная проверка на наличие объектов в слое
-            if layer.featureCount() == 0:
-                self.setMessage(f"Layer '{selected_item}' is empty")
-                return 0
-                
-            features = layer.getFeatures()
-            first_feature = next(features)
-
-        except StopIteration:
-            self.setMessage(f"Layer '{selected_item}' is empty")
-            return 0
-        
-        feature_geometry = first_feature.geometry()
-        feature_geometry_type = feature_geometry.type()
-            
-        if not (feature_geometry_type in {QgsWkbTypes.PolygonGeometry}):
-            self.setMessage(f"Features in the layer '{selected_item}' must be polygons")
-            return 0
-
-        return 1
-
     def check_add_hex(self):
-
         if self.cbLength.isChecked() and self.txtAddHex.text() == "":
             self.setMessage(f"Value of side length is empty")
             return False
-        
         return True 
+    
     def check_folder_and_file(self):
 
         os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
-
-        #if not os.path.exists(self.txtPathToProtocols.text()):
-        #    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-        #    return False
-
-        """
-        # check for the presence of .shp files in the folder
-        if os.path.isdir(self.txtPathToProtocols.text()):
-            for file in os.listdir(self.txtPathToProtocols.text()):
-                if file.lower().endswith('.shp'):
-                    self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' is not empty")
-                    return False
-        """
 
         try:
             tmp_prefix = "write_tester"
@@ -533,7 +361,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
         
-
         shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*_vor*.shp"))
         if shp_files:
             msgBox = QMessageBox()
@@ -556,10 +383,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
                 event.ignore()
                 return True
         return super().eventFilter(obj, event)
-    
 
     def show_info(self):
-        
         html = """
         <b>Data preprocessing, Build visualization layers:</b><br /><br />
         <span style="color: grey;">Five default layers of hexagons are constructed for visualization, in 4 steps: <br />

@@ -1,3 +1,5 @@
+FIELD_ID = "aid"
+
 import os
 import sys
 import configparser
@@ -32,6 +34,17 @@ try:
     IN_QGIS = True
 except ImportError:
     IN_QGIS = False
+
+
+def check_layer(layer, FIELD_ID = ""):
+    if not layer:
+        return 0, "Layer is not selected" 
+    if layer.featureCount() == 0:
+        return 0, f"Layer '{layer.name()}' is empty"
+    if FIELD_ID != "":
+        if layer.fields().indexOf(FIELD_ID) == -1:
+            return 0, f"Layer '{layer.name()}' does not contain required field '{FIELD_ID}'"
+    return 1, ""  
 
 
 def get_gtfs_date_range(gtfs_path):
@@ -294,12 +307,18 @@ def find_pkl_subfolder(base_dir: Path):
 
 
 def insert_field_first(layer, new_field):
-    """Вставляет новое поле первым в структуру атрибутов слоя"""
+    """Создает новый слой, где new_field — первое поле, остальные пустые."""
     old_fields = layer.fields()
     new_fields = QgsFields()
+    
+    # Гарантируем, что тип поля позволит хранить большие числа
+    if new_field.type() == QVariant.Int:
+        new_field = QgsField(new_field.name(), QVariant.LongLong)
+        
     new_fields.append(new_field)
+    
     for field in old_fields:
-        if field.name() != new_field.name():  # Избежать дублирования, если поле уже есть
+        if field.name() != new_field.name():
             new_fields.append(field)
 
     crs = layer.crs().authid()
@@ -308,18 +327,17 @@ def insert_field_first(layer, new_field):
     temp_provider = temp_layer.dataProvider()
     temp_provider.addAttributes(new_fields)
     temp_layer.updateFields()
-
+   
     for feat in layer.getFeatures():
         new_feat = QgsFeature(new_fields)
-        # Проверка: если поле уже существовало — нужно взять его значение
         old_attrs = feat.attributes()
-        if new_field.name() in layer.fields().names():
-            idx = layer.fields().indexOf(new_field.name())
-            new_val = old_attrs[idx]
-        else:
-            new_val = None
-        new_attrs = [new_val] + [val for i, val in enumerate(old_attrs) if layer.fields()[i].name() != new_field.name()]
-        new_feat.setAttributes(new_attrs)
+        
+        clean_attrs = [None]
+        for i, field in enumerate(old_fields):
+            if field.name() != new_field.name():
+                clean_attrs.append(old_attrs[i])
+        
+        new_feat.setAttributes(clean_attrs)
         new_feat.setGeometry(feat.geometry())
         temp_provider.addFeature(new_feat)
 
@@ -334,61 +352,18 @@ def get_unique_field_name(layer, base_name):
         counter += 1
     return new_name
 
-def create_and_check_field(layer, name_field, type = 'bldg'):
-
-    insert_field = name_field == "Create ID"
-    first_field_name = layer.fields().field(0).name()
-
-    if name_field == "Create ID":
-        if type == 'bldg':
-            name_field = get_unique_field_name(layer, "bldg_id")
-        if type == 'link':
-            name_field = get_unique_field_name(layer, "link_id")
-
-    field_exists = name_field in layer.fields().names()
-
-    if not field_exists or first_field_name != name_field:
-        layer = insert_field_first(layer, QgsField(name_field, QVariant.Int))
-        
-    name_field_index = layer.fields().indexOf(name_field)
-
-    existing_ids = set()
-    if not insert_field:
-        for f in layer.getFeatures():
-            val = f[name_field_index]
-            if val is not None:
-                try: 
-                    existing_ids.add(int(val)) 
-                except: 
-                    continue
-        next_id = max(existing_ids) + 1 if existing_ids else 1
-    else:
-        if type == 'bldg':
-            next_id =  1_000_000
-        else:
-            next_id =  1
-
-    layer.startEditing()
-    assigned_ids = set()
-    count_modified = 0
-    for f in layer.getFeatures():
+def create_and_check_field(layer, name_field, type='bldg'):
+    next_id = 1_000_000 if type == 'bldg' else 1
+    new_field_obj = QgsField(name_field, QVariant.LongLong)
+    temp_layer = insert_field_first(layer, new_field_obj)
+    name_field_index = temp_layer.fields().indexOf(name_field)
+    temp_layer.startEditing()
+    for f in temp_layer.getFeatures():
         fid = f.id()
-        val = f[name_field_index]
-        if val is None or not val or val in assigned_ids:
-            count_modified += 1
-            
-            while next_id in assigned_ids:
-                next_id += 1
-            layer.changeAttributeValue(fid, name_field_index, next_id)
-            assigned_ids.add(next_id)
-            
-            next_id += 1
-        else:
-            assigned_ids.add(val)
-
-    layer.commitChanges()
-
-    return layer, count_modified, insert_field, name_field
+        temp_layer.changeAttributeValue(fid, name_field_index, next_id)
+        next_id += 1
+    temp_layer.commitChanges()
+    return temp_layer
 
 def get_unique_path(base_path):
         """

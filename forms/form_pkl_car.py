@@ -6,8 +6,8 @@ import urllib.parse
 import configparser
 
 from qgis.core import (QgsProject,
-                       QgsWkbTypes,
                        QgsVectorLayer,
+                       QgsMapLayerProxyModel
                        )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -15,7 +15,8 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                             QMessageBox,
                             QPushButton,
                             QTableWidgetItem,
-                            QDialog
+                            QDialog,
+                            QHeaderView
                             )
 
 from PyQt5.QtCore import (Qt,
@@ -33,15 +34,13 @@ from qgis.PyQt import uic
 from pkl_car import pkl_car
 from common import (get_qgis_info, 
                     check_file_parameters_accessibility,
-                    showAllLayersInCombo_Line,
-                    showAllLayersInCombo_Point_and_Polygon)
+                    FIELD_ID,
+                    check_layer
+                    )
 
 from road_layer_processor import RoadLayerProcessor
 
-FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl_car.ui')
-)
-
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl_car.ui'))
 
 class form_pkl_car(QDialog, FORM_CLASS):
     def __init__(self,
@@ -83,33 +82,30 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.cbDirection.addItems(["T", "F", "B"])
         self.cbDirection.setCurrentIndex(self.cbDirection.findText("B"))
         
-        showAllLayersInCombo_Line(self.cbRoads)
         self.toolButtonRoads.clicked.connect(lambda: self.open_file_dialog (type = "roads"))
         self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog (type = "buildings"))
 
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
-        self.toolButton_protocol.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToProtocols))
+        self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
         
-        showAllLayersInCombo_Point_and_Polygon(self.cmbLayers_buildings)
-
+        
         self.cmbLayers_buildings.installEventFilter(self)
+        self.cbRoads.installEventFilter(self)
+        self.cmbLayers_buildings.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cbRoads.setFilters(QgsMapLayerProxyModel.LineLayer)
+
 
         self.cmbFieldsSpeed.installEventFilter(self)
-        self.cmbLayers_buildings.installEventFilter(self)
         self.cmbFieldsDirection.installEventFilter(self)
-        self.cmbLayers_buildings_fields.installEventFilter(self)
-
+        self.cmbLayersRoad_type_road.installEventFilter(self)
+        
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        self.run_button = self.buttonBox.addButton(
-            "Run", QDialogButtonBox.ActionRole)
-        self.close_button = self.buttonBox.addButton(
-            "Close", QDialogButtonBox.RejectRole)
-        self.help_button = self.buttonBox.addButton(
-            "Help", QDialogButtonBox.HelpRole)
+        self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
+        self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
+        self.help_button = self.buttonBox.addButton("Help", QDialogButtonBox.HelpRole)
 
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
@@ -127,21 +123,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         int_validator3 = QRegExpValidator(regex3)
 
         self.txtSpeed.setValidator(int_validator3)
-        self.layer_road = self.get_layer_road()
-        self.layer_buidings = self.get_layer_buildings()
-
-        self.fillComboBoxFields_Id(self.cmbLayers_buildings,
-                                   self.cmbLayers_buildings_fields,
-                                   "osm_id"
-                                   )
-
-        self.cmbLayers_buildings.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbLayers_buildings,
-             self.cmbLayers_buildings_fields,
-             "osm_id")
-             )
-
+        
         self.ParametrsShow()
         self.onLayerRoadChanged()
         self.cbRoads.currentIndexChanged.connect(self.onLayerRoadChanged)
@@ -175,56 +157,29 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
     def toggle_tables_visibility(self, checked):
         self.groupBox_tables.setVisible(checked)
-        
-          
-    def get_layer_road(self):
-        selected_item = self.cbRoads.currentText()
-        
-        if os.path.isfile(selected_item):
-            layer_road = QgsVectorLayer(selected_item, "LayerRoad", "ogr")
-        else:
-            layers = QgsProject.instance().mapLayersByName(selected_item)
-            if layers:  
-                layer_road = layers[0]
-            else:
-                layer_road = None  
-
-        return layer_road
     
-    def get_layer_buildings(self):
-        selected_item = self.cmbLayers_buildings.currentText()
-        if os.path.isfile(selected_item):
-            layer_building = QgsVectorLayer(selected_item, "LayerBuildings", "ogr")
-        else:
-            layers = QgsProject.instance().mapLayersByName(selected_item)
-            if layers:  
-                layer_building = layers[0]
-            else:
-                layer_building = None  
-        return layer_building
-
     def open_file_dialog(self, type):
+
+        project_path = QgsProject.instance().fileName()
+        initial_dir = os.path.dirname(project_path) if project_path else ""
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
-            "",
+            initial_dir,
             "Shapefile (*.shp);"
         )
-
+        
         if file_path:
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             layer = QgsVectorLayer(file_path, file_name, "ogr")
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
+                self.cmbLayers.setLayer(layer)
                 if type == "roads":
-                    self.cbRoads.addItem(file_path, file_path)
-                    index = self.cbRoads.findText(file_path)
-                    self.cbRoads.setCurrentIndex(index)
-                    self.onLayerRoadChanged()
+                    self.cbRoads.setLayer(layer)
                 else:
-                    self.cmbLayers_buildings.addItem(file_path, file_path)
-                    index = self.cmbLayers_buildings.findText(file_path)
-                    self.cmbLayers_buildings.setCurrentIndex(index)
+                    self.cmbLayers_buildings.setLayer(layer)
+                    
 
     def show_stage_testing (self, message, progress):
         self.setMessage (message)    
@@ -235,8 +190,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.test_button.setEnabled(False)
         self.run_button.setEnabled(False)
         self.progressBar.setMaximum(3)
-        self.layer_road = self.get_layer_road()
-        self.layer_road_name = self.cbRoads.currentText()
+        self.layer_road = self.cbRoads.currentLayer() 
+        self.layer_road_name = self.layer_road.name()
               
 
         self.processor_road = RoadLayerProcessor(self,
@@ -264,40 +219,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.cmbFieldsSpeed.setEnabled(False)
         self.lblOSM.setText ("")
 
-    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields, field_name_default):
-        obj_layer_fields.clear()
-        
-        
-        self.layer_buidings = self.get_layer_buildings()
-        if not self.layer_buidings:
-            return
-        layer = self.layer_buidings
-        fields = layer.fields()
-        field_name_default_exists = False
-
-        # field type and value validation
-        for field in fields:
-            field_name = field.name()
-            field_type = field.type()
-
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong):
-                # add numeric fields
-                obj_layer_fields.addItem(field_name)
-                if field_name.lower() == field_name_default:
-                    field_name_default_exists = True
-            else:
-                if field_name.lower() == "osm_id":
-                    obj_layer_fields.addItem(field_name)
-                    field_name_default_exists = True
-            
-        if field_name_default_exists:
-            # iterate through all the items in the combobox and compare them with "osm_id", 
-            # ignoring the case
-            for i in range(obj_layer_fields.count()):
-                if obj_layer_fields.itemText(i).lower() == field_name_default:
-                    obj_layer_fields.setCurrentIndex(i)
-                    break
-
     def open_file(self, url):
         file_path = url.toLocalFile()
         if os.path.isfile(file_path):
@@ -314,7 +235,29 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.close_button.setEnabled(True)
         
     def on_run_button_clicked(self):
+            
+        self.run_button.setEnabled(False)
+        self.break_on = False
+        
+        self.layer_road = self.cbRoads.currentLayer() 
+        self.layer_buildings = self.cmbLayers_buildings.currentLayer() 
 
+        result, text = check_layer(self.layer_buildings, FIELD_ID = FIELD_ID)
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
+        
+        result, text = check_layer(self.layer_road, FIELD_ID = FIELD_ID)
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
+                
+        if not (self.check_folder_and_file()):
+            self.run_button.setEnabled(True)
+            return 0
+        
         if not self.cmbFieldsSpeed.currentData() or not self.cmbFieldsDirection.currentData():
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Information)
@@ -326,31 +269,12 @@ class form_pkl_car(QDialog, FORM_CLASS):
             msgBox.exec_()
             if msgBox.clickedButton() == ok_button:
                 return 0  
-            
-        self.run_button.setEnabled(False)
-
-        self.break_on = False
-
-        self.layer_road = self.get_layer_road()
-        self.layer_buildings = self.get_layer_buildings()
-
-        if not (self.check_folder_and_file()):
-            self.run_button.setEnabled(True)
-            return 0
-        
-        if not (self.check_layer_buildings()):
-            self.run_button.setEnabled(True)
-            return 0
         
         self.folder_name = f'{self.txtPathToProtocols.text()}'
 
         self.saveParameters()
         self.readParameters()
         
-        if not (self.check_type_layer_road()):
-            self.run_button.setEnabled(True)
-            return 0
-
         if not os.path.exists(self.folder_name):
             os.makedirs(self.folder_name)
 
@@ -479,9 +403,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
         if 'Layer_buildings_car_pkl' not in self.config['Settings']:
             self.config['Settings']['Layer_buildings_car_pkl'] = '0'
 
-        if 'Layer_buildings_field_car_pkl' not in self.config['Settings']:
-            self.config['Settings']['Layer_buildings_field_car_pkl'] = '0'
-
         if 'Speed_car_pkl' not in self.config['Settings']:
             self.config['Settings']['Speed_car_pkl'] = '0'
 
@@ -496,15 +417,14 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.config['Settings']['PathToProtocols_car_pkl'] = self.txtPathToProtocols.text()
 
-        self.config['Settings']['Roads_car_pkl'] = self.cbRoads.currentText()
-
         self.config['Settings']['FieldDirection_car_pkl'] = str(self.cmbFieldsDirection.currentData())
         self.config['Settings']['FieldSpeed_car_pkl'] = str(self.cmbFieldsSpeed.currentData())
         self.config['Settings']['LayerRoad_type_road_car_pkl'] = self.cmbLayersRoad_type_road.currentData() or ''
         
-        self.config['Settings']['Layer_buildings_car_pkl'] = self.cmbLayers_buildings.currentText()
-        self.config['Settings']['Layer_buildings_field_car_pkl'] = self.cmbLayers_buildings_fields.currentText()
+        self.config['Settings']['Roads_car_pkl'] = self.cbRoads.currentLayer().id()
+        self.config['Settings']['Layer_buildings_car_pkl'] = self.cmbLayers_buildings.currentLayer().id()
 
+        
         self.config['Settings']['Speed_car_pkl'] = self.txtSpeed.text()
 
         with open(f, 'w') as configfile:
@@ -522,23 +442,13 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.txtPathToProtocols.setText(
             os.path.normpath(self.config['Settings']['PathToProtocols_car_pkl']))
 
-        self.cmbFieldsSpeed.setCurrentText(
-            self.config['Settings']['FieldSpeed_car_pkl'])
-        self.cmbLayersRoad_type_road.setCurrentText(
-            self.config['Settings']['LayerRoad_type_road_car_pkl'])
-        self.cmbFieldsDirection.setCurrentText(
-            self.config['Settings']['FieldDirection_car_pkl'])
-
-        self.cmbLayers_buildings.setCurrentText(
-            self.config['Settings']['Layer_buildings_car_pkl'])
-        self.cmbLayers_buildings_fields.setCurrentText(
-            self.config['Settings']['Layer_buildings_field_car_pkl'])
-
+        self.cmbFieldsSpeed.setCurrentText(self.config['Settings']['FieldSpeed_car_pkl'])
+        self.cmbLayersRoad_type_road.setCurrentText(self.config['Settings']['LayerRoad_type_road_car_pkl'])
+        self.cmbFieldsDirection.setCurrentText(self.config['Settings']['FieldDirection_car_pkl'])
         self.txtSpeed.setText(self.config['Settings']['Speed_car_pkl'])
 
-        if os.path.isfile(self.config['Settings']['Roads_car_pkl']):
-            self.cbRoads.addItem(self.config['Settings']['Roads_car_pkl'])
-        self.cbRoads.setCurrentText(self.config['Settings']['Roads_car_pkl'])
+        self.cbRoads.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Roads_car_pkl']))
+        self.cmbLayers_buildings.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer_buildings_car_pkl']))
 
     def check_folder_and_file(self):
 
@@ -576,51 +486,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
-    def check_layer_buildings(self):
-
-        layer = self.layer_buildings
-        if layer == "":
-            self.setMessage(f"Layer is empty")
-            return 0
-        
-        try:
-            features = layer.getFeatures()
-        except:
-            self.setMessage(f'Layer {layer} is empty')
-            return 0
-        
-        geometryType = layer.geometryType()
-        if (geometryType != QgsWkbTypes.PointGeometry and geometryType != QgsWkbTypes.PolygonGeometry):
-            self.setMessage(f'Features of the layer {self.cmbLayers_buildings.currentText()} must be polylines or points')
-            return 0
-
-        return 1
-    
-    def check_type_layer_road(self):
-
-        try:
-            features = self.layer_road.getFeatures()
-        except:
-            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
-            return 0
-
-        feature_count = self.layer_road.featureCount()
-        if feature_count == 0:
-            self.setMessage(f"Layer '{self.cbRoads.currentText()}' is empty")
-            return 0
-        
-        
-        features = self.layer_road.getFeatures()
-        for feature in features:
-            feature_geometry = feature.geometry()
-            feature_geometry_type = feature_geometry.type()
-            break
-
-        if (feature_geometry_type != QgsWkbTypes.LineGeometry):
-            self.setMessage(f"Features of the layer in '{self.cbRoads.currentText()}' must be polylines")
-            return 0
-
-        return 1
+   
 
     def save_var(self):
         self.path_to_protocol = self.config['Settings']['pathtoprotocols_car_pkl']
@@ -631,7 +497,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.layer_road_type_road = self.config['Settings']['LayerRoad_type_road_car_pkl']
         self.layer_road_direction = self.config['Settings']['FieldDirection_car_pkl']
-        self.layer_buildings_field = self.config['Settings']['Layer_buildings_field_car_pkl']
+        self.layer_buildings_field = FIELD_ID
         self.speed = float(self.config['Settings']['Speed_CAR_pkl'].replace(',', '.'))
         self.strategy_id = 1
 
@@ -653,7 +519,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         if mode == "noCDI":
             data = sorted(data.items(), key=lambda item: float(item[1]), reverse=True)
-            table.setHorizontalHeaderLabels(["OSM link type\n (FCLASS)", "Maximum speed\n(free flow)"])
+            table.setHorizontalHeaderLabels(["OSM link type\n (FCLASS)", "Maximum speed, km/h\n(free flow)"])
             
         else:
             data = data.items() 
@@ -674,7 +540,12 @@ class form_pkl_car(QDialog, FORM_CLASS):
             item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
             table.setItem(i, 1, item)
-    
+        
+        table.setWordWrap(True)
+        table.horizontalHeader().setStretchLastSection(True)
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+       
     def load_text_with_bold_first_line(self, file_path):
         if not os.path.exists(file_path):
             return

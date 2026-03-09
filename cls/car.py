@@ -335,8 +335,6 @@ class car_accessibility:
         
         count = len(self.parent.points)
         self.parent.progressBar.setMaximum(count)
-        
-
 
         self.parent.progressBar.setValue(1)
         i = 0
@@ -356,7 +354,6 @@ class car_accessibility:
         #################################
         
         for source in self.parent.points:
-
             QApplication.processEvents()
             if self.verify_break():
                 return 0
@@ -368,7 +365,6 @@ class car_accessibility:
             self.source = source
             
             idStart, _ = self.parent.dict_building_vertex.get(self.source, ("xxx", "xxx"))
-
             if idStart == "xxx":
                 self.parent.progressBar.setValue(count+1)
                 continue

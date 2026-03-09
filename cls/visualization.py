@@ -23,7 +23,7 @@ from qgis.utils import iface
 class visualization:
     def __init__(self,
                  parent,
-                 layer_buildings_name = "",
+                 layer_buildings = "",
                  mode = "",
                  fieldname_layer = "",
                  mode_compare = False,
@@ -47,8 +47,8 @@ class visualization:
         self.fieldname_layer = fieldname_layer
         self.parent = parent
 
-        self.layer_buildings_name = layer_buildings_name
-        self.layer_buildings = QgsProject.instance().mapLayersByName(self.layer_buildings_name)[0]
+        self.layer_buildings = layer_buildings
+        self.layer_buildings_name= layer_buildings.name()
         
         self.style_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'styles')
 

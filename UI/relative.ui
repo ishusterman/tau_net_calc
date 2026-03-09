@@ -81,10 +81,10 @@
           <widget class="QWidget" name="scrollAreaWidgetContents_2">
            <property name="geometry">
             <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>301</width>
-             <height>496</height>
+             <x>-97</x>
+             <y>-182</y>
+             <width>345</width>
+             <height>548</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -241,28 +241,12 @@
               <item row="20" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
-                 <widget class="QComboBox" name="cbVisLayers"/>
+                 <widget class="QgsMapLayerComboBox" name="cbVisLayers"/>
                 </item>
                 <item>
-                 <widget class="QLabel" name="label_4">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
+                 <widget class="QToolButton" name="toolButtonViz">
                   <property name="text">
-                   <string>id=</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QComboBox" name="cbVisLayers_fields">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
+                   <string>...</string>
                   </property>
                  </widget>
                 </item>
@@ -395,6 +379,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsmaplayercombobox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>textInfo</tabstop>
   <tabstop>tabWidget</tabstop>

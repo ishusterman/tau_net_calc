@@ -4,8 +4,12 @@ from PyQt5.QtWidgets import (QApplication,
                              QTreeWidget,
                              QTreeWidgetItem,
                              QVBoxLayout,
-                             QWidget
+                             QWidget,
+                             QMessageBox,
+                             QPushButton,
                              )
+from PyQt5.QtCore import Qt
+
 from qgis.PyQt.QtGui import QIcon, QFont
 import os
 import webbrowser
@@ -84,6 +88,7 @@ class AccessibilityTools(QWidget):
         group7.setExpanded(True)
 
         self.item1 = QTreeWidgetItem(self.tree_widget, ['Help and tutorial'])
+        self.itemTutorialData = QTreeWidgetItem(self.tree_widget, ['Tutorial data'])
       
         icon1 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'folder.png') # icon for groups
         icon2 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'ring.png') # icon for elements 
@@ -113,6 +118,9 @@ class AccessibilityTools(QWidget):
         
         icon3 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'help.png')
         self.item1.setIcon(0, QIcon(icon3))
+
+        iconDownload = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'download.png')
+        self.itemTutorialData.setIcon(0, QIcon(iconDownload))
        
         layout.addWidget(self.tree_widget)
 
@@ -159,6 +167,28 @@ class AccessibilityTools(QWidget):
             url = "https://geosimlab.github.io/accessibility-calculator-tutorial/introduction.html"
             
             webbrowser.open(url)
+
+        if item == self.itemTutorialData:
+            link_tama = "https://github.com/ishusterman/TAMA_QGIS_Project/archive/refs/heads/main.zip"
+            link_tlv = "https://github.com/ishusterman/TLV_QGIS_Project/archive/refs/heads/main.zip"
+                        
+            message = (
+                f"The layers of the TAMA dataset are supplied as <a href='{link_tama}'>TAMA_tutorial.zip</a> (33MB).<br>"
+                f"The layers of the Tel Aviv dataset are supplied as <a href='{link_tlv}'>TLV_tutorial.zip</a> (3.5MB).<br><br>"
+                "Click the links to download the datasets."
+            )
+
+            msgBox = QMessageBox()
+            msgBox.setTextFormat(Qt.RichText)
+            msgBox.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            msgBox.setIcon(QMessageBox.Information)
+            msgBox.setWindowTitle("Tutorial data")
+            msgBox.setText(message)
+            
+            ok_button = QPushButton("Ok")
+            msgBox.addButton(ok_button, QMessageBox.AcceptRole)
+            msgBox.exec_() 
+            
             
         if item == self.item2:
             title="Data preprocessing. Clean road network"

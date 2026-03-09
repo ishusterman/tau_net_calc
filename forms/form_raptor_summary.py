@@ -23,8 +23,7 @@ class RaptorSummary(RaptorDetailed):
         self.parent = parent
 
         self.fillComboBoxWithLayerFields2()
-        self.cmbLayersDest.currentIndexChanged.connect(
-            self.fillComboBoxWithLayerFields2)
+        self.cmbLayersDest.currentIndexChanged.connect(self.fillComboBoxWithLayerFields2)
 
         regex = QRegExp(r"^(1[0-9]|20|[2-9])$")
         int_validator = QRegExpValidator(regex)
@@ -51,11 +50,9 @@ class RaptorSummary(RaptorDetailed):
     # for widget with checkbox
     def fillComboBoxWithLayerFields2(self):
         self.cmbFields_ch.clear()
-        selected_layer_name = self.cmbLayersDest.currentText()
-        selected_layer = QgsProject.instance().mapLayersByName(selected_layer_name)
+        layer = self.cmbLayersDest.currentLayer()
 
-        if selected_layer:
-            layer = selected_layer[0]
+        print ("fillComboBoxWithLayerFields2")
 
         try:
             fields = [field for field in layer.fields()]

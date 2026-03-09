@@ -12,7 +12,9 @@ from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from qgis import processing
 
-from common import get_unique_path, create_and_check_field
+from common import (get_unique_path, 
+                    create_and_check_field,
+                    FIELD_ID)
 
 class TaskSignals(QObject):
     log = pyqtSignal(str)
@@ -27,7 +29,6 @@ class cls_clean_buildings(QgsTask):
                  begin_computation_time, 
                  layer, 
                  folder_name, 
-                 osm_id_field, 
                  task_name="Buildings clean task"):
         
         super().__init__(task_name)
@@ -35,8 +36,8 @@ class cls_clean_buildings(QgsTask):
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
-        self.osm_id_field = osm_id_field
-
+        self.osm_id_field = FIELD_ID
+        
         self.exception = None
         self.break_on = False
         self.list_layer = []
@@ -92,14 +93,7 @@ class cls_clean_buildings(QgsTask):
 
         self.signals.set_message.emit('Renumbering duplicated osm_id ...')
 
-        if self.osm_id_field == "":
-            self.osm_id_field = "bldg_id"
-
-        layer_singlepart, count_modified, insert_field, name_field  = create_and_check_field(layer_singlepart, self.osm_id_field, type = 'bldg')
-        if insert_field:
-            self.signals.log.emit(f'<b>Building ID field "{name_field}" is created as a first field in the cleaned table</b>')
-        if not insert_field and count_modified > 0:
-            self.signals.log.emit(f'<b>{count_modified} of the building IDs are not unique, updated</b>')
+        layer_singlepart  = create_and_check_field(layer_singlepart, self.osm_id_field, type = 'bldg')
         
         if self.break_on:
             return 0

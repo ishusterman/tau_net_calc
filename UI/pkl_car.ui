@@ -84,7 +84,7 @@
              <x>0</x>
              <y>0</y>
              <width>576</width>
-             <height>620</height>
+             <height>628</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -109,42 +109,12 @@
               <item row="3" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
-                 <widget class="QComboBox" name="cmbLayers_buildings">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="baseSize">
-                   <size>
-                    <width>16</width>
-                    <height>0</height>
-                   </size>
-                  </property>
-                 </widget>
+                 <widget class="QgsMapLayerComboBox" name="cmbLayers_buildings"/>
                 </item>
                 <item>
                  <widget class="QToolButton" name="toolButtonBuildings">
                   <property name="text">
                    <string>...</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_8">
-                  <property name="text">
-                   <string>id=</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QComboBox" name="cmbLayers_buildings_fields">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
                   </property>
                  </widget>
                 </item>
@@ -160,7 +130,7 @@
               <item row="6" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <item>
-                 <widget class="QComboBox" name="cbRoads"/>
+                 <widget class="QgsMapLayerComboBox" name="cbRoads"/>
                 </item>
                 <item>
                  <widget class="QToolButton" name="toolButtonRoads">
@@ -580,14 +550,18 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsmaplayercombobox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
   <tabstop>textInfo</tabstop>
   <tabstop>scrollArea</tabstop>
-  <tabstop>cmbLayers_buildings</tabstop>
   <tabstop>toolButtonBuildings</tabstop>
-  <tabstop>cmbLayers_buildings_fields</tabstop>
-  <tabstop>cbRoads</tabstop>
   <tabstop>toolButtonRoads</tabstop>
   <tabstop>cbDirection</tabstop>
   <tabstop>txtSpeed</tabstop>

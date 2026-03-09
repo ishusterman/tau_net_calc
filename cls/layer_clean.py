@@ -19,7 +19,10 @@ from qgis.core import (
 from PyQt5.QtWidgets import QApplication
 from qgis.PyQt.QtCore import Qt, QVariant, QObject, pyqtSignal
 
-from common import convert_meters_to_degrees, create_and_check_field, get_unique_path
+from common import (convert_meters_to_degrees, 
+                    create_and_check_field, 
+                    get_unique_path,
+                    FIELD_ID)
 
 class TaskSignals(QObject):
     log = pyqtSignal(str)
@@ -38,7 +41,6 @@ class cls_clean_roads(QgsTask):
                  layer_path, 
                  layer_name, 
                  folder_name, 
-                 osm_id_field,
                  task_name="Roads clean task"):
         
         super().__init__(task_name)
@@ -49,7 +51,7 @@ class cls_clean_roads(QgsTask):
         self.layer_name = layer_name
         self.initial_layer_count = self.layer.featureCount()
         self.folder_name = folder_name
-        self.osm_id_field = osm_id_field
+        self.osm_id_field = FIELD_ID
         self.exception = None
         self.break_on = False
         
@@ -230,15 +232,8 @@ class cls_clean_roads(QgsTask):
                         
             self.signals.progress.emit(5)
             
-            if self.osm_id_field == "":
-                self.osm_id_field = "link_id"
-
-            filtered_layer, count_modified, insert_field, name_field  = create_and_check_field(filtered_layer, self.osm_id_field, type = 'link')
-            if insert_field:
-                self.signals.log.emit(f'<b>Link ID field "{name_field}" is created as a first field in the cleaned table</b>')
-            if not insert_field and count_modified > 0:
-                self.signals.log.emit(f'<b>{count_modified} of the link IDs are not unique, updated</b>')
-
+            filtered_layer = create_and_check_field(filtered_layer, self.osm_id_field, type = 'link')
+            
             self.signals.set_message.emit('Saving ...')
             file_dir = self.folder_name
 

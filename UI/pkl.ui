@@ -84,7 +84,7 @@
              <x>0</x>
              <y>0</y>
              <width>404</width>
-             <height>441</height>
+             <height>456</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -112,17 +112,7 @@
               <item row="2" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
-                 <widget class="QComboBox" name="cmbLayers">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="mouseTracking">
-                   <bool>false</bool>
-                  </property>
-                 </widget>
+                 <widget class="QgsMapLayerComboBox" name="cmbLayers"/>
                 </item>
                 <item>
                  <widget class="QToolButton" name="toolButtonBuildings">
@@ -131,42 +121,19 @@
                   </property>
                  </widget>
                 </item>
-                <item>
-                 <widget class="QLabel" name="label_5">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="text">
-                   <string>id=</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QComboBox" name="cmbLayers_fields">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                 </widget>
-                </item>
                </layout>
               </item>
-              <item row="3" column="0">
+              <item row="4" column="0">
                <widget class="QLabel" name="label_6">
                 <property name="text">
                  <string>Layer of roads</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="0" colspan="2">
+              <item row="5" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <item>
-                 <widget class="QComboBox" name="cbRoads"/>
+                 <widget class="QgsMapLayerComboBox" name="cbRoads"/>
                 </item>
                 <item>
                  <widget class="QToolButton" name="toolButtonRoads">
@@ -177,14 +144,14 @@
                 </item>
                </layout>
               </item>
-              <item row="9" column="0">
+              <item row="10" column="0">
                <widget class="QLabel" name="label_8">
                 <property name="text">
                  <string>Maximum length of a single walking leg (must not exceed 600 m)</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="0" colspan="2">
+              <item row="11" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_7">
                 <item>
                  <widget class="QLabel" name="label_3">
@@ -208,7 +175,7 @@
                 </item>
                </layout>
               </item>
-              <item row="13" column="0" colspan="2">
+              <item row="14" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_8">
                 <item>
                  <widget class="QLabel" name="label_7">
@@ -232,14 +199,14 @@
                 </item>
                </layout>
               </item>
-              <item row="14" column="0">
+              <item row="15" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
                  <string>The folder of the initial GTFS dataset</string>
                 </property>
                </widget>
               </item>
-              <item row="16" column="0" colspan="2">
+              <item row="17" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
                 <item>
                  <widget class="QLineEdit" name="txtPathToGTFS">
@@ -269,7 +236,7 @@
                 </item>
                </layout>
               </item>
-              <item row="20" column="0" colspan="2">
+              <item row="21" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_9">
                 <item>
                  <widget class="QLabel" name="label_9">
@@ -317,14 +284,14 @@
                 </item>
                </layout>
               </item>
-              <item row="22" column="0">
+              <item row="23" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Folder to store transit database</string>
                 </property>
                </widget>
               </item>
-              <item row="23" column="0" colspan="2">
+              <item row="24" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_4">
                 <item>
                  <widget class="QLineEdit" name="txtPathToProtocols">
@@ -426,6 +393,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsmaplayercombobox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>textInfo</tabstop>
   <tabstop>tabWidget</tabstop>

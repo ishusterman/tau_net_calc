@@ -3,18 +3,16 @@ import webbrowser
 import configparser
 from datetime import datetime
 import glob
-import re
 
 from qgis.core import (QgsApplication,
                        QgsProject,
-                       QgsWkbTypes,
+                       QgsMapLayerProxyModel,
                        QgsVectorLayer
                        )
 
 from PyQt5.QtCore import (Qt,
                           QEvent,
-                          QTimer,
-                          QVariant
+                          QTimer,                          
                           )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -27,19 +25,17 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
 from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
 
+
 from common import (get_qgis_info, 
                     check_file_parameters_accessibility, 
                     getDateTime, 
                     insert_layer_ontop,
-                    showAllLayersInCombo_Line,
+                    check_layer
                     )
 
 from layer_clean import cls_clean_roads
 
-
-FORM_CLASS, _ = uic.loadUiType(
-    os.path.join(os.path.dirname(__file__), '..', 'UI', 'roads_clean.ui')
-)
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'roads_clean.ui'))
 
 class form_roads_clean(QDialog, FORM_CLASS):
     def __init__(self, title):
@@ -66,29 +62,20 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.progressBar.setMaximum(5)
         self.progressBar.setValue(0)
 
-        self.toolButton_protocol.clicked.connect(
-            lambda: self.showFoldersDialog(self.txtPathToProtocols))
+        self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
+        self.toolButtonRoads.clicked.connect(lambda: self.open_file_dialog ())
 
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
-        showAllLayersInCombo_Line(self.cmbLayersRoad)
+        self.cmbLayersRoad.setFilters(QgsMapLayerProxyModel.LineLayer)
         self.cmbLayersRoad.installEventFilter(self)
-
-        self.cmbLayers_fields.installEventFilter(self)
-        self.fillComboBoxFields_Id(self.cmbLayersRoad, self.cmbLayers_fields)
-        self.cmbLayersRoad.currentIndexChanged.connect(
-            lambda: self.fillComboBoxFields_Id
-            (self.cmbLayersRoad, self.cmbLayers_fields))
 
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        self.run_button = self.buttonBox.addButton(
-            "Run", QDialogButtonBox.ActionRole)
-        self.close_button = self.buttonBox.addButton(
-            "Close", QDialogButtonBox.RejectRole)
-        self.help_button = self.buttonBox.addButton(
-            "Help", QDialogButtonBox.HelpRole)
+        self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
+        self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
+        self.help_button = self.buttonBox.addButton("Help", QDialogButtonBox.HelpRole)
 
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
@@ -100,60 +87,29 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
         self.show_info()
-    
-    def fillComboBoxFields_Id(self, obj_layers, obj_layer_fields):
-        obj_layer_fields.clear()
-        selected_layer_name = obj_layers.currentText()
-        layers = QgsProject.instance().mapLayersByName(selected_layer_name)
 
-        if not layers:
-            return
-        layer = layers[0]
+    def open_file_dialog(self):
 
-        fields = layer.fields()
-        osm_id_exists = False
+        project_path = QgsProject.instance().fileName()
+        initial_dir = os.path.dirname(project_path) if project_path else ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Choose a File",
+            initial_dir,
+            "Shapefile (*.shp);"
+        )
 
-        # regular expression to check for the presence of only digit
-        digit_pattern = re.compile(r'^\d+$')
-
-        # field type and value validation
-        for field in fields:
-            field_name = field.name()
-            field_type = field.type()
-
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong) and field_name.lower() != "maxspeed":
-                # add numeric fields
-                obj_layer_fields.addItem(field_name)
-                if field_name.lower() == "osm_id":
-                    osm_id_exists = True
+        if file_path:
+            file_name = os.path.splitext(os.path.basename(file_path))[0]
+            layer = QgsVectorLayer(file_path, file_name, "ogr")
+            
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
+                self.cmbLayersRoad.setLayer(layer)
             else:
-                if field_name.lower() == "osm_id":
-                    obj_layer_fields.addItem(field_name)
-                    osm_id_exists = True
-            """
-            elif field_type == QVariant.String:
-                # check the first value of the field for digits only
-                first_value = None
-                for feature in layer.getFeatures():
-                    first_value = feature[field_name]
-                    break  # stop after the first value
+                self.setMessage(f"Layer '{file_name}' is invalid or corrupted.")
 
-                if first_value is not None and digit_pattern.match(str(first_value)):
-                    obj_layer_fields.addItem(field_name)
-                    if field_name.lower() == "osm_id":
-                        osm_id_exists = True
-            """                    
-
-        obj_layer_fields.addItem("Create ID")
-
-        if osm_id_exists:
-            # iterate through all the items in the combobox and compare them with "osm_id", 
-            # ignoring the case
-            for i in range(obj_layer_fields.count()):
-                if obj_layer_fields.itemText(i).lower() == "osm_id":
-                    obj_layer_fields.setCurrentIndex(i)
-                    break
-
+    
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(
             self, "Select Folder", obj.text())
@@ -188,11 +144,16 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.run_button.setEnabled(False)
         self.break_on = False
 
+        result, text = check_layer(self.cmbLayersRoad.currentLayer())
+        if not result:
+            self.run_button.setEnabled(True)
+            self.setMessage(text)
+            return 0
         
-        if not (self.check_type_layer_road()):
+        if not (self.check_type_layer_road_add()):
             self.run_button.setEnabled(True)
             return 0
-
+        
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
@@ -201,8 +162,9 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.saveParameters()
         self.readParameters()
 
-        self.layer_road = QgsProject.instance().mapLayersByName(self.cmbLayersRoad.currentText())[0]
-        self.layer_road_name = self.cmbLayersRoad.currentText()
+        self.layer_road = self.cmbLayersRoad.currentLayer()
+        self.layer_road_name = self.layer_road.name()
+        self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[0]
         
         self.setMessage("Cleaning layer of roads ...")
         self.folder_name = f'{self.txtPathToProtocols.text()}'
@@ -219,10 +181,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.textLog.append(f'<a> Mode: {self.title}</a>')
 
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
-
-        
-        self.layer_road_path = self.layer_road.dataProvider().dataSourceUri().split("|")[0]
-        
+                
         self.textLog.append(f"<a>Initial road network: {os.path.normpath(self.layer_road_path)}</a>")
         self.folder_name = self.config['Settings']['PathToProtocols_clean']
         self.textLog.append(f"<a>Folder to store clean road network: {self.folder_name}</a>")
@@ -234,14 +193,13 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         self.break_on = False
         QApplication.setOverrideCursor(Qt.WaitCursor)
-        osm_id_field = self.config['Settings']['Layer_field_clean']
+        
         self.task = cls_clean_roads(
             begin_computation_time, 
             self.layer_road, 
             self.layer_road_path,
             self.layer_road_name, 
-            self.folder_name, 
-            osm_id_field            
+            self.folder_name            
             )
                 
         self.task.signals.log.connect(self.textLog.append)
@@ -250,8 +208,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.task.signals.save_log.connect(self.save_log)
         self.task.signals.add_layers.connect(self.add_layers)
         self.task.signals.change_button_status.connect(self.change_button_status)
-       
-                
+                      
         QgsApplication.taskManager().addTask(self.task)
         QApplication.processEvents()
 
@@ -306,64 +263,35 @@ class form_roads_clean(QDialog, FORM_CLASS):
             self.config['Settings']['PathToProtocols_clean'] = PathToProtocols_clean
         self.config['Settings']['PathToProtocols_clean'] = os.path.normpath(self.config['Settings']['PathToProtocols_clean'])
 
-        if 'Layer_field_clean' not in self.config['Settings']:
-            self.config['Settings']['Layer_field_clean'] = '' 
-        
-
     # update config file
 
     def saveParameters(self):
 
         project_directory = os.path.dirname(QgsProject.instance().fileName())
         f = os.path.join(project_directory, 'parameters_accessibility.txt')
-        self.config['Settings']['LayerRoad_clean'] = self.cmbLayersRoad.currentText()
+        self.config['Settings']['Layerroad_clean'] = self.cmbLayersRoad.currentLayer().id()
         self.config['Settings']['PathToProtocols_clean'] = self.txtPathToProtocols.text()
-        self.config['Settings']['Layer_field_clean'] = self.cmbLayers_fields.currentText()
+        
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
     def ParametrsShow(self):
         self.readParameters()
-        self.cmbLayersRoad.setCurrentText(
-            self.config['Settings']['Layerroad_clean'])
-        self.txtPathToProtocols.setText(
-            self.config['Settings']['PathToProtocols_clean'])
-        self.cmbLayers_fields.setCurrentText(self.config['Settings']['Layer_field_clean'])
-
+        self.cmbLayersRoad.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['layerroad_clean']))
+        self.txtPathToProtocols.setText(self.config['Settings']['PathToProtocols_clean'])
+        
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
-    def check_type_layer_road(self):
+    def check_type_layer_road_add(self):
 
-        layer = self.cmbLayersRoad.currentText()
-        if layer == "":
-            self.setMessage(f"Layer is empty")
-            return 0
-
-        layer = QgsProject.instance().mapLayersByName(layer)[0]
-
-        try:
-            features = layer.getFeatures()
-        except:
-            self.setMessage(f"Layer '{self.cmbLayersRoad.currentText()}' is empty")
-            return 0
-
-        for feature in features:
-            feature_geometry = feature.geometry()
-            feature_geometry_type = feature_geometry.type()
-            break
-        
-        if not (feature_geometry_type in {QgsWkbTypes.LineGeometry}):
-            self.setMessage(f"Features of the layer '{self.cmbLayersRoad.currentText()}' must be polylines")
-            return 0
-        
+        layer = self.cmbLayersRoad.currentLayer()
         field_names = [field.name().lower() for field in layer.fields()]
         for forbidden_field in ["fid", "cat"]:
             if forbidden_field in field_names:
                 msgBox = QMessageBox()
                 msgBox.setIcon(QMessageBox.Information)
                 msgBox.setWindowTitle("Information")
-
                 msgBox.setText(
                             f"Layer '{self.cmbLayersRoad.currentText()}' contains the attribute '{forbidden_field}', "
                             "that is created by the system during cleaning.\n"
@@ -372,8 +300,6 @@ class form_roads_clean(QDialog, FORM_CLASS):
                 msgBox.setStandardButtons(QMessageBox.Ok)
                 msgBox.exec_()
                 return 0
-
-        
         return 1
 
     def check_folder_and_file(self):
@@ -429,4 +355,3 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.textInfo.setOpenLinks(False)          
         self.textInfo.setHtml(html)
         self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
-        

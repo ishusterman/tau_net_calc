@@ -16,6 +16,7 @@ from qgis.core import (
     QgsWkbTypes,
     QgsDistanceArea,
     QgsCoordinateTransformContext,
+    NULL
     )
 
 from PyQt5.QtWidgets import QApplication
@@ -218,6 +219,8 @@ class cls_footpath_on_projection:
         # add two segments to the cloned layer
         if nearest_point:  
 
+            str_osm_id = self.normalize_id(osm_id)
+
             line_geom = QgsGeometry.fromPolylineXY(
                 [centroid_geom.asPoint(), nearest_point])
             
@@ -232,7 +235,7 @@ class cls_footpath_on_projection:
                     [nearest_point, QgsPointXY(start_vertex.x(), start_vertex.y())]))
                 feat1.setAttributes(attributes)
                 # setting the osm_id value
-                feat1.setAttribute(self.osm_id_index, osm_id)
+                feat1.setAttribute(self.osm_id_index, str_osm_id)
                 # setting the distance value 
                 feat1.setAttribute(self.distance_index, min_dist_meters)
                 # setting the type value 
@@ -255,7 +258,7 @@ class cls_footpath_on_projection:
                     [nearest_point, QgsPointXY(end_vertex.x(), end_vertex.y())]))
                 feat2.setAttributes(attributes)
                 # setting the osm_id value
-                feat2.setAttribute(self.osm_id_index, osm_id)
+                feat2.setAttribute(self.osm_id_index, str_osm_id)
                 # setting the distance value 
                 feat2.setAttribute(self.distance_index, min_dist_meters)
                 # setting the type value
@@ -297,7 +300,7 @@ class cls_footpath_on_projection:
             # calculate the length of the geometry (line)
             length_in_meters = distance_area.measureLength(feature.geometry())
 
-            osm_id = feature[self.new_field_id]
+            osm_id = self.normalize_id(feature[self.new_field_id])
 
             distance = feature['distance']
             type = feature['type']
@@ -422,8 +425,7 @@ class cls_footpath_on_projection:
                                              ):
 
         self.layer_buildings = layer_buildings
-        path_to_file = os.path.join(
-            path_to_file, 'footpath_road_projection.txt')
+        path_to_file = os.path.join(path_to_file, 'footpath_road_projection.txt')
         with open(path_to_file, mode='w', newline='') as file:
             writer = csv.writer(file)
             # column headers
@@ -442,9 +444,8 @@ class cls_footpath_on_projection:
                     if self.verify_break():
                         return 0
 
-                from_osm_id = feature.stop_id
-                dist_list = self.get_nearby_buildings(
-                    from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s") 
+                from_osm_id = self.normalize_id(feature.stop_id)
+                dist_list = self.get_nearby_buildings(from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s") 
 
                 # write building_id, building, and dist to the file
                 for to_stop_id, dist in dist_list:
@@ -462,10 +463,9 @@ class cls_footpath_on_projection:
                     if self.verify_break():
                         return 0
 
-                building_id = str(feature[layer_buildings_field])
+                building_id = self.normalize_id(feature[layer_buildings_field])
 
-                dist_list = self.get_nearby_buildings(
-                    building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s")
+                dist_list = self.get_nearby_buildings(building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s")
                 
 
                 # write building_id, building, and dist to the file
@@ -476,22 +476,18 @@ class cls_footpath_on_projection:
     def get_nearby_buildings(self, building_id, graph, dict_osm_vertex, dict_vertex_osm, mode):
 
         dist = self.MaxPath
-
         dist_dict = {}
-        vertex_id, dist_1 = dict_osm_vertex.get(building_id, ("xxx","xxx"))
+        dist_list = []
 
-        if vertex_id == "xxx":
-            return dist_dict
+        search_id = self.normalize_id(building_id)
+
+        data = dict_osm_vertex.get(search_id)
+        if data is None:
+            return dist_list # Вернет пустой список, если ничего не найдено
+            
+        vertex_id, dist_1 = data
 
         cutoff = dist - dist_1
-
-        """
-        lengths, _ = nx.single_source_dijkstra(graph,
-                                               vertex_id,
-                                               cutoff=cutoff,
-                                               weight='weight'
-                                               )
-        """
         
         lengths = nx.single_source_dijkstra_path_length(graph, vertex_id, cutoff=cutoff, weight='weight')
 
@@ -569,3 +565,11 @@ class cls_footpath_on_projection:
         points_copy = gpd.GeoDataFrame(points, columns=['stop_id', 'geometry'])
 
         return points_copy
+    
+    def normalize_id(self, val):
+        if val is None or val == NULL:
+            return None
+        try:
+            return str(int(float(val)))
+        except (ValueError, TypeError):
+            return str(val).strip()

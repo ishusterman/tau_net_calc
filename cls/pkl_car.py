@@ -83,10 +83,8 @@ class pkl_car ():
         current_dir = os.path.dirname(
             os.path.dirname(os.path.abspath(__file__)))
         config_path = os.path.join(current_dir, 'config')
-        source_path_road = os.path.join(
-            config_path, "car_speed_by_link_type.csv")
-        dest_path_road = os.path.join(
-            self.parent.path_to_protocol, f"{prefix}_car_speed_by_link_type.csv")
+        source_path_road = os.path.join(config_path, "car_speed_by_link_type.csv")
+        dest_path_road = os.path.join(self.parent.path_to_protocol, f"{prefix}_car_speed_by_link_type.csv")
 
         shutil.copy(source_path_road, dest_path_road)
 
@@ -99,26 +97,6 @@ class pkl_car ():
             return 0
 
         self.parent.progressBar.setValue(2)
-
-        """
-        if self.parent.idx_field_direction != -1:
-            
-            self.parent.setMessage(f'Validating layer of roads ...')
-            valid_values = {"T", "F", "B"}
-            field_name = self.layer_roads.fields().at(self.parent.idx_field_direction).name()
-            if any(feature.attribute(self.parent.idx_field_direction) not in valid_values 
-                    for feature in self.layer_roads.getFeatures()):
-                self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field of traffic direction "{field_name}" can contain only "T", "F", or "B". Two-way traffic assigned.</font></b></a>')
-                self.idx_field_direction = -1
-        
-        field = self.layer_roads.fields().at(self.parent.idx_field_speed)
-        field_type = field.type()
-
-        
-        if not (field_type in [QVariant.Int, QVariant.Double, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong]):
-            self.parent.textLog.append(f'<a><b><font color="red"> WARNING: The field of speed "{field.name()}" must be numeric type. The default speed is assigned</font> </b></a>')
-            self.parent.idx_field_speed = -1
-        """
 
         self.parent.progressBar.setValue(3)
 
@@ -487,8 +465,7 @@ class pkl_car ():
         return dict_building_vertex, dict_vertex_buildings
 
     def converting_roads(self):
-        self.converter = MultiLineStringToLineStringConverter(
-            self.parent, self.parent.layer_road)
+        self.converter = MultiLineStringToLineStringConverter(self.parent, self.parent.layer_road)
         layer_road = self.converter.execute()
 
         return layer_road
@@ -528,20 +505,16 @@ class pkl_car ():
                 if math.isinf(distance): continue
 
                 if self.crs_grad:
-                    distance = convert_distance_to_meters(
-                        distance, latitude)
+                    distance = convert_distance_to_meters(distance, latitude)
                 if distance <= buffer_radius:  # check that the distance does not exceed the radius
                     nearest_vertex_id = index
                     if nearest_vertex_id in dict_vertex_nearest_buildings:
-                        dict_vertex_nearest_buildings[nearest_vertex_id].append(
-                            (building_id, round(distance)))
+                        dict_vertex_nearest_buildings[nearest_vertex_id].append((building_id, round(distance)))
                     else:
                         # initialize the element as a list
-                        dict_vertex_nearest_buildings[nearest_vertex_id] = [
-                            (building_id, round(distance))]
+                        dict_vertex_nearest_buildings[nearest_vertex_id] = [(building_id, round(distance))]
         self.prefix = os.path.basename(self.parent.path_to_protocol)
-        file_path = os.path.join(
-            self.parent.path_to_protocol, f'{self.prefix}_dict_vertex_buildings.pkl')
+        file_path = os.path.join(self.parent.path_to_protocol, f'{self.prefix}_dict_vertex_buildings.pkl')
         with open(file_path, 'wb') as f:
             pickle.dump(dict_vertex_nearest_buildings, f)
 
@@ -549,6 +522,7 @@ class pkl_car ():
 
         # get points from the building layer
         points = []
+        print (f'self.parent.layer_buildings_field {self.parent.layer_buildings_field}')
 
         for c, feature in enumerate(self.parent.layer_buildings.getFeatures()):
 
@@ -587,12 +561,10 @@ class pkl_car ():
                 point_coords, k=1)
             if self.crs_grad:
                 distance = convert_distance_to_meters(distance, latitude)
-            point_to_vertex_dict[int(id)] = (
-                (nearest_vertex_index, round(distance)))
+            point_to_vertex_dict[int(id)] = ((nearest_vertex_index, round(distance)))
         
         self.prefix = os.path.basename(self.parent.path_to_protocol)
-        file_path = os.path.join(
-            self.parent.path_to_protocol, f'{self.prefix}_dict_building_vertex.pkl')
+        file_path = os.path.join(self.parent.path_to_protocol, f'{self.prefix}_dict_building_vertex.pkl')
         with open(file_path, 'wb') as f:
             pickle.dump(point_to_vertex_dict, f)
 

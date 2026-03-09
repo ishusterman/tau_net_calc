@@ -6,6 +6,7 @@ import math
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from PyQt5.QtCore import QMetaType
+from qgis.PyQt.QtCore import QVariant
 
 from qgis.core import (
     QgsVectorLayer,
@@ -22,7 +23,9 @@ from qgis.core import (
 
 from qgis import processing
 
-from common import convert_meters_to_degrees, get_unique_path
+from common import (convert_meters_to_degrees, 
+                    get_unique_path, 
+                    FIELD_ID)
 
 class TaskSignals(QObject):
     log = pyqtSignal(str)
@@ -37,7 +40,6 @@ class cls_clean_visualization(QgsTask):
                  begin_computation_time, 
                  layer, 
                  folder_name, 
-                 layer_field,
                  runVoronoi,
                  spacing,
                  task_name="Voronoi and Hexagons task"):
@@ -46,7 +48,7 @@ class cls_clean_visualization(QgsTask):
         self.begin_computation_time = begin_computation_time
         self.layer = layer
         self.folder_name = folder_name
-        self.layer_field = layer_field
+        self.layer_field = FIELD_ID
         self.runVoronoi = runVoronoi
         self.exception = None
         self.break_on = False
@@ -132,13 +134,21 @@ class cls_clean_visualization(QgsTask):
                             'OUTPUT':'TEMPORARY_OUTPUT'}
                             )
                 hexagones_layer = hexagones_result['OUTPUT']
+
+
+                clean_hexagones_result = processing.run("native:retainfields", {
+                    'INPUT': hexagones_layer,
+                    'FIELDS': ['id'], # Оставляем только нужные поля
+                    'OUTPUT': 'TEMPORARY_OUTPUT'
+                })
+                clean_hexagones_layer = clean_hexagones_result['OUTPUT']
                                     
                 if self.break_on:
                     return 0
                 self.signals.progress.emit(6 + i*4)
                 #############################################
                 self.signals.set_message.emit(f'Filtering hexagons {spacing_info}m...')
-                self.filter_hexagons_by_intersection(hexagones_layer, self.layer)
+                self.filter_hexagons_by_intersection(clean_hexagones_layer, self.layer)
             
                 if self.break_on:
                     return 0
@@ -146,7 +156,7 @@ class cls_clean_visualization(QgsTask):
                 
                 #############################################
                 self.signals.set_message.emit(f'Matching between buildings and hexagons {spacing_info}m...')
-                self.add_nearest_osm_id(hexagones_layer, centroids_layer)
+                self.add_nearest_osm_id(clean_hexagones_layer, centroids_layer)
             
 
                 if self.break_on:
@@ -154,10 +164,10 @@ class cls_clean_visualization(QgsTask):
                 self.signals.progress.emit(8 + i*4)
                 
                 #############################################
-                self.signals.set_message.emit(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on osm_id...')
+                self.signals.set_message.emit(f'Dissolving adjacent hexagons with the same ID {spacing_info}m on {FIELD_ID}...')
                 dissolve_result = processing.run("native:dissolve", 
                             {
-                            'INPUT': hexagones_layer,
+                            'INPUT': clean_hexagones_layer,
                             'FIELD': [self.layer_field],
                             'OUTPUT': 'memory:'
                             })
@@ -278,7 +288,7 @@ class cls_clean_visualization(QgsTask):
         hexagones_layer.startEditing()
 
         if self.layer_field not in [field.name() for field in hexagones_layer.fields()]:
-            hexagones_layer.dataProvider().addAttributes([QgsField(self.layer_field, QMetaType.Type.QString)])
+            hexagones_layer.dataProvider().addAttributes([QgsField(self.layer_field, QVariant.LongLong)])
             hexagones_layer.updateFields()
 
         field_index = hexagones_layer.fields().lookupField(self.layer_field)    
