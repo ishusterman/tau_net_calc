@@ -1,0 +1,8 @@
+<b>Transit Accessibility Computations, Transit Service Area Maps, Fixed Arrival/Departure Time</b> <br /><br />
+<span style="color: grey;">
+•	<b>TO Service Area (Fixed Arrival):</b> This map includes all buildings from which a traveler can use public transport to reach at least one facility, ensuring arrival at or before a specified hour. If multiple facilities are reachable, the system stores the specific route that guarantees an arrival time closest to the target hour.<br />
+•	<b>FROM Service Area (Fixed Departure):</b> This map includes all buildings a traveler can reach via public transport, starting from one or more facility buildings at a designated departure hour. If a building is accessible from multiple facilities, the system stores the route yielding the earliest possible arrival time.<br />
+•	<b>ROUNDTRIP Service Area (Fixed Arrival and Departure):</b> This map includes all buildings from which a traveler can reach at least one facility by a specified arrival hour and subsequently return home starting at a designated departure time. If multiple facilities meet these criteria, the system stores the route associated with the facility offering the minimal total travel time.<br />
+For all computations, the total trip duration is strictly capped and cannot exceed the defined maximum travel time.
+
+<span>

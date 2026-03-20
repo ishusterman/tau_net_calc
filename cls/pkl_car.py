@@ -6,14 +6,13 @@ from datetime import datetime
 from scipy.spatial import KDTree
 
 from PyQt5.QtWidgets import QApplication
-from qgis.core import (QgsProject,
-                       QgsVectorLayer,
+from qgis.core import (QgsVectorLayer,
                        QgsFeature,
                        QgsWkbTypes,
                        QgsPointXY,
                        )
 
-from PyQt5.QtCore import QVariant
+
 
 from qgis.analysis import (
     QgsGraphBuilder,
@@ -22,10 +21,11 @@ from qgis.analysis import (
     QgsNetworkDistanceStrategy
 )
 
-import csv
-
 from converter_layer import MultiLineStringToLineStringConverter
-from common import getDateTime, convert_distance_to_meters, get_existing_path
+from common import (getDateTime, 
+                    convert_distance_to_meters, 
+                    get_existing_path,
+                    transform_log_to_csv_text)
 
 class pkl_car ():
 
@@ -47,7 +47,7 @@ class pkl_car ():
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Started at {begin_computation_str}</a>')
+        self.parent.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         QApplication.processEvents()
 
         self.parent.progressBar.setMaximum(8)
@@ -133,14 +133,14 @@ class pkl_car ():
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
-        self.parent.textLog.append(f'<a>Finished {after_computation_str}</a>')
+        self.parent.textLog.append(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
-        text = self.parent.textLog.toPlainText()
+        text = transform_log_to_csv_text(self.parent.textLog.toPlainText())
         postfix = getDateTime()
-        filelog_name = f'{self.parent.path_to_protocol}//log_pkl_car_{postfix}.txt'
+        filelog_name = f'{self.parent.path_to_protocol}//log_pkl_car_{postfix}.csv'
         with open(filelog_name, "w") as file:
             file.write(text)
 
@@ -366,10 +366,6 @@ class pkl_car ():
 
         return graph
 
-
-
-
-
     def change_road_layer(self):
         comment = ""
         if self.mode == 2:
@@ -405,8 +401,7 @@ class pkl_car ():
                     else:
                         new_value = "B"
                 
-                new_feature.setAttribute(
-                    self.parent.idx_field_direction, new_value)
+                new_feature.setAttribute(self.parent.idx_field_direction, new_value)
 
             
             if self.parent.layer_road_type_road != '':
@@ -522,8 +517,7 @@ class pkl_car ():
 
         # get points from the building layer
         points = []
-        print (f'self.parent.layer_buildings_field {self.parent.layer_buildings_field}')
-
+        
         for c, feature in enumerate(self.parent.layer_buildings.getFeatures()):
 
             if c % 50000 == 0:

@@ -1,6 +1,7 @@
 import os
 import zipfile
 from pathlib import Path
+import io
 
 import pickle
 from datetime import datetime
@@ -13,26 +14,27 @@ import pstats
 #from collections import Counter
 from report import (make_protocol_detailed, 
                     make_protocol_summary, 
-                    make_service_area_report)
+                    make_service_area_report,
+                    make_service_area_report_xlsx)
 
-from PyQt5.QtWidgets import QApplication, QMessageBox
-from qgis.core import (QgsProject,
-                       QgsVectorFileWriter,
-                       )
+from PyQt5.QtWidgets import QApplication
 
 from footpath_on_projection import cls_footpath_on_projection
 from RAPTOR.std_raptor import raptor
 from RAPTOR.rev_std_raptor import rev_raptor
 
+from openpyxl import load_workbook
+from openpyxl import Workbook
 
-from footpath_on_air_b_to_b import cls_footpath_on_air_b_b
 from visualization import visualization
 from common import (seconds_to_time, 
                     get_existing_path, 
                     get_name_columns,
-                    FIELD_ID)
+                    FIELD_ID,
+                    transform_log_to_csv_text,
+                    fast_write_gpkg)
 
-def myload_all_dict(self, PathToNetwork, mode, RunOnAir):
+def myload_all_dict(self, PathToNetwork, mode ):
         path = PathToNetwork
         
         if self is not None:
@@ -40,7 +42,7 @@ def myload_all_dict(self, PathToNetwork, mode, RunOnAir):
             QApplication.processEvents()
 
         
-        base_transfer = 'transfers_dict_air.pkl' if RunOnAir else 'transfers_dict_projection.pkl'
+        base_transfer = 'transfers_dict_projection.pkl'
         filename_transfer = get_existing_path(path, base_transfer)
        
         with open(filename_transfer, 'rb') as file:
@@ -112,8 +114,7 @@ def myload_all_dict(self, PathToNetwork, mode, RunOnAir):
         )
 
 def verify_break(self,
-                 Layer="",
-                 LayerDest="",
+                 file_name_xlsx = "",
                  vis="",
                  fields_ok="",
                  f="",
@@ -130,16 +131,12 @@ def verify_break(self,
 
             if self.folder_name != "":
                 write_info(self,
-                       Layer,
-                       LayerDest,
-                       False,
-                       False,
+                       file_name_xlsx,    
                        vis,
                        fields_ok,
                        f,
                        protocol_type,
-                       shift_mode,
-                       
+                       shift_mode,                       
                        )
                 
             self.progressBar.setValue(0)
@@ -173,13 +170,12 @@ def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_
 
 
 def runRaptorWithProtocol(self,
+                          file_name_gpkg,
                           sources,
                           raptor_mode,
                           protocol_type,
                           timetable_mode,
                           D_TIME,
-                          selected_only1,
-                          selected_only2,
                           dictionary,
                           shift_mode,
                           layer_dest_obj,
@@ -237,8 +233,6 @@ def runRaptorWithProtocol(self,
     else:
         list_fields_aggregate = ""
 
-    RunOnAir = self.config['Settings']['RunOnAir'] == 'True'
-    
     if not (shift_mode):
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -257,8 +251,7 @@ def runRaptorWithProtocol(self,
         idx_by_route_stop_dict, 
         set_stops
     ) = dictionary
-
-    footpath_on_air_b_b = None
+    
     footpath_on_projection = None
     graph_projection = None
     dict_osm_vertex = None
@@ -266,23 +259,12 @@ def runRaptorWithProtocol(self,
 
     
     Dist1 = int(self.config['Settings']['MaxWalkDist1'])
-    if RunOnAir:
-        footpath_on_air_b_b = cls_footpath_on_air_b_b(layer_origin,
-                                                      layer_dest,
-                                                      Dist1,
-                                                      layer_dest_field,
-                                                      Speed
-                                                      )
-    else:
-        footpath_on_projection = cls_footpath_on_projection(None, MaxPath = Dist1)
-        graph_projection = footpath_on_projection.load_graph(path_to_pkl)
-        dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
-            path_to_pkl)
-        dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
-            path_to_pkl)
-        
 
-    
+    footpath_on_projection = cls_footpath_on_projection(None, MaxPath = Dist1)
+    graph_projection = footpath_on_projection.load_graph(path_to_pkl)
+    dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(path_to_pkl)
+    dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(path_to_pkl)
+            
     if verify_break(self):
         return 0, 0
    
@@ -310,7 +292,9 @@ def runRaptorWithProtocol(self,
         protocol_header = ss + "\n"
     
     files_path = {}
-    suffixes = ["_min_duration.csv", "_min_endtime.csv"]
+    suffixes = ["_min_duration.csv"]
+    if timetable_mode:
+        suffixes.append("_min_endtime.csv")
     if protocol_type == 1:
         aggregate_dict_all = {}
         
@@ -383,9 +367,10 @@ def runRaptorWithProtocol(self,
     else:
         vis = None 
     
-    
-    #pr_child = cProfile.Profile()
-    #pr_child.enable()
+    """
+    pr_child = cProfile.Profile()
+    pr_child.enable()
+    """
     
     if timetable_mode:
         stop_times_index = preprocess_stop_times(stoptimes_dict)
@@ -401,8 +386,6 @@ def runRaptorWithProtocol(self,
         SOURCE = sources[i]
 
         if verify_break(self,
-                        layer_origin,
-                        layer_dest,
                         vis,
                         fields_ok,
                         files_path,
@@ -411,17 +394,10 @@ def runRaptorWithProtocol(self,
                         ):
             return 0, 0
 
-        if RunOnAir:
-            nearby_buildings_from_start = footpath_on_air_b_b.get_nearby_buildings(SOURCE)
             
-            list_buildings_from_start = [
-                str(osm_id) for osm_id, _ in nearby_buildings_from_start]
-            
-        else:
-            nearby_buildings_from_start = footpath_on_projection.get_nearby_buildings(str(
-                SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b")
-            list_buildings_from_start = [
-                str(osm_id) for osm_id, _ in nearby_buildings_from_start]
+        
+        nearby_buildings_from_start = footpath_on_projection.get_nearby_buildings(str(SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b")
+        list_buildings_from_start = [str(osm_id) for osm_id, _ in nearby_buildings_from_start]
 
         SOURCE = str(SOURCE)
         D_TIME_copy = D_TIME
@@ -513,8 +489,6 @@ def runRaptorWithProtocol(self,
 
                 
                 if verify_break(self,
-                        layer_origin,
-                        layer_dest,
                         vis,
                         fields_ok,
                         f,
@@ -632,8 +606,6 @@ def runRaptorWithProtocol(self,
                 (stop_id, time_departure, dist) = step
 
                 if verify_break(self,
-                        Layer,
-                        LayerDest,
                         vis,
                         fields_ok,
                         f,
@@ -768,33 +740,48 @@ def runRaptorWithProtocol(self,
             
             f_curr = f'{self.folder_name}//{self.alias}.csv'
             f_min_duration = f_curr.replace(".csv", "_min_duration.csv")
-            f_min_endtime = f_curr.replace(".csv", "_min_endtime.csv")
+            if timetable_mode:
+                f_min_endtime = f_curr.replace(".csv", "_min_endtime.csv")
 
-            files_path = (f_min_endtime, f_min_duration)
+            files_path = [f_min_duration]
+            if timetable_mode:
+                files_path.append(f_min_endtime)
             
 
             if i == 0:
                 with open(f_min_duration, 'w') as filetowrite:
                     filetowrite.write(protocol_header)
 
-                with open(f_min_endtime, 'w') as filetowrite:
-                    filetowrite.write(protocol_header)
+                if timetable_mode:
+                    with open(f_min_endtime, 'w') as filetowrite:
+                        filetowrite.write(protocol_header)
 
-                
-                
-            make_protocol_detailed(raptor_mode,
-                                   D_TIME_copy,
-                                   output_endtime,
-                                   f_min_endtime,
-                                   timetable_mode,
-                                   nearby_buildings_from_start,
-                                   list_buildings_from_start,
-                                   set_stops,
-                                   SOURCE
-                                   )
+            sheets_to_add = []
+            
+            if timetable_mode:
+                prefix = "min_endtime"    
+                df_final, sheet_name = make_protocol_detailed(
+                                    protocol_header,
+                                    prefix,
+                                    raptor_mode,
+                                    D_TIME_copy,
+                                    output_endtime,
+                                    f_min_endtime,
+                                    timetable_mode,
+                                    nearby_buildings_from_start,
+                                    list_buildings_from_start,
+                                    set_stops,
+                                    SOURCE
+                                    )
+
+                sheets_to_add.append((sheet_name, df_final))
+            
             QApplication.processEvents()
-                        
-            make_protocol_detailed(raptor_mode,
+            prefix = "min_duration"                            
+            df_final, sheet_name = make_protocol_detailed(
+                                   protocol_header,
+                                   prefix,
+                                   raptor_mode,
                                    D_TIME_copy,
                                    output_duration,
                                    f_min_duration,
@@ -806,7 +793,11 @@ def runRaptorWithProtocol(self,
                                    short_result
                                    )
             
-            
+            sheets_to_add.append((sheet_name, df_final))
+
+            #fast_write_gpkg(file_name_gpkg, sheets_to_add)
+
+                     
             QApplication.processEvents()
             
             
@@ -814,10 +805,22 @@ def runRaptorWithProtocol(self,
     if protocol_type == 2 and len(sources) > 1 and not (timetable_mode):
         col_star = cols["star"]
         col_hash = cols["hash"]
-        f_min_endtime, _ = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime', col_star, col_hash)
         f_min_duration, short_result = make_service_area_report(f_min_duration, f'{self.alias}_min_duration', col_star, col_hash)
+        if timetable_mode:
+            f_min_endtime, _ = make_service_area_report(f_min_endtime, f'{self.alias}_min_endtime', col_star, col_hash)
+
+        """
+        if timetable_mode:
+            prefix = "min_endtime"
+            make_service_area_report_xlsx (file_name_gpkg, prefix, col_star, col_hash)
+        prefix = "min_duration"                            
+        make_service_area_report_xlsx (file_name_gpkg, prefix, col_star, col_hash)
         
-        files_path = [f_min_endtime,f_min_duration]
+        files_path = [f_min_duration]
+        if timetable_mode:
+            files_path.append(f_min_endtime)
+        """
+
         
     #if protocol_type == 1:
     #    f = f_new
@@ -826,7 +829,7 @@ def runRaptorWithProtocol(self,
     if not (shift_mode):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
-        self.textLog.append(f'<a>Finished {after_computation_str}</a>')
+        self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
     
@@ -837,34 +840,30 @@ def runRaptorWithProtocol(self,
         add_thematic_map = False
 
     write_info(self,
-               layer_origin,
-               layer_dest,
-               selected_only1,
-               selected_only2,
+               file_name_gpkg,
                vis,
                fields_ok,
                files_path,
                protocol_type,
                shift_mode,
-               add_thematic_map,
-               field_star = cols["star"],              
-               field_hash = cols["hash"],              
+               add_thematic_map                           
                )
     
     if hasattr(self, 'progressBar'):   
         self.setMessage(f'Finished')
         self.progressBar.setValue(self.progressBar.maximum())
     
+    """
+    pr_child.disable()
     
-    #pr_child.disable()
+    output_filename_txt = r"c:\doc\Igor\GIS\temp\profile_raptor.txt"
+    output_filename_prof = r"c:\doc\Igor\GIS\temp\profile_raptor.prof"
     
-    #output_filename_txt = r"c:\temp\profile_raptor.txt"
-    #output_filename_prof = r"c:\temp\profile_raptor.prof"
-    
-    #with open(output_filename_txt, "w") as f:
-    #    ps = pstats.Stats(pr_child, stream=f).sort_stats('cumulative')
-    #    ps.print_stats()
-    #pr_child.dump_stats(output_filename_prof)
+    with open(output_filename_txt, "w") as f:
+        ps = pstats.Stats(pr_child, stream=f).sort_stats('cumulative')
+        ps.print_stats()
+    pr_child.dump_stats(output_filename_prof)
+    """
     
 
     return short_result
@@ -931,25 +930,41 @@ def get_available_boardings(start_time_seconds,
 
 
 def write_info(self,
-               Layer,
-               LayerDest,
-               selected_only1,
-               selected_only2,
+               file_name_xlsx,
                vis,
                fields_ok,
                f,
                protocol_type,
                shift_mode = False,
                add_thematic_map = True,
-               field_star = "",
-               field_hash = ""
                ):
 
     if hasattr(self, 'textLog'):        
-        text = self.textLog.toPlainText()
-        filelog_name = f'{self.folder_name}//log_{self.alias}.txt'
+        
+        text = transform_log_to_csv_text(self.textLog.toPlainText())
+        filelog_name = f'{self.folder_name}//log_{self.alias}.csv'
         with open(filelog_name, "w") as file:
             file.write(text)
+
+        ######### experiment
+        """
+        log_content = self.textLog.toPlainText()
+        csv_text = transform_log_to_csv_text(log_content)
+        df_log = pd.read_csv(io.StringIO(csv_text))
+        base_name = os.path.splitext(os.path.basename(file_name_xlsx))[0]
+        sheet_name = f"log_{base_name}"[:31]
+        mode = 'a' if os.path.exists(file_name_xlsx) else 'w'
+        engine = 'openpyxl'
+        with pd.ExcelWriter(file_name_xlsx, engine=engine, mode=mode, 
+                               if_sheet_exists='replace' if mode == 'a' else None) as writer:
+                df_log.to_index=False # Если индекс не нужен в таблице
+                df_log.to_excel(writer, sheet_name=sheet_name, index=False)
+
+                wb = writer.book
+                idx = wb.sheetnames.index(sheet_name)
+                wb._sheets.insert(0, wb._sheets.pop(idx))    
+        """
+        ######### experiment
     
     if shift_mode:
         return 0
@@ -965,8 +980,6 @@ def write_info(self,
                     alias = os.path.splitext(os.path.basename(item))[0]
                     vis.add_thematic_map(item, alias, set_min_value=0)
 
-    
-
     if protocol_type == 2:
         for item in f:
             item = os.path.normpath (item)
@@ -974,74 +987,12 @@ def write_info(self,
             if not (shift_mode) and add_thematic_map:
                 alias = os.path.splitext(os.path.basename(item))[0]
                 vis.add_thematic_map(item, alias, set_min_value=0)
-
-    if (selected_only1 or selected_only2) and not shift_mode:
-        if field_star and field_hash:
-            msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Question)
-            msgBox.setWindowTitle("Confirm")
-            msgBox.setText(
-                f'Do you want to store selected features as a layer?'
-            )
-            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-
-            result = msgBox.exec_()
-            if result == QMessageBox.Yes:
-                if selected_only1:
-
-                    zip_filename1 = f'{self.folder_name}//{field_hash}_{self.alias}.zip'
-                    filename1 = f'{self.folder_name}//{field_hash}_{self.alias}.geojson'
-
-                    self.setMessage(f'Zipping the layer of {field_hash} ...')
-                    QApplication.processEvents()
-
-                    save_layer_to_zip(Layer, zip_filename1, filename1)
-
-                if selected_only2:
-
-                    zip_filename2 = f'{self.folder_name}//{field_star}_{self.alias}.zip'
-                    filename2 = f'{self.folder_name}//{field_star}_{self.alias}.geojson'
-
-                    self.setMessage(f'Zipping the layer of {field_star} ...')
-                    QApplication.processEvents()
-
-                    save_layer_to_zip(LayerDest, zip_filename2, filename2)
+    
     if not (shift_mode):
         self.textLog.append(f'<a href="file:///{self.folder_name}" target="_blank" >Output in folder</a>')
-
-
 
 def int1(s):
     result = s
     if s == "":
         result = 0
     return result
-
-
-def save_layer_to_zip(layer, zip_filename, filename):
-
-    with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp_file:
-        temp_file = tmp_file.name
-
-    QApplication.processEvents()
-
-    options = QgsVectorFileWriter.SaveVectorOptions()
-    options.driverName = "GeoJSON"
-    options.fileEncoding = "UTF-8"
-    options.onlySelectedFeatures = True
-
-    QgsVectorFileWriter.writeAsVectorFormatV3(
-                layer, 
-                temp_file, 
-                QgsProject.instance().transformContext(), 
-                options)
-
-    QApplication.processEvents()
-
-    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        zipf.write(temp_file, os.path.basename(filename))
-
-    QApplication.processEvents()
-
-    if os.path.exists(temp_file):
-        os.remove(temp_file)

@@ -1,0 +1,7 @@
+<b>Prepare Databases: Build Transit Routing Database</b> <br /><br />
+<span style="color: grey;">
+The transit routing database is constructed in two primary steps:<br />
+<b>Step 1:</b> To accurately estimate pedestrian walking distances from buildings to bus stops, any building not directly connected to the road network is programmatically linked to the nearest road link. This is achieved by generating a virtual connecting link between the building and the closest point on that adjacent road. These virtual links are used exclusively for constructing the routing database and are not permanently added to the cleaned road network layer.<br />
+<b>Step 2:</b> All relevant data concerning the road network, buildings, and public transport schedules are translated into a binary .pkl (Pickled Python Objects) format. This conversion facilitates highly accelerated accessibility computations.
+
+<span>

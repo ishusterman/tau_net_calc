@@ -29,7 +29,8 @@ from common import (get_qgis_info,
                     check_file_parameters_accessibility, 
                     getDateTime, 
                     insert_layer_ontop,
-                    check_layer                    
+                    check_layer,
+                    transform_log_to_csv_text                    
                     )
 
 from buildings_clean import cls_clean_buildings
@@ -87,26 +88,41 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.show_info()
 
     def open_file_dialog(self):
-
         project_path = QgsProject.instance().fileName()
         initial_dir = os.path.dirname(project_path) if project_path else ""
-        
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
             initial_dir,
-            "Shapefile (*.shp);"
+            "All supported (*.shp *.gpkg);;Shapefile (*.shp);;GeoPackage (*.gpkg)"
         )
+        if not file_path:
+            return
 
-        if file_path:
+        added_layers = []
+        if file_path.lower().endswith(".gpkg"):
+            temp_layer = QgsVectorLayer(file_path, "temp_discovery", "ogr")
+            if not temp_layer.isValid():
+                return
+            sublayers = temp_layer.dataProvider().subLayers()
+            for sub_info in sublayers:
+                parts = sub_info.split('!!::!!')
+                if len(parts) >= 2:
+                    layer_name = parts[1]
+                    uri = f"{file_path}|layername={layer_name}"
+                    new_layer = QgsVectorLayer(uri, layer_name, "ogr")
+                    if new_layer.isValid():
+                        QgsProject.instance().addMapLayer(new_layer)
+                        added_layers.append(new_layer)
+        else:
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             layer = QgsVectorLayer(file_path, file_name, "ogr")
-            
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
-                self.cmbLayers.setLayer(layer)
-            else:
-                self.setMessage(f"Layer '{file_name}' is invalid or corrupted.")
+                added_layers.append(layer)
+        if added_layers:
+            target_layer = added_layers[-1] 
+            self.cmbLayers.setLayer(target_layer)
 
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(
@@ -211,8 +227,8 @@ class form_buildings_clean(QDialog, FORM_CLASS):
     def save_log(self, need_save):
         if need_save:
             postfix = getDateTime()
-            filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.txt'
-            text = self.textLog.toPlainText()
+            filelog_name = f'{self.folder_name}//log_buildings_clean_{postfix}.csv'
+            text = transform_log_to_csv_text(self.textLog.toPlainText())
             with open(filelog_name, "w") as file:
                 file.write(text)
 
@@ -300,21 +316,17 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         return super().eventFilter(obj, event)
     
     def show_info(self):
-        
-        html = """
-        <b>The layer of buildings is topologically cleaned in four steps:</b>  <br /><br />
-        <span style="color: grey;">
 
-        1. The features with the absent (NULL) geometry, if exist in the layer, are deleted.<br />
-        2. Multipart features are split into single parts, see <a href="https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#multipart-to-singleparts" target="_blank">QGIS Multipart to Single Parts documentation</a>.<br /> 
-        3. Duplicated buildings, if exist, are found and excessive copies are deleted  
-        4. The delete holes algorithm is employed to delete holes in the buildings, see <a href="https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#delete-holes" target="_blank">QGIS Delete Holes documentation</a>.<br /> 
-        The building identifier must be unique. This condition is tested and the repeating or NULL identifiers are made unique by substituting the repeating values by MAX+1, MAX+2, etc., where MAX is the maximum value of the identifier before the test.<br />
-        If the option “Create ID” is chosen, a new field <i>bldg_id</i> is created as the first field of the layer’s attribute table, and filled by the consecutive integer numbers, starting from 0.<br />
-        </span>
-        """
-        self.textInfo.setOpenExternalLinks(False) 
+        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+        help_filename = "clean_buildings_layer.txt"
+        hlp_file = os.path.join(hlp_directory, help_filename)
+
+        if os.path.exists(hlp_file):
+            with open(hlp_file, 'r', encoding='utf-8') as f:
+                html = f.read()
+
+        self.textInfo.setOpenExternalLinks(False)  
         self.textInfo.setOpenLinks(False)          
         self.textInfo.setHtml(html)
-        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
+        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))    
         

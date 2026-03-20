@@ -91,7 +91,7 @@ class cls_clean_buildings(QgsTask):
 
         ############################################
 
-        self.signals.set_message.emit('Renumbering duplicated osm_id ...')
+        self.signals.set_message.emit('Renumbering duplicated id ...')
 
         layer_singlepart  = create_and_check_field(layer_singlepart, self.osm_id_field, type = 'bldg')
         
@@ -150,7 +150,7 @@ class cls_clean_buildings(QgsTask):
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
         self.signals.save_log.emit(True)
-        self.signals.log.emit(f'"{self.layer_name_single_part}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        self.signals.log.emit(f'"{self.layer_name_single_part}.gpkg" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
         self.signals.add_layers.emit(self.list_layer)
         
 
@@ -162,13 +162,13 @@ class cls_clean_buildings(QgsTask):
             super().cancel()
         except:
             return
-
     
-    
-    def save_layer_single_part (self, layer_single_part):
+    def save_layer_single_part(self, layer_single_part):
         self.signals.set_message.emit('Saving layer of buildings...')
         file_dir = self.folder_name
-        self.ext = ".shp"
+        
+        # 1. Меняем расширение на .gpkg
+        self.ext = ".gpkg" 
         output_file_name = f"{self.name}_cleaned{self.ext}"
         output_path = os.path.join(file_dir, output_file_name)
         unique_output_path = get_unique_path(output_path)
@@ -176,14 +176,21 @@ class cls_clean_buildings(QgsTask):
         layer_name = os.path.splitext(os.path.basename(unique_output_path))[0]
         
         options = QgsVectorFileWriter.SaveVectorOptions()
-        options.driverName = "ESRI Shapefile"
+        
+        # 2. Указываем драйвер GPKG
+        options.driverName = "GPKG"
         options.fileEncoding = "UTF-8"
+        
+        # 3. Для GeoPackage желательно явно указать имя слоя внутри контейнера
+        options.layerName = layer_name
 
+        # Сохраняем формат
         QgsVectorFileWriter.writeAsVectorFormatV3(
-                layer_single_part, 
-                unique_output_path, 
-                QgsProject.instance().transformContext(), 
-                options)
+            layer_single_part, 
+            unique_output_path, 
+            QgsProject.instance().transformContext(), 
+            options
+        )
         
         self.list_layer.append((unique_output_path, layer_name))    
         

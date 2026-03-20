@@ -236,19 +236,17 @@ class cls_clean_roads(QgsTask):
             
             self.signals.set_message.emit('Saving ...')
             file_dir = self.folder_name
-
-            ext = '.shp'
+            ext = '.gpkg'
             self.output_file_name = f"{name}_cleaned{ext}"
 
             output_path = os.path.join(file_dir, self.output_file_name)
             self.unique_output_path = get_unique_path(output_path)
             self.layer_name = os.path.splitext(
                 os.path.basename(self.unique_output_path))[0]
-
             options = QgsVectorFileWriter.SaveVectorOptions()
-            options.driverName = "ESRI Shapefile"
+            options.driverName = "GPKG"
             options.fileEncoding = "UTF-8"
-
+            options.layerName = self.layer_name
             QgsVectorFileWriter.writeAsVectorFormatV3(
                 filtered_layer, 
                 self.unique_output_path, 
@@ -258,10 +256,7 @@ class cls_clean_roads(QgsTask):
             saved_layer = QgsVectorLayer(
                 self.unique_output_path, self.layer_name, "ogr")
             self.saved_layer_count = saved_layer.featureCount()
-
             self.list_layer.append((self.unique_output_path, self.layer_name))
-            
-                        
             self.write_finish_info()
 
             self.signals.change_button_status.emit(True)
@@ -376,13 +371,10 @@ class cls_clean_roads(QgsTask):
        
         self.signals.save_log.emit(True)
 
-        self.signals.log.emit(f'"{self.layer_name}.shp" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
+        self.signals.log.emit(f'"{self.layer_name}.gpkg" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
 
         self.signals.set_message.emit(f'Finished')
         self.signals.add_layers.emit(self.list_layer)
-
-
-
 
     def cancel(self):
         try:

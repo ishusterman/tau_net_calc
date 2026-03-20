@@ -34,7 +34,8 @@ from common import (get_qgis_info,
                     get_documents_path,
                     get_gtfs_date_range,
                     FIELD_ID,
-                    check_layer)
+                    check_layer,
+                    transform_log_to_csv_text)
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl.ui')
@@ -55,9 +56,9 @@ class form_pkl(QDialog, FORM_CLASS):
         self.splitter.setSizes(
             [int(self.width() * 0.6), int(self.width() * 0.4)])
         
-        fix_size = 15* self.txtMaxPathRoad.fontMetrics().width('x')
+        fix_size = 20* self.txtMaxPathRoad.fontMetrics().width('x')
         self.txtMaxPathRoad.setFixedWidth(fix_size)
-        self.txtMaxPathAir.setFixedWidth(fix_size)
+        
         self.calendar.setFixedWidth(fix_size)
 
         # [1-600]
@@ -67,8 +68,7 @@ class form_pkl(QDialog, FORM_CLASS):
 
         int_validator = QRegExpValidator(regex)
         self.txtMaxPathRoad.setValidator(int_validator)
-        self.txtMaxPathAir.setValidator(int_validator)
-
+        
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
 
@@ -107,16 +107,16 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.label_9.setWordWrap(True)
         self.setLabelDayGTFS()
-        
+                
     def setLabelDayGTFS (self):
         min_str, max_str, result = get_gtfs_date_range(self.txtPathToGTFS.text())
-        msg = f"Choose a day for constructing GTFS dataset"
+        msg = f"Choose a day for constructing transit routing database"
         if min_str and max_str:
             min_date = QDate.fromString(min_str, "yyyyMMdd")
             max_date = QDate.fromString(max_str, "yyyyMMdd")
             self.calendar.setMinimumDate(min_date)
             self.calendar.setMaximumDate(max_date)
-            date_info = f"Initial GTFS dataset covers {min_date.toString('dd.MM.yyyy')} - {max_date.toString('dd.MM.yyyy')}. " if result else ""
+            date_info = f"GTFS dataset covers {min_date.toString('dd.MM.yyyy')} - {max_date.toString('dd.MM.yyyy')}. " if result else ""
             if date_info:
                 msg = f"{date_info}  \n{msg}"
         self.label_9.setText(msg)
@@ -199,14 +199,16 @@ class form_pkl(QDialog, FORM_CLASS):
         
         self.layer_buildings_path = os.path.normpath(self.layer_building.dataProvider().dataSourceUri().split("|")[0])
         self.layer_roads_path = os.path.normpath(self.layer_road.dataProvider().dataSourceUri().split("|")[0])
-
+        self.textLog.append(f'<a> [Input]</a>')
         self.textLog.append(f"<a> Layer of buildings: {self.layer_buildings_path}</a>")
         self.textLog.append(f"<a> Layer of roads: {self.layer_roads_path}</a>")
-        self.textLog.append(f"<a> Maximal walking path on road: {self.config['Settings']['MaxPathRoad_pkl']}</a>")
-        self.textLog.append(f"<a> Maximal walking path on air: {self.config['Settings']['MaxPathAir_pkl']}</a>")
-        self.textLog.append(f"<a> The folder of the initial GTFS dataset: {self.config['Settings']['PathToGTFS_pkl']}</a>")
-        self.textLog.append(f"<a> The day for constructing a modified GTFS dataset : {QDate.fromString(self.config['Settings']['Date_pkl'], 'yyyyMMdd').toString('dd.MM.yyyy')}</a>")
-        self.textLog.append(f"<a> Folder to store transit database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
+        self.textLog.append(f"<a> Maximum length of a single walk: {self.config['Settings']['MaxPathRoad_pkl']}</a>")
+        
+        self.textLog.append(f"<a> The folder of the GTFS dataset: {self.config['Settings']['PathToGTFS_pkl']}</a>")
+        self.textLog.append(f"<a> The day for constructing transit routing database: {QDate.fromString(self.config['Settings']['Date_pkl'], 'yyyyMMdd').toString('dd.MM.yyyy')}</a>")
+        self.textLog.append(f'<a> [Output]</a>')
+
+        self.textLog.append(f"<a> Folder to store transit routing database: {self.config['Settings']['PathToProtocols_pkl']}</a>")
 
         self.prepare()
         if self.break_on:
@@ -264,9 +266,6 @@ class form_pkl(QDialog, FORM_CLASS):
         if 'MaxPathRoad_pkl' not in self.config['Settings']:
             self.config['Settings']['MaxPathRoad_pkl'] = '400'    
 
-        if 'MaxPathAir_pkl' not in self.config['Settings']:
-            self.config['Settings']['MaxPathAir_pkl'] = '400'        
-
         if 'Date_pkl' not in self.config['Settings']:
             self.config['Settings']['Date_pkl'] = '20000101'  
 
@@ -281,7 +280,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.config['Settings']['Layer_pkl'] = self.cmbLayers.currentLayer().id()
         
         self.config['Settings']['MaxPathRoad_pkl'] = self.txtMaxPathRoad.text()
-        self.config['Settings']['MaxPathAir_pkl'] = self.txtMaxPathAir.text()
+        
         selected_date = self.calendar.date()
         self.config['Settings']['Date_pkl'] = selected_date.toString("yyyyMMdd")
 
@@ -296,8 +295,7 @@ class form_pkl(QDialog, FORM_CLASS):
 
         self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols_pkl']))
         self.txtMaxPathRoad.setText(self.config['Settings']['MaxPathRoad_pkl'])
-        self.txtMaxPathAir.setText(self.config['Settings']['MaxPathAir_pkl'])
-
+        
         self.cmbLayers.setCurrentText(self.config['Settings']['Layer_pkl'])        
         self.cbRoads.setCurrentText(self.config['Settings']['Roads_pkl'])
 
@@ -370,7 +368,7 @@ class form_pkl(QDialog, FORM_CLASS):
         
         layer_origins_field = FIELD_ID
         MaxPathRoad = self.config['Settings']['MaxPathRoad_pkl']
-        MaxPathAir = self.config['Settings']['MaxPathAir_pkl']
+        
 
         QApplication.processEvents()
                 
@@ -391,7 +389,7 @@ class form_pkl(QDialog, FORM_CLASS):
                                  self.layer_road,
                                  layer_origins_field,
                                  MaxPathRoad,
-                                 MaxPathAir,
+        
                                  check_date
                                  )
             run_ok = calc_GTFS.correcting_files()
@@ -421,10 +419,10 @@ class form_pkl(QDialog, FORM_CLASS):
                 duration_computation).split('.')[0]
             self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
-            text = self.textLog.toPlainText()
+            text = transform_log_to_csv_text(self.textLog.toPlainText())
             postfix = getDateTime()
             
-            filelog_name = os.path.join(path_to_PKL, f'log_pkl_pt_{postfix}.txt')
+            filelog_name = os.path.join(path_to_PKL, f'log_pkl_pt_{postfix}.csv')
             with open(filelog_name, "w") as file:
                 file.write(text)
 
@@ -447,30 +445,22 @@ class form_pkl(QDialog, FORM_CLASS):
                 event.ignore()
                 return True
         return super().eventFilter(obj, event)
-    
-    def load_text_with_bold_first_line(self, file_path):
-        if not os.path.exists(file_path):
-            return
-        with open(file_path, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-            if not lines:
-                return  
-            first_line = f"<b>{lines[0].strip()}</b>"  
-            other_lines = "".join(lines[1:]) 
-
-        other_lines_with_br = other_lines.replace("\n", "<br>")
-        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
-        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
-        self.textInfo.setHtml(full_text)
-    
-    def show_info(self):
         
+    def show_info(self):
+
         hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
-        help_filename = "transit_db.txt"
-            
+      
+        help_filename = "build_transit_routing_database.txt"
         hlp_file = os.path.join(hlp_directory, help_filename)
-        hlp_file = os.path.normpath(hlp_file)
-        self.load_text_with_bold_first_line (hlp_file)
+
+        if os.path.exists(hlp_file):
+            with open(hlp_file, 'r', encoding='utf-8') as f:
+                html = f.read()
+
+        self.textInfo.setOpenExternalLinks(False)  
+        self.textInfo.setOpenLinks(False)          
+        self.textInfo.setHtml(html)
+        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))  
 
     def closeEvent(self, event):
         self.break_on = True

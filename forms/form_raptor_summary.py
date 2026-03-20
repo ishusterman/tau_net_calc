@@ -105,3 +105,22 @@ class RaptorSummary(RaptorDetailed):
                     i, Qt.Unchecked, role=Qt.CheckStateRole)
 
         self.txtTimeInterval.setText(self.config['Settings']['TimeInterval'])
+
+    def show_info(self):
+
+            hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+
+            if self.timetable_mode:
+                help_filename = "transit_cumulative_schedule.txt"
+            else:
+                help_filename = "transit_cumulative_fixed.txt"
+            hlp_file = os.path.join(hlp_directory, help_filename)
+
+            if os.path.exists(hlp_file):
+                with open(hlp_file, 'r', encoding='utf-8') as f:
+                    html = f.read()
+
+            self.textInfo.setOpenExternalLinks(False)  
+            self.textInfo.setOpenLinks(False)          
+            self.textInfo.setHtml(html)
+            self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString())) 

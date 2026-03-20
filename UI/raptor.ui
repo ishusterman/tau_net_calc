@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>788</width>
-    <height>730</height>
+    <width>896</width>
+    <height>685</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -52,9 +52,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-186</y>
+             <y>-327</y>
              <width>742</width>
-             <height>963</height>
+             <height>884</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -208,19 +208,6 @@ QGroupBox::title {
                        </property>
                       </widget>
                      </item>
-                     <item>
-                      <widget class="QCheckBox" name="cbSelectedOnly1">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="text">
-                        <string>Selected features only</string>
-                       </property>
-                      </widget>
-                     </item>
                     </layout>
                    </item>
                    <item>
@@ -249,19 +236,6 @@ QGroupBox::title {
                       <widget class="QToolButton" name="toolButtonLayer2">
                        <property name="text">
                         <string>...</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="cbSelectedOnly2">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="text">
-                        <string>Selected features only</string>
                        </property>
                       </widget>
                      </item>
@@ -327,7 +301,7 @@ QGroupBox::title {
                    <item>
                     <widget class="QLabel" name="label_13">
                      <property name="text">
-                      <string>Output folder</string>
+                      <string>Save output as…</string>
                      </property>
                     </widget>
                    </item>
@@ -343,30 +317,64 @@ QGroupBox::title {
                        </property>
                       </widget>
                      </item>
+                     <item>
+                      <widget class="QLabel" name="lblAlias">
+                       <property name="text">
+                        <string>Alias</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtAlias">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                      </widget>
+                     </item>
                     </layout>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_7">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="text">
-                      <string>Output alias</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QLineEdit" name="txtAlias">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                    </widget>
+                    <layout class="QHBoxLayout" name="horizontalLayout_5">
+                     <item>
+                      <widget class="QLabel" name="lblTimeInterval">
+                       <property name="text">
+                        <string>Save the accumulated number of opportunities at a time resolution of</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtTimeInterval">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>20</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="lblTimeInterval2">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>minutes</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
                    </item>
                    <item>
                     <widget class="QLabel" name="label">
@@ -414,7 +422,7 @@ QGroupBox::title {
                     </string>
                   </property>
                   <property name="title">
-                   <string>Numbers of transfers, walking distances, walking speed, waiting times</string>
+                   <string>Transit Tolerance Thresholds</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_params">
                    <item>
@@ -569,17 +577,6 @@ QGroupBox::title {
                     </layout>
                    </item>
                    <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_22">
-                     <item>
-                      <widget class="QCheckBox" name="cbRunOnAir">
-                       <property name="text">
-                        <string>Aerial distance</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_12">
                      <item>
                       <widget class="QLabel" name="label_4">
@@ -654,6 +651,30 @@ QGroupBox::title {
                      </item>
                     </layout>
                    </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_15">
+                     <item>
+                      <widget class="QLabel" name="label_24">
+                       <property name="text">
+                        <string>Maximum travel time, min</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtMaxTimeTravel">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>20</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
                   </layout>
                  </widget>
                 </item>
@@ -679,7 +700,7 @@ QGroupBox::title {
                     </string>
                   </property>
                   <property name="title">
-                   <string>Arrival/Departure times, maximum travel times</string>
+                   <string>Arrival/Departure times</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_times">
                    <item>
@@ -714,13 +735,6 @@ QGroupBox::title {
                      <item>
                       <layout class="QHBoxLayout" name="rightLayout_start">
                        <item>
-                        <widget class="QLabel" name="lblStartTime2">
-                         <property name="text">
-                          <string>between</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
                         <widget class="QTimeEdit" name="dtStartTime">
                          <property name="alignment">
                           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -733,7 +747,21 @@ QGroupBox::title {
                        <item>
                         <widget class="QLabel" name="lblStartTime3">
                          <property name="text">
-                          <string>and</string>
+                          <string>schedule-adjustment gap</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="txtMaxExtraTime">
+                         <property name="alignment">
+                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="lblStartTime4">
+                         <property name="text">
+                          <string>minutes</string>
                          </property>
                         </widget>
                        </item>
@@ -748,30 +776,6 @@ QGroupBox::title {
                         </widget>
                        </item>
                       </layout>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_11">
-                     <item>
-                      <widget class="QLabel" name="lblMaxExtraTime">
-                       <property name="text">
-                        <string>Latest arrival time is T minutes later, T =</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="txtMaxExtraTime">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>20</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                       </property>
-                      </widget>
                      </item>
                     </layout>
                    </item>
@@ -928,60 +932,6 @@ QGroupBox::title {
                         </widget>
                        </item>
                       </layout>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_15">
-                     <item>
-                      <widget class="QLabel" name="label_24">
-                       <property name="text">
-                        <string>Maximum travel time, min</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="txtMaxTimeTravel">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>20</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QWidget" name="widget_spacer5" native="true">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="lblTimeInterval">
-                       <property name="text">
-                        <string>Store output every, min</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="txtTimeInterval">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>20</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                       </property>
-                      </widget>
                      </item>
                     </layout>
                    </item>

@@ -1,0 +1,10 @@
+<b>Car Accessibility Computations, Car Service Area Maps</b> <br /><br />
+<span style="color: grey;">
+•	<b>TO Service Area:</b> This map encompasses all buildings from which a traveler can use a car to reach at least one facility building, arriving at or before a specified hour. If multiple facilities can be accessed, the system stores the route to the facility that provides the earliest possible arrival time.<br />
+•	<b>FROM Service Area:</b> This map includes all buildings a traveler can reach by car, starting from one or more facility buildings at a designated departure hour. If a destination building can be accessed from multiple facilities, the system stores the route from the facility that provides the earliest possible arrival time.<br />
+•	<b>ROUNDTRIP Service Area:</b> This map comprises all buildings a traveler can reach via a return car trip to one or more facility buildings. If multiple facilities can be accessed, the system stores the route to the facility that provides the earliest possible arrival time.<br />
+ 
+For all car service area calculations, the total trip duration is strictly capped at the defined maximum travel time.
+
+
+<span>

@@ -1,0 +1,8 @@
+<b>Transit Accessibility Computations, Transit Service Area Maps, Schedule-Based Arrival/Departure Time</b> <br /><br />
+<span style="color: grey;">
+•	<b>TO Service Area (Schedule-Based Arrival):</b> This map includes all buildings from which a traveler — equipped with timetable knowledge — can use public transport to reach at least one facility at or before a specified hour. The traveler optimizes their trip by arriving at the initial transit stop at the exact moment of the bus's arrival. If multiple facilities are accessible, the system stores the route guaranteeing an arrival time closest to the target hour.<br />
+•	<b>FROM Service Area (Schedule-Based Departure):</b> This map includes all buildings a timetable-informed traveler can reach via public transport, starting from one or more facilities. The traveler minimizes wait time by arriving at the initial transit stop exactly as the bus arrives.<br />
+•	<b>ROUNDTRIP Service Area (Schedule-Based Arrival and Departure):</b> This map includes all buildings from which a timetable-informed traveler can reach at least one facility by a specific hour and then return home starting at a specific time. If multiple facilities are reachable, the system stores the route to the facility yielding the minimal total travel time.<br />
+The output consistently reflects the fastest possible trips, and the total duration for any journey cannot exceed the defined maximum travel time.
+
+<span>

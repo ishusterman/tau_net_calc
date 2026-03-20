@@ -1,0 +1,10 @@
+<b>Data Preprocessing: Clean Buildings Layer</b> <br /><br />
+<span style="color: grey;">
+The building layer is topologically cleaned in four steps:<br />
+<b>Step 1:</b> Any features within the layer that possess an absent (NULL) geometry are deleted.<br />
+<b>Step 2:</b> All multipart features are separated into <a href="https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#multipart-to-singleparts" target="_blank">single-part geometries</a>.<br />
+<b>Step 3:</b> The layer is scanned for duplicated buildings; if any exist, the excess copies are removed.<br />
+<b>Step 4:</b> <a href="https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#delete-holes" target="_blank">The delete holes algorithm</a> is applied to remove any internal gaps or holes within the building polygons .<br />
+Just as with the road network, every building must possess a unique identifier. Therefore, a new identifier field named <i>aid</i> is created and populated with consecutive integers beginning at 0, which guarantees strict data consistency during all subsequent accessibility calculations.
+
+<span>

@@ -105,7 +105,7 @@
               <item row="7" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
-                 <string>The folder of the initial GTFS dataset</string>
+                 <string>The folder of the GTFS dataset</string>
                 </property>
                </widget>
               </item>
@@ -140,7 +140,7 @@
                </layout>
               </item>
               <item row="14" column="0" colspan="2">
-               <widget class="QLabel" name="label_10">
+               <widget class="QLabel" name="lblNumbers">
                 <property name="text">
                  <string>Enter numbers of lines to delete (comma separated)</string>
                 </property>
@@ -238,7 +238,7 @@
               <item row="19" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
-                 <string>Folder to store modified dataset</string>
+                 <string>Folder to store the modified GTFS dataset</string>
                 </property>
                </widget>
               </item>
@@ -275,7 +275,7 @@
               <item row="12" column="0">
                <widget class="QLabel" name="lblAddLines">
                 <property name="text">
-                 <string>The folder of the GTFS dataset of the additional lines</string>
+                 <string>The folder of the additional GTFS dataset</string>
                 </property>
                </widget>
               </item>

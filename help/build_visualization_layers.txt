@@ -1,0 +1,12 @@
+<b>Prepare Databases: Build Visualization Layers</b> <br /><br />
+<span style="color: grey;">
+The visualization layers are generated using Voronoi polygons and hexagon grids. First, a layer of Voronoi polygons is generated using the centroids of the building foundations. To restrict their size, these polygons are clipped using a 50m radius buffer applied around the building layer.<br />
+Additionally, the user can generate up to five default layers of hexagons for lower-resolution visualization, with each layer covering the entire spatial extent of the building layer.<br />
+•	The default side lengths for these hexagon layers are 50, 100, 200, 400, and 800 meters.<br />
+•	Any hexagon that does not intersect at least one building is automatically deleted from the layer.<br />
+•	Each hexagon inherits its identifier from the aid of the building positioned closest to its centroid. If multiple buildings are equidistant from the centroid, the algorithm assigns the lowest available identifier.<br />
+•	Adjacent hexagons sharing the same identifier are dissolved into a single, unified polygon.<br />
+Users can also construct custom hexagon layers with arbitrary side lengths. To create multiple custom hexagon layers, simply run this tool multiple times. All hexagon grids are generated using <a href="https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/vectorcreation.html#create-grid" target="_blank">the QGIS Create Grid algorithm</a>.
+
+
+<span>

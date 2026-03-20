@@ -224,7 +224,7 @@ def raptor(SOURCE,
                               )
         """
         
-        if k < roundsCount and MaxWalkDist2_time != MaxWalkDist3_time:
+        if k < roundsCount: # and MaxWalkDist2_time != MaxWalkDist3_time:   exp!!!
 
             save_marked_stop = True
             
@@ -289,12 +289,13 @@ def process_walking_stage(max_time,
                           save_marked_stop,
                           list_stops,
                           check_only_buildings
-
                           ):
 
     marked_stop_copy = marked_stop.copy()
     
     for p in marked_stop_copy:
+
+        #print (p)
 
         if pi_label[k][p][0] == 'walking':
             continue

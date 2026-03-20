@@ -1,0 +1,10 @@
+<b>Prepare Databases: Build Car Routing Database</b> <br /><br />
+<span style="color: grey;">
+The car routing database is built relying on three key attributes: the traffic direction of the links, the maximum traffic speed, and an hourly congestion delay coefficient. The construction follows these principles:<br />
+•	If the road layer originates from an OSM database, the maximum traffic speed for each link is automatically retrieved from the default table of average free-flow speeds, based on the specific road link type. To modify this table, click the designated link within the dialog. If edited, the new version overwrites the previous one, and the user assumes responsibility for storing backups if necessary.<br />
+•	If the road layer is sourced from a non-OSM database, the designated maximum traffic speed attribute is utilized exactly as provided.<br />
+•	If any data regarding traffic directions or maximum speeds are found to be missing or incorrect, the system will prompt the user to resolve the issue before attempting the computations again.<br />
+•	The congestion delay coefficient is determined by the trip's starting time and is applied uniformly throughout the entire duration of the trip. To modify the table of these coefficients, click the designated link within the dialog. As with the speed table, editing this will overwrite the existing version, making the user responsible for maintaining any needed backups.<br />
+•	Finally, the road network and building data are compiled into a binary .pkl (Pickled Python Objects) format to ensure rapid accessibility computations.
+
+<span>

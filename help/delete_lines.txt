@@ -1,0 +1,4 @@
+<b>Prepare Databases: Delete Lines from GTFS</b> <br /><br />
+<span style="color: grey;">
+This dialog interface allows users to easily remove specific transit lines from an existing GTFS dataset.
+<span>

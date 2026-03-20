@@ -6,6 +6,7 @@ import re
 import numpy as np
 from datetime import datetime
 import configparser
+import csv
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
                              QDialog,
@@ -23,6 +24,7 @@ from PyQt5.QtCore import (Qt,
                           )
 from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
+from qgis.gui import QgsFileWidget
 
 from visualization import visualization
 from common import (getDateTime, 
@@ -49,6 +51,9 @@ class form_relative(QDialog, FORM_CLASS):
         self.setWindowTitle(title)
         self.splitter.setSizes([int(self.width() * 0.6), int(self.width() * 0.4)])
 
+        self.fix_size3 = 25 * self.txtPathToOutput.fontMetrics().width('x')
+        self.txtAlias.setFixedWidth(self.fix_size3)
+
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
         self.break_on = False
@@ -61,9 +66,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
         self.toolButton_Output.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToOutput))
-        self.toolButton_PT.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToPT))
-        self.toolButton_Car.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToCar))
-
+        
         self.btnBreakOn.clicked.connect(self.set_break_on)
         self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
         self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
@@ -76,51 +79,58 @@ class form_relative(QDialog, FORM_CLASS):
         self.cbVisLayers.installEventFilter(self)
         self.cbVisLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
 
-        self.cmbListFiles1.installEventFilter(self)
-        self.cmbListFiles2.installEventFilter(self)
-
         self.toolButtonViz.clicked.connect(lambda: self.open_file_dialog ())
 
         self.default_aliase = f'{getDateTime()}'
 
-        self.txtPathToPT.textChanged.connect(lambda:
-                                             self.fill_combobox_with_csv_files
-                                             (self.cmbListFiles1,
-                                              self.txtPathToPT.text()))
-
-        self.txtPathToCar.textChanged.connect(lambda:
-                                              self.fill_combobox_with_csv_files
-                                              (self.cmbListFiles2,
-                                               self.txtPathToCar.text()))
+        self.widget_result1.setStorageMode(QgsFileWidget.GetFile)
+        self.widget_result2.setStorageMode(QgsFileWidget.GetFile)
+        self.widget_result1.setFilter("CSV files (*.csv);")
+        self.widget_result2.setFilter("CSV files (*.csv);")
 
         self.ParametrsShow()
         self.show_info()
 
-    def open_file_dialog(self):
+        self.lblAlias.setVisible(False)
+        self.txtAlias.setVisible(False)
 
+    def open_file_dialog(self):
         project_path = QgsProject.instance().fileName()
         initial_dir = os.path.dirname(project_path) if project_path else ""
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
             initial_dir,
-            "Shapefile (*.shp);"
+            "All supported (*.shp *.gpkg);;Shapefile (*.shp);;GeoPackage (*.gpkg)"
         )
-        
-        if file_path:
+        if not file_path:
+            return
+
+        added_layers = []
+        if file_path.lower().endswith(".gpkg"):
+            temp_layer = QgsVectorLayer(file_path, "temp_discovery", "ogr")
+            if not temp_layer.isValid():
+                return
+            sublayers = temp_layer.dataProvider().subLayers()
+            for sub_info in sublayers:
+                parts = sub_info.split('!!::!!')
+                if len(parts) >= 2:
+                    layer_name = parts[1]
+                    uri = f"{file_path}|layername={layer_name}"
+                    new_layer = QgsVectorLayer(uri, layer_name, "ogr")
+                    if new_layer.isValid():
+                        QgsProject.instance().addMapLayer(new_layer)
+                        added_layers.append(new_layer)
+        else:
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             layer = QgsVectorLayer(file_path, file_name, "ogr")
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
-                self.cbVisLayers.setLayer(layer)
-
-    def fill_combobox_with_csv_files(self, obj, path):
-
-        obj.clear()
-        if os.path.exists(path):
-            csv_files = [f for f in os.listdir(path) if f.endswith('.csv')]
-            obj.addItems(csv_files)
-
+                added_layers.append(layer)
+        if added_layers:
+            target_layer = added_layers[-1] 
+            self.cbVisLayers.setLayer(target_layer)
+      
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
 
@@ -144,20 +154,22 @@ class form_relative(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             return 0
 
-        if not (self.check_folder_and_file(self.txtPathToPT.text())):
-            self.run_button.setEnabled(True)
-            return 0
-
-        if not (self.check_folder_and_file(self.txtPathToCar.text())):
-            self.run_button.setEnabled(True)
-            return 0
-
-        if self.cmbListFiles1.currentText() == "":
+        if not self.widget_result1.filePath():
             self.setMessage('File1 is not provided')
             self.run_button.setEnabled(True)
             return 0
 
-        if self.cmbListFiles2.currentText() == "":
+        if not self.widget_result1.filePath():
+            self.setMessage('File2 is not provided')
+            self.run_button.setEnabled(True)
+            return 0
+
+        if not os.path.isfile(self.widget_result1.filePath()):
+            self.setMessage('File1 is not provided')
+            self.run_button.setEnabled(True)
+            return 0
+
+        if not os.path.isfile(self.widget_result2.filePath()):
             self.setMessage('File2 is not provided')
             self.run_button.setEnabled(True)
             return 0
@@ -178,7 +190,7 @@ class form_relative(QDialog, FORM_CLASS):
         
         cols_dict = get_name_columns()
         
-        mode_first, mode_roundtrip_first, self.MAP_first, AccessibilityText_first = self.check_log(self.txtPathToPT.text())
+        mode_first, mode_roundtrip_first, self.MAP_first, AccessibilityText_first = self.check_log(os.path.dirname(self.widget_result1.filePath()))
         
         self.from_to_first = 1 if mode_first else 2
         protocol = 1 if self.MAP_first else 2
@@ -186,7 +198,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.first_col_star = cols["star"]
         self.first_col_hash = cols["hash"]
 
-        mode_second, mode_roundtrip_second, self.MAP_second, AccessibilityText_second = self.check_log(self.txtPathToCar.text())
+        mode_second, mode_roundtrip_second, self.MAP_second, AccessibilityText_second = self.check_log(os.path.dirname(self.widget_result2.filePath()))
         
         self.from_to_second = 1 if mode_second else 2
         protocol = 1 if self.MAP_second else 2
@@ -282,7 +294,7 @@ class form_relative(QDialog, FORM_CLASS):
                             mode=mode_visualization,
                             fieldname_layer=fieldname_layer,
                             mode_compare=True,
-                            from_to = 1                            
+                            from_to = self.from_to_first
                             )
 
         begin_computation_time = datetime.now()
@@ -468,8 +480,8 @@ class form_relative(QDialog, FORM_CLASS):
         self.config.read(f)
 
         self.config['Settings']['PathToOutput_relative'] = self.txtPathToOutput.text()
-        self.config['Settings']['PathToPT_relative'] = self.txtPathToPT.text()
-        self.config['Settings']['PathToCar_relative'] = self.txtPathToCar.text()
+        self.config['Settings']['PathToPT_relative'] = self.widget_result1.filePath()
+        self.config['Settings']['PathToCar_relative'] = self.widget_result2.filePath()
 
         self.config['Settings']['calc_ratio_relative'] = str(self.cb_ratio.isChecked())
         self.config['Settings']['calc_difference_relative'] = str(self.cb_difference.isChecked())
@@ -485,8 +497,8 @@ class form_relative(QDialog, FORM_CLASS):
         self.readParameters()
 
         self.txtPathToOutput.setText(os.path.normpath(self.config['Settings']['PathToOutput_relative']))
-        self.txtPathToPT.setText(os.path.normpath(self.config['Settings']['PathToPT_relative']))
-        self.txtPathToCar.setText(os.path.normpath(self.config['Settings']['PathToCar_relative']))
+        self.widget_result1.setFilePath(os.path.normpath(self.config['Settings']['PathToPT_relative']))
+        self.widget_result2.setFilePath(os.path.normpath(self.config['Settings']['PathToCar_relative']))
 
         cb1 = self.config['Settings']['calc_ratio_relative'].lower() == "true"
         self.cb_ratio.setChecked(cb1)
@@ -494,13 +506,9 @@ class form_relative(QDialog, FORM_CLASS):
         self.cb_difference.setChecked(cb1)
         cb1 = self.config['Settings']['calc_relative_difference_relative'].lower() == "true"
         self.cb_relative_difference.setChecked(cb1)
-       
         self.cbVisLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['VisLayer_relative']))
-
         self.txtAlias.setText(self.default_aliase)
 
-        self.fill_combobox_with_csv_files(self.cmbListFiles1, self.config['Settings']['PathToPT_relative'])
-        self.fill_combobox_with_csv_files(self.cmbListFiles2, self.config['Settings']['PathToCar_relative'])
 
     def check_output_folder(self):
         self.setMessage("")
@@ -520,62 +528,86 @@ class form_relative(QDialog, FORM_CLASS):
         return True
 
     def parse_log_file(self, file_path):
+        """Парсит CSV-лог от [Mode] до [Processing], исключая заголовки разделов."""
         params = {}
-        with open(file_path, 'r') as file:
-            inside_mode = False
-            for line in file:
-                line = line.strip()
-                if line.startswith('[Mode]'):
-                    inside_mode = True
-                    continue
-                if line.startswith('Started:'):
-                    break
-                if inside_mode and ': ' in line:
-                    param, value = line.split(': ', 1)
-                    params[param] = value
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f, quotechar='"', delimiter=',')
+                
+                start_recording = False
+                
+                for row in reader:
+                    if not row or len(row) < 2:
+                        continue
+                    
+                    param_name = row[0].strip()
+                    param_value = row[1].strip()
+
+                    # Включаем запись, когда дошли до раздела [Mode]
+                    if param_name == "[Mode]":
+                        start_recording = True
+                        continue # Пропускаем саму строку заголовка
+                    
+                    # Выключаем запись, когда дошли до раздела [Processing]
+                    if param_name == "[Processing]":
+                        break
+                    
+                    if start_recording:
+                        # Игнорируем любые другие заголовки разделов внутри диапазона (например, [Input], [Output])
+                        if param_name.startswith("[") and param_name.endswith("]"):
+                            continue
+                        
+                        # Сохраняем параметр, если у него есть имя
+                        if param_name:
+                            params[param_name] = param_value
+                            
+        except Exception as e:
+            print(f"Error parsing log file {file_path}: {e}")
+            
         return params
 
     def make_log_compare(self):
-        path1 = self.txtPathToPT.text()
-        path2 = self.txtPathToCar.text()
+        path1 = os.path.dirname(self.widget_result1.filePath())
+        path2 = os.path.dirname(self.widget_result2.filePath())
+        pattern = 'log_*.csv'
+        files1 = glob.glob(os.path.join(path1, pattern))
+        files2 = glob.glob(os.path.join(path2, pattern))
+        if not files1 or not files2:
+            self.textLog.append("<b style='color:red;'>[Error] Log CSV files not found for comparison.</b>")
+            return
 
-        pattern = 'log_*.txt'
-        file_path1 = glob.glob(os.path.join(path1, pattern))[0]
-        file_path2 = glob.glob(os.path.join(path2, pattern))[0]
-
-        # parse both files
+        file_path1 = files1[0]
+        file_path2 = files2[0]
         params_file1 = self.parse_log_file(file_path1)
         params_file2 = self.parse_log_file(file_path2)
         comparison_array = []
-
-        # process the Mode parameter separately to ensure it is the first one
-        mode_value_file1 = params_file1.pop('Mode', 'XXX')
-        mode_value_file2 = params_file2.pop('Mode', 'XXX')
-
+        mode_v1 = params_file1.pop('Mode', 'N/A')
+        mode_v2 = params_file2.pop('Mode', 'N/A')
         comparison_array.append({
             'parameter': 'Accessibility computation options',
-            'value_file1': mode_value_file1,
-            'value_file2': mode_value_file2
+            'value_file1': mode_v1,
+            'value_file2': mode_v2
         })
 
-        # add all parameters from the first file
+        # Добавляем все параметры из первого файла
         for param in params_file1:
             comparison_array.append({
                 'parameter': param,
                 'value_file1': params_file1[param],
-                'value_file2': params_file2.get(param, 'XXX')
+                'value_file2': params_file2.get(param, '---')
             })
 
-        #  add the remaining parameters from the second file that were not present in the first one
+        # Добавляем параметры из второго файла, которых нет в первом
         for param in params_file2:
-            if param not in [entry['parameter'] for entry in comparison_array]:
+            if not any(entry['parameter'] == param for entry in comparison_array):
                 comparison_array.append({
                     'parameter': param,
-                    'value_file1': 'XXX',
+                    'value_file1': '---',
                     'value_file2': params_file2[param]
                 })
-        
+       
         html_table = self.generate_html_table(comparison_array)
+        self.textLog.append("<br><b style='font-size:14px;'>Comparison of scenarios:</b>")
         self.textLog.append(html_table)
 
     def generate_html_table(self, comparison_array):
@@ -588,67 +620,54 @@ class form_relative(QDialog, FORM_CLASS):
         html += "</table>"
         return html
 
+
+
     def check_log(self, path):
-        pattern = 'log_*.txt'
-        file_path = glob.glob(os.path.join(path, pattern))
-        file_path = file_path[0]
+        pattern = 'log_*.csv'
+        files = glob.glob(os.path.join(path, pattern))
+        if not files:
+            return (False, False, False, "")
+        
+        file_path = files[0]
+        
+        # Инициализация флагов
         mode_from = False
         mode_roundtrip = False
         mode_cumulative = False
-        AccessibilityText = ""
+        accessibility_text = ""
 
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            
+            reader = csv.reader(f, quotechar='"', delimiter=',')
+            # (Пропускаем заголовок "Parameter","Value")
+            data = {row[0]: row[1] for row in reader if len(row) >= 2}
 
-            for line in file:
+        
+        if "Accessibility" in data:
+            accessibility_text = data["Accessibility"]
+            if "FROM" in accessibility_text.upper():
+                mode_from = True
+            if "TO" in accessibility_text.upper():
+                mode_from = False
+            if "ROUNDTRIP" in accessibility_text.upper():
+                mode_roundtrip = True
+                mode_from = True
 
-                if "Accessibility:" in line:
-
-                    AccessibilityText = line.split("Accessibility:", 1)[1].strip()
-
-                    if "FROM" in line:
-                        mode_from = True
-                    
-                    if "TO" in line:
-                        mode_from = False
-                
-                    if "ROUNDTRIP" in line:
-                        mode_roundtrip = True
-                        mode_from = True
-                
-
-                if "Mode:" in line:
-                    if "cumulative" in line:
-                        mode_cumulative = True
-
-                
+        if "Mode" in data:
+            if "cumulative" in data["Mode"].lower():
+                mode_cumulative = True
+        
+        print (mode_from,
+                mode_roundtrip,
+                mode_cumulative,
+                accessibility_text)
 
         return (mode_from,
                 mode_roundtrip,
                 mode_cumulative,
-                AccessibilityText
+                accessibility_text
                 )
 
-    def check_folder_and_file(self, path):
-
-        if not os.path.exists(path):
-            self.setMessage(f"Folder '{path}' does not exist")
-            return False
-
-        required_patterns = ['*.csv', 'log_*.txt']
-        missing_files = []
-
-        for pattern in required_patterns:
-            pattern_path = os.path.join(path, pattern)
-            matching_files = glob.glob(pattern_path)
-            if not matching_files:
-                missing_files.append(pattern)
-
-        if missing_files:
-            missing_files_message = ", ".join(missing_files)
-            self.setMessage(f"Files are missing in '{path}': {missing_files_message}")
-            return False
-
-        return True
 
     def setMessage(self, message):
         self.lblMessages.setText(message)
@@ -665,8 +684,8 @@ class form_relative(QDialog, FORM_CLASS):
 
             self.path_output = f'{self.folder_name}//{self.mode_calc}_{self.txtAlias.text()}.csv'
 
-            self.file1 = os.path.join(self.txtPathToPT.text(), self.cmbListFiles1.currentText())
-            self.file2 = os.path.join(self.txtPathToCar.text(), self.cmbListFiles2.currentText())
+            self.file1 = self.widget_result1.filePath()
+            self.file2 = self.widget_result2.filePath()
 
             self.file_name1 = os.path.splitext(os.path.basename(self.file1))[0]
             self.file_name2 = os.path.splitext(os.path.basename(self.file2))[0]
@@ -791,33 +810,22 @@ class form_relative(QDialog, FORM_CLASS):
                 return True
 
         return super().eventFilter(obj, event)
-    
-    def load_text_with_bold_first_line(self, file_path):
-        if not os.path.exists(file_path):
-            return
-        with open(file_path, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-            if not lines:
-                return  
-            first_line = f"<b>{lines[0].strip()}</b>"  
-            other_lines = "".join(lines[1:]) 
-
-        other_lines_with_br = other_lines.replace("\n", "<br>")
-        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
-        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
-        self.textInfo.setHtml(full_text)
-    
+        
     def show_info(self):
-        
-        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
 
-        
-        if self.mode == 1: 
+            hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+
+            if self.mode == 1: 
                 help_filename = "compare_sa.txt"
-        if self.mode == 2:
-                help_filename = "compare_reg.txt"
-                    
-            
-        hlp_file = os.path.join(hlp_directory, help_filename)
-        hlp_file = os.path.normpath(hlp_file)
-        self.load_text_with_bold_first_line (hlp_file)
+            else:
+                help_filename = "compare_cumulative.txt"
+            hlp_file = os.path.join(hlp_directory, help_filename)
+
+            if os.path.exists(hlp_file):
+                with open(hlp_file, 'r', encoding='utf-8') as f:
+                    html = f.read()
+
+            self.textInfo.setOpenExternalLinks(False)  
+            self.textInfo.setOpenLinks(False)          
+            self.textInfo.setHtml(html)
+            self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))           

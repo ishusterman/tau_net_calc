@@ -267,8 +267,6 @@ def post_processingAll(
                                      )
         
 
-        
-
         if pareto_set == None:
             continue
         
@@ -280,6 +278,7 @@ def post_processingAll(
             # Заполнение словарей на основе полученных данных
             
             duration, transfers, end_time, journey = optimal_endtime
+            
             Dict_endtime[p_i] = [SOURCE, duration, journey, transfers, end_time ]
 
             duration, transfers, end_time, journey = optimal_duration
@@ -357,7 +356,7 @@ def get_earliest_trip_new(stoptimes_dict,
             t1 = trip[pi_index-1][1]
         except IndexError:
             continue
-
+       
         if (t1 <= t2) and (t1 >= t3):
             return f'{route}_{trip_idx}', stoptimes_dict[route][trip_idx]
 

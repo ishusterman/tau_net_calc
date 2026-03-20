@@ -1,12 +1,9 @@
-Compare accessibility maps, Service area
+<b>Compare Accessibility Maps, Service Areas maps</b> <br /><br />
+<span style="color: grey;">
+The system evaluates the outputs of two different scenarios for a valid comparison.<br />
+•	For <b>Service Areas</b>, the comparison proceeds if both maps are indeed service area maps and the spatial overlap between them is not empty. If both tests pass, the algorithm compares the spatially overlapping regions of the outputs, while any non-overlapping parts are generated as two supplementary layers.
 
-The comparison is performed for the outcomes of two scenarios if:
 
-•	Compared maps are both maps of the service areas.
-•	The overlap between the two maps is not empty.
 
-If both tests are successfully passed, the comparison is made for the spatially overlapping parts of the output.
 
-The non-overlapping parts are presented as two additional layers.
-
-  
+<span>

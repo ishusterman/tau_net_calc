@@ -2,9 +2,9 @@ import pandas as pd
 import os
 
 # Paths
-stops_file = r'c:\doc\Igor\GIS\test_012026\stops_2025_TAMA.csv'
-gtfs_path = r'c:\doc\Igor\GIS\test_012026\gtfs'
-output_file = r'c:\doc\Igor\GIS\test_012026\routes_TAMA.txt'
+stops_file = r'c:\doc\Igor\GIS\36_routes\PKL_ISR2025+36routes\GTFS\footpath_road_projection_gesher_new.txt'
+gtfs_path = r'c:\doc\Igor\GIS\36_routes\GTFS2025+36routes'
+output_file = r'c:\doc\Igor\GIS\36_routes\PKL_ISR2025+36routes\GTFS\routes_for_gesher.txt'
 
 def filter_routes_by_stops(stops_csv, gtfs_dir):
     # 1. Load target stop_ids from your CSV

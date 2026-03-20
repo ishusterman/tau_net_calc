@@ -23,14 +23,16 @@ class RoadLayerProcessor ():
                  parent,
                  layer, 
                  layer_name, 
-                 mode = "clean" 
+                 osm
                  ):
         
         self.parent = parent
         self.layer = layer
         self.layer_name = layer_name
+
+        self.osm = osm
         
-        self.mode = mode
+        
         self.load_car_speed_by_link_type()
 
         self.link = "https://geosimlab.github.io/accessibility-calculator-tutorial/car_accessibility.html#building-database-for-car-accessibility-computation"            
@@ -67,12 +69,13 @@ class RoadLayerProcessor ():
             self.set_Message("Testing roads attributes (2 of 3)...", 2)
             self.get_maxspeed_fields2()
 
-            self.set_Message("Testing roads attributes (3 of 3)...", 3)
-            self.get_fclass_fields3()
+            if self.osm:
+                self.set_Message("Testing roads attributes (3 of 3)...", 3)
+                self.get_fclass_fields3()
 
-            self.finish_analizing_layers()
+            result = self.finish_analizing_layers()
 
-            return self.lblOSM_need_update
+            return result, self.text_for_log
 
 
         #except Exception as e:
@@ -105,19 +108,30 @@ class RoadLayerProcessor ():
         else:
             self.fields_above_90_maxspeed = result
         return result
-    
-    def fill_cmb_more_90 (self, type, cmb):
+        
+    def fill_cmb_more_90(self, type, cmb):
 
         if type == "ONEWAY":
             fields_above_90 = self.fields_above_90_oneway
         else:
             fields_above_90 = self.fields_above_90_maxspeed
-        
-        cmb.clear()  # Очистка перед заполнением
 
-        for field_name, percent in fields_above_90.items():
+        cmb.clear()
+
+        index_to_select = -1
+
+        for i, (field_name, percent) in enumerate(fields_above_90.items()):
             display_text = f"{field_name} ({percent:.1f}%)"
             cmb.addItem(display_text, field_name)
+
+            
+            if field_name == type:
+                index_to_select = i
+
+        
+        if index_to_select >= 0:
+            cmb.setCurrentIndex(index_to_select)
+
     
     def check_ONEWAY_AND_MAXSPEED_more_90(self):
         """
@@ -174,42 +188,8 @@ class RoadLayerProcessor ():
     def get_exact_oneway_name(self):
         return self.find_exact_field_name (self.oneway_fields, "oneway")
     
-    def check_fclass_valid (self):
-        for field_name, percentage in self.fclass_fields:
-            if field_name.lower() == 'fclass' and percentage >= 99:
-                return True
-        return False
         
-    def get_message_exist_oneway_and_maxspeed(self):
-        """
-        Проверяет наличие полей 'oneway' и 'maxspeed'.
-        Возвращает - сообщение "“OSM field FCLASS is found, but fields [ONEWAY] [and] [MAXSPEED] are not, see Tutorial X.Y, fix the table, and re-run "
-        """
-        has_oneway = any(k.lower() == 'oneway' for k in self.oneway_percent_dict)
-        has_maxspeed = any(k.lower() == 'maxspeed' for k in self.maxspeed_percent_dict)
-
-        
-        # 1. Если одно из полей не найдено
-        if not has_oneway or not has_maxspeed:
-            missing = []
-            if not has_oneway:
-                missing.append("ONEWAY")
-            if not has_maxspeed:
-                missing.append("MAXSPEED")
-
-            if len(missing) == 1:
-                missing_str = f"'{missing[0]}'"
-            else:
-                missing_str = f"'{missing[0]}' and '{missing[1]}'"
-
-            return (
-                f"TEST FAILED<br>"
-                f"OSM field FCLASS is found, but fields {missing_str} are not<br>"
-                f"Fix the table of road links and re-run<br>"
-                f"See <a href='{self.link}'>tutorial</a> for more details"
-            )
-    
-    def get_message_valid_oneway_and_maxspeed(self):
+    def get_message_valid_oneway_maxspeed_fclass(self):
         """
         Проверяет процент валидности значений в полях 'oneway' и 'maxspeed'.
         Возвращает предупреждение, если хотя бы одно поле содержит менее 99% валидных значений.
@@ -219,11 +199,14 @@ class RoadLayerProcessor ():
 
         oneway_pct = next((v for k, v in self.oneway_percent_dict.items() if k.lower() == 'oneway'), -1)
         maxspeed_pct = next((v for k, v in self.maxspeed_percent_dict.items() if k.lower() == 'maxspeed'), -1)
+        fclass_pct = next((v for k, v in self.best_fclass_percentage_dict.items() if k.lower() == 'fclass'), -1)
 
         if oneway_pct < 99:
             invalid_fields.append("'ONEWAY'")
         if maxspeed_pct < 99:
             invalid_fields.append("'MAXSPEED'")
+        if fclass_pct < 99:
+            invalid_fields.append("'FClass'")
 
         if invalid_fields:
             fields_str = " and ".join(invalid_fields)
@@ -238,7 +221,7 @@ class RoadLayerProcessor ():
         if not (invalid_fields):
             return (True,
                     f"TEST PASSED<br>"
-                    "Source of the road layer: 'OSM', 'ONEWAY' and 'MAXSPEED' have less than 1% "
+                    "Source of the road layer: 'ONEWAY', 'MAXSPEED' and 'FClass' have less than 1% "
                     "of values that must be substituted by the defaults"
                     )
         
@@ -269,42 +252,6 @@ class RoadLayerProcessor ():
         self.link_types = list(set(self.link_types))
 
     
-    def get_oneway_fields2(self):
-        
-        allowed_expr_template = '"{field}" IN (\'T\', \'F\', \'B\', \'N\')'
-
-        string_fields = [
-            field.name()
-            for field in self.layer.fields()
-            if field.typeName().lower() in {'string', 'text'}
-        ]
-
-        total_count = self.layer.featureCount()
-        result = []
-        max_field = None
-        max_percentage = -1.0
-
-        for field_name in string_fields:
-            expr_str = allowed_expr_template.format(field=field_name)
-            expr = QgsExpression(expr_str)
-            request = QgsFeatureRequest().setFilterExpression(expr.expression())
-            valid_count = sum(1 for _ in self.layer.getFeatures(request))
-            
-            percentage = (valid_count / total_count) * 100
-            if percentage > 0:
-                result.append((field_name, percentage))
-            if percentage > max_percentage:
-                max_percentage = percentage
-                max_field = field_name
-
-        self.oneway_fields = result
-        self.best_oneway_field = max_field
-        self.best_oneway_percentage = round(max_percentage, 2) if max_field else -1
-
-        self.oneway_percent_dict = {fname: percent for fname, percent in self.oneway_fields}
-        
-        return result, max_field
-    
     def get_maxspeed_fields2(self):
         """
         Возвращает список имён полей, значения которых:
@@ -329,10 +276,16 @@ class RoadLayerProcessor ():
 
         for field in self.layer.fields():
             QApplication.processEvents()
+            
+            field_name = field.name()
+
+            if self.osm:
+                if field_name.lower() != "maxspeed":
+                    continue
+
             if field.type() not in numeric_types:
                 continue
-
-            field_name = field.name()
+            
 
             expr_str = (
                 f'"{field_name}" = 0 OR '
@@ -370,9 +323,15 @@ class RoadLayerProcessor ():
 
         for field in self.layer.fields():
             QApplication.processEvents()
+            
             field_name = field.name()
+
+            if self.osm:
+                if field_name.lower() != "oneway":
+                    continue
             if field.typeName().lower() not in {'string', 'text'}:
                 continue
+                
             
             # Удалить предыдущий join (по ID слоя)
             self.layer.removeJoin(self.layer_directions_default.id())
@@ -427,7 +386,12 @@ class RoadLayerProcessor ():
 
         for field in self.layer.fields():
             QApplication.processEvents()
+            
             field_name = field.name()
+
+            if self.osm:
+                if field_name.lower() != "fclass":
+                    continue
 
             if field.typeName().lower() not in {'string', 'text'}:
                 continue
@@ -468,205 +432,56 @@ class RoadLayerProcessor ():
         
         self.best_fclass_field = max_field
         self.best_fclass_percentage = round(max_percentage, 2) if result else -1
+        self.best_fclass_percentage_dict = {fname: percent for fname, percent in self.fclass_fields}
 
         return result, max_field
-
-
-
-    def get_fclass_fields2(self):
-        allowed_values = set(str(val).strip() for val in self.link_types)
-        allowed_expr_list = ','.join([f"'{val}'" for val in allowed_values])
-
-        total_count = self.layer.featureCount()
-
-        result = []
-        max_field = None
-        max_percentage = -1.0
-
-        for field in self.layer.fields():
-            if field.typeName().lower() not in {'string', 'text'}:
-                continue
-
-            field_name = field.name()
-            expr_str = f'("{field_name}" IN ({allowed_expr_list}))'
-            expr = QgsExpression(expr_str)
-
-            request = QgsFeatureRequest().setFilterExpression(expr.expression())
-            valid_count = sum(1 for _ in self.layer.getFeatures(request))
-            
-            percentage = (valid_count / total_count) * 100
-
-            if percentage > 0:
-                result.append((field_name, percentage))
-
-            if percentage > max_percentage:
-                max_percentage = percentage
-                max_field = field_name
-
-        self.fclass_fields = result
-        self.best_fclass_field = max_field
-        self.best_fclass_percentage = round(max_percentage, 2)
-        if not result:
-            self.best_fclass_percentage = -1
-
-        return result, max_field
-
-
-    
-    def get_message1 (self):
-
-        result = ""
-
-        if len(self.fclass_fields) == 0:
-            result += (f"There is no candidate for the 'link type' among the '{self.layer_name}' attributes. \n")
-        else:
-            for field_name, percentage in self.fclass_fields:
-                if percentage >= 90:
-                    result += (f"The field '{field_name}' is a valid candidate for the 'link type' with {percentage:.2f} percent of the valid values. \n")
-
-            if self.best_fclass_percentage < 90:
-                result += (f"There valid candidate for the 'link type' not found.\n ")
-            if 0 < self.best_fclass_percentage < 90:
-                result += (f"The closes match is '{self.best_fclass_field}', with the insufficient percentage of the valid values - {self.best_fclass_percentage:.2f}%. \n")    
-
-        ############################
-        if len(self.oneway_fields) == 0:
-            result += (f"There is no candidate for the 'direction' among the '{self.layer_name}' attributes. \n")
-        else:
-            for field_name, percentage in self.oneway_fields:
-                if percentage >= 90:
-                    result += (f"The field '{field_name}' is a valid candidate for the 'direction' with {percentage:.2f} percent of the valid values. \n")
-            if self.best_oneway_percentage < 90:
-                result += (f"There valid candidate for the 'direction' not found.\n")
-            if 0 < self.best_oneway_percentage < 90:
-                result += (f"The closes match is '{self.best_oneway_field}', with the insufficient percentage of the valid values - {self.best_oneway_percentage:.2f}% \n")    
-
-        if len(self.maxspeed_fields) == 0:
-            result += (f"There is no candidate for the 'speed' among the '{self.layer_name}' attributes. \n")
-        else:
-            for field_name in self.maxspeed_fields:
-                result += (f"The field '{field_name}' is a valid candidate for the 'speed'.\n")
-                
-        return result
-    
-    def get_message2(self, mode = "clean"):
-        result = ""
-        
-        list_fields_name = []
-        list_fields_to_correct = []
-
-        # Проверка fclass
-        #if len(self.fclass_fields) == 0:
-        if  0 < self.best_fclass_percentage < 90 or self.best_fclass_percentage == -1:
-            list_fields_name.append("link type")
-        
-            for field_name, percentage in self.fclass_fields:
-                if 0 < percentage < 90:
-                    list_fields_to_correct.append(f"({field_name}, {percentage:.2f}%)")
-
-        # Проверка oneway
-        if  0 < self.best_oneway_percentage < 90 or self.best_oneway_percentage == -1:
-            list_fields_name.append("direction")
-        
-            for field_name, percentage in self.oneway_fields:
-                if 0 < percentage < 90:
-                    list_fields_to_correct.append(f"({field_name}, {percentage:.2f}%)")
-
-        # Проверка maxspeed
-        if len(self.maxspeed_fields) == 0:
-            list_fields_name.append("speed")
-        
-        # Условия для отображения сообщения
-        if len(self.fclass_fields) == 0 or len(self.oneway_fields) == 0 or len(self.maxspeed_fields) == 0:
-            fields_name_str = ", ".join(list_fields_name)
-            fields_to_correct_str = ", ".join(list_fields_to_correct)
-
-            add_str1 = "The cleaning is finished, but to use a cleaned layer for constructing the car routing database of roads, you"
-            add_str2 = "You"
-
-            if mode == "clean":
-                result = add_str1
-            else:
-                result = add_str2
-
-            result += (f" must create and fill the field(s) [{fields_name_str}] in layer '{self.layer_name}'"
-            )
-
-            if fields_to_correct_str:
-                result += (
-                    f", and fix the values in the [{fields_to_correct_str}] fields. "
-                    f"Each of the latter must contain 90% of the valid values."
-                )
-            else:
-                result += "."
-
-            link = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-database-for-car-accessibility-computation"            
-            result += f' See <a href="{link}"> section</a> of the tutorial for the suggestion on how to do that in the easiest way.'
-                
-            
-
-        return result
     
     def finish_analizing_layers (self):
                         
         self.parent.setMessage("")
         self.parent.progressBar.setValue(0)
-        self.parent.run_button.setEnabled(True)
+        #self.parent.run_button.setEnabled(True)
         msgBox = QMessageBox()
         msgBox.setTextFormat(Qt.RichText)
         msgBox.setTextInteractionFlags(Qt.TextBrowserInteraction)
         msgBox.setIcon(QMessageBox.Information)
         msgBox.setWindowTitle("Road attributes test")
-        self.lblOSM_need_update = False
+        
+        #self.parent.textLog.append (f"Testing the layer of roads: {self.layer_name}")
 
-        self.parent.textLog.append (f"Testing the layer of roads: {self.layer_name}")
-
-        if self.check_fclass_valid():
-            message_type = "Source of the road layer: <b>OSM</b>"
-            message = self.get_message_exist_oneway_and_maxspeed()
-            if message :
-                
-                self.lblOSM_need_update = False
-                lbl_text = f'<span style="color:red; font-weight:bold;">TEST FAILED</span> {message_type}'
-                self.parent.lblOSM.setText(lbl_text)
-                msgBox.setText(message)
-                #self.parent.textLog.append (lbl_text)
-                self.parent.textLog.append (message)
-                self.parent.textLog.append ("-----------")                
-                stop_button = QPushButton("Cancel")
-                msgBox.addButton(stop_button, QMessageBox.AcceptRole)
-                msgBox.exec_()
-                if msgBox.clickedButton() == stop_button:
-                    return 0
-                
-            result, message = self.get_message_valid_oneway_and_maxspeed()
+        if self.osm:
+                            
+            result, message = self.get_message_valid_oneway_maxspeed_fclass()
             if result:
-                self.lblOSM_need_update = False
-                self.parent.lblOSM.setText (f'<span style="color:red; font-weight:bold;">TEST PASSED</span> {message_type}')
+                
+                self.parent.lblOSM.setText ('PASSED')
                 exact_maxspeed_name = self.get_exact_maxspeed_name()
                 self.parent.cmbFieldsSpeed.addItem(exact_maxspeed_name, exact_maxspeed_name)
                 exact_oneway_name = self.get_exact_oneway_name()
                 self.parent.cmbFieldsDirection.addItem(exact_oneway_name, exact_oneway_name)
-                exact_fclass_name = self.get_exact_fclass_name()
-                self.parent.cmbLayersRoad_type_road.addItem(exact_fclass_name, exact_fclass_name)
-                msgBox.setText(message)
-                self.parent.textLog.append (message)
-                self.parent.textLog.append ("-----------")                
-                ok_button = QPushButton("Ok")
-                msgBox.addButton(ok_button, QMessageBox.AcceptRole)
+                
+                #msgBox.setText(message)
+                #self.parent.textLog.append (message)
+                #self.parent.textLog.append ("-----------")     
+                self.text_for_log = message
+                result = True
+                #ok_button = QPushButton("Ok")
+                #msgBox.addButton(ok_button, QMessageBox.AcceptRole)
                 
                 
-                msgBox.exec_()
-                if msgBox.clickedButton() == ok_button:
-                    return 0
+                #msgBox.exec_()
+                #if msgBox.clickedButton() == ok_button:
+                #    return 0
             else:
-                self.lblOSM_need_update = False
-                lbl_text = f'<span style="color:red; font-weight:bold;">TEST FAILED</span> {message_type}'
+                
+                lbl_text = 'FAILED'
                 self.parent.lblOSM.setText(lbl_text)
                 msgBox.setText(message)
                 #self.parent.textLog.append (lbl_text)
-                self.parent.textLog.append (message)
-                self.parent.textLog.append ("-----------")                
+                #self.parent.textLog.append (message)
+                #self.parent.textLog.append ("-----------")
+                self.text_for_log = f'{lbl_text}\n{message}'
+                result = False
                 stop_button = QPushButton("Cancel")
                 msgBox.addButton(stop_button, QMessageBox.AcceptRole)
                 msgBox.exec_()
@@ -675,35 +490,40 @@ class RoadLayerProcessor ():
         
         #No OSM"
         else:
-            message_type = "Source of the road layer: <b>Unknown</b>"
+            
             result, message = self.check_ONEWAY_AND_MAXSPEED_more_90()
             if result:
-                self.lblOSM_need_update = True
+                
                 self.fill_cmb_more_90(type = "MAXSPEED", cmb = self.parent.cmbFieldsSpeed)
                 self.fill_cmb_more_90(type = "ONEWAY", cmb = self.parent.cmbFieldsDirection)
                 
                 self.parent.cmbFieldsDirection.setEnabled(True)
                 self.parent.cmbFieldsSpeed.setEnabled(True)
-                lbl_text = f'<span style="color:red; font-weight:bold;">TEST PASSED</span> {message_type}'
-                log_text = f"{message_type} Found fields for 'Direction' and 'Speed'"
+                lbl_text = 'PASSED'
+                log_text = f"Found fields for 'Direction' and 'Speed'"
                 self.parent.lblOSM.setText (lbl_text)
-                self.parent.textLog.append ("TEST PASSED")                
-                self.parent.textLog.append (log_text)                
-                self.parent.textLog.append ("-----------")                
+                #self.parent.textLog.append ("TEST PASSED")                
+                #self.parent.textLog.append (log_text)                
+                #self.parent.textLog.append ("-----------")                
+                self.text_for_log = f'TEST PASSED\n {log_text}'
+                result = True                           
 
             else:
-                self.lblOSM_need_update = False
-                lbl_text = f'<span style="color:red; font-weight:bold;">TEST FAILED</span> {message_type}'
+                
+                lbl_text = 'FAILED'
                 self.parent.lblOSM.setText(lbl_text)
                 msgBox.setText(message)
                 #self.parent.textLog.append (lbl_text)
-                self.parent.textLog.append (message)
-                self.parent.textLog.append ("-----------")                
+                #self.parent.textLog.append (message)
+                #self.parent.textLog.append ("-----------")
+                self.text_for_log = f'{lbl_text}\n{message}' 
+                result = False                                          
                 stop_button = QPushButton("Cancel")
                 msgBox.addButton(stop_button, QMessageBox.AcceptRole)
                 msgBox.exec_()
                 if msgBox.clickedButton() == stop_button:
-                    
+                   
                     return 0 
              
         self.parent.progressBar.setValue(0)
+        return result

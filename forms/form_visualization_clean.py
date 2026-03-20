@@ -11,7 +11,6 @@ from matplotlib.colors import CSS4_COLORS
 
 from qgis.core import (QgsApplication,
                        QgsProject,
-                       QgsWkbTypes,
                        QgsVectorLayer,
                        QgsFillSymbol,
                        QgsMapLayerProxyModel
@@ -20,7 +19,6 @@ from qgis.core import (QgsApplication,
 from PyQt5.QtCore import (Qt,
                           QEvent,
                           QRegExp,
-                          QVariant,
                           QTimer
                           )
 
@@ -41,7 +39,8 @@ from common import (get_qgis_info,
                    getDateTime,
                    insert_layer_ontop,
                    FIELD_ID,
-                   check_layer
+                   check_layer,
+                   transform_log_to_csv_text
                     )
 from visualization_clean import cls_clean_visualization
 
@@ -109,29 +108,43 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
         self.show_info()
-    
-    def open_file_dialog(self):
 
+    def open_file_dialog(self):
         project_path = QgsProject.instance().fileName()
         initial_dir = os.path.dirname(project_path) if project_path else ""
-        
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
             initial_dir,
-            "Shapefile (*.shp);"
+            "All supported (*.shp *.gpkg);;Shapefile (*.shp);;GeoPackage (*.gpkg)"
         )
+        if not file_path:
+            return
 
-        if file_path:
+        added_layers = []
+        if file_path.lower().endswith(".gpkg"):
+            temp_layer = QgsVectorLayer(file_path, "temp_discovery", "ogr")
+            if not temp_layer.isValid():
+                return
+            sublayers = temp_layer.dataProvider().subLayers()
+            for sub_info in sublayers:
+                parts = sub_info.split('!!::!!')
+                if len(parts) >= 2:
+                    layer_name = parts[1]
+                    uri = f"{file_path}|layername={layer_name}"
+                    new_layer = QgsVectorLayer(uri, layer_name, "ogr")
+                    if new_layer.isValid():
+                        QgsProject.instance().addMapLayer(new_layer)
+                        added_layers.append(new_layer)
+        else:
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             layer = QgsVectorLayer(file_path, file_name, "ogr")
-            
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
-                self.cmbLayers.setLayer(layer)
-            else:
-                self.setMessage(f"Layer '{file_name}' is invalid or corrupted.")
-
+                added_layers.append(layer)
+        if added_layers:
+            target_layer = added_layers[-1] 
+            self.cmbLayers.setLayer(target_layer)
     
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(
@@ -234,9 +247,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         runVoronoi = self.cbVoronoi.isChecked()
 
-        progress_max = (1 + (len(spacing)-1) *5)
+        progress_max = len(spacing)
         if runVoronoi:
-            progress_max += 4
+            progress_max += 1
         self.progressBar.setMaximum(progress_max)
 
              
@@ -274,8 +287,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
     def save_log(self, need_save):
         if need_save:
             postfix = getDateTime()
-            filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.txt'
-            text = self.textLog.toPlainText()
+            filelog_name = f'{self.folder_name}//log_vis_layers_{postfix}.csv'
+            text = transform_log_to_csv_text(self.textLog.toPlainText())
             with open(filelog_name, "w") as file:
                 file.write(text)
           
@@ -385,23 +398,20 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         return super().eventFilter(obj, event)
 
     def show_info(self):
-        html = """
-        <b>Data preprocessing, Build visualization layers:</b><br /><br />
-        <span style="color: grey;">Five default layers of hexagons are constructed for visualization, in 4 steps: <br />
-        Five default layers of hexagons, each covering the full extent of the layer of buildings, can be constructed for visualization: 
-        1. Four layers of hexagons with the default side of 50, 100, 200, 400, and 800 m sides. <br />
-        2. The hexagons that do not overlap any building are deleted from each layer. <br />
-        3. The identifier of each hexagon is set equal to the identifier of the building that is closest to its centroid. If several buildings are at the same distance from the centroid, the minimal identifier is chosen. <br />
-        4. The hexagons with the same identifier are dissolved into one. <br /><br />
 
-        Additional layers of hexagons with the arbitrary length of the side can be also constructed. If you need several additional layers of hexagons, employ this command several times.<br /><br />
-        The hexagon layers are constructed applying <a href="https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/vectorcreation.html#create-grid" target="_blank">QGIS Create Grid documentation</a>. 
-        </span>
-        """
-        self.textInfo.setOpenExternalLinks(False) 
-        self.textInfo.setOpenLinks(False)         
-        self.textInfo.setHtml(html)
-        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
+            hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+        
+            help_filename = "build_visualization_layers.txt"
+            hlp_file = os.path.join(hlp_directory, help_filename)
+
+            if os.path.exists(hlp_file):
+                with open(hlp_file, 'r', encoding='utf-8') as f:
+                    html = f.read()
+
+            self.textInfo.setOpenExternalLinks(False)  
+            self.textInfo.setOpenLinks(False)          
+            self.textInfo.setHtml(html)
+            self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString())) 
     
     def closeEvent(self, event):
         self.task = None

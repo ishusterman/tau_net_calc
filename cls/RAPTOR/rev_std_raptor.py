@@ -162,6 +162,7 @@ def rev_raptor(SOURCE,
 
                         continue
 
+
                     if min_time > arr_by_t_at_pi:
                         to_process = False
 
@@ -179,7 +180,7 @@ def rev_raptor(SOURCE,
                                             p_i,
                                             arr_by_t_at_pi,
                                             tid)
-
+                      
                         list_stops.add(p_i)
 
                         if marked_stop_dict[p_i] == 0:
@@ -228,7 +229,7 @@ def rev_raptor(SOURCE,
                               )
         """
         
-        if k < roundsCount and MaxWalkDist2_time != MaxWalkDist3_time:
+        if k < roundsCount: # and MaxWalkDist2_time != MaxWalkDist3_time: exp
 
             save_marked_stop = True
             process_walking_stage(min_time,
@@ -298,6 +299,7 @@ def process_walking_stage(min_time,
             continue
 
         trans_info = footpath_dict.get(p, 0)
+        
 
         if not trans_info:
             continue
@@ -305,7 +307,7 @@ def process_walking_stage(min_time,
         label_k_p = np.int64(label[k][p])
 
         for p_dash, to_pdash_time in trans_info:
-
+            
             if to_pdash_time > WALKING_LIMIT:
                 continue
 
@@ -315,7 +317,6 @@ def process_walking_stage(min_time,
                 pi_label_k_p_dash = -1
 
             # this line is "don't rewrite founded bus trip to footleg"
-
             if pi_label_k_p_dash != - 1 and pi_label_k_p_dash[0] != 'walking':
                 continue
 
@@ -338,11 +339,8 @@ def process_walking_stage(min_time,
             pi_label[k][p_dash] = ('walking', p, p_dash,
                                    to_pdash_time, new_p_dash_time)
             
+                        
             list_stops.add(p_dash)
-
-            # experiment !!!!!!!!!
-            #save_marked_stop = k != 2 or to_pdash_time <= 200    
-            # experiment !!!!!!!!!
             
             if save_marked_stop:
                 marked_stop.append(p_dash)

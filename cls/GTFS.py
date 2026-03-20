@@ -31,14 +31,14 @@ class GTFS ():
                  layer_road,
                  layer_origins_field="",
                  MaxPathRoad = "400",
-                 MaxPathAir = "400",
+                 
                  check_date = "20000101"
                  ):
         self.pkl_path = pkl_path
         self.__path_to_file = path_to_file
         self.__path_to_GTFS = path_to_GTFS
         self.MaxPathRoad = int(MaxPathRoad)
-        self.MaxPathAir = int(MaxPathAir)
+        
         self.check_date = int(check_date)
         
         self.parent = parent
@@ -574,14 +574,6 @@ class GTFS ():
                 file.write(line + "\n")
         #################################        
         
-        
-        self.parent.setMessage(f'Building aerial paths between buildings and stops...')
-        QApplication.processEvents()
-        self.create_footpath_AIR()
-        self.parent.progressBar.setValue(9)
-        if self.verify_break():
-            return 0
-        
         ##########################################
         # Calc footpath on graph with projections
         ##########################################
@@ -906,104 +898,6 @@ class GTFS ():
         _, _, distance = geod.inv(lon1, lat1, lon2, lat2)
         return distance
     
-    
-    def create_footpath_AIR(self):
-
-        stops = self.create_stops_gpd()
-        buildings = self.layer_origins
-
-        dist = self.MaxPathAir
-        dist_m = self.MaxPathAir
-        self.crs = buildings.crs()
-        units = self.crs.mapUnits()
-        self.crs_grad = (units == 6)
-
-        centroids_buildings = []
-        for i, feature in enumerate(buildings.getFeatures()):
-            if i % 1000 == 0:
-                QApplication.processEvents()
-                if self.verify_break():
-                    return 0
-            geom = feature.geometry()
-
-            centroid = geom.centroid().asPoint()
-            centroids_buildings.append((feature[self.layer_origins_field], Point(centroid)))
-
-        centroids_coords = [(centroid[1].x, centroid[1].y)
-                            for centroid in centroids_buildings]
-        centroids_tree_buildings = cKDTree(centroids_coords)
-
-        close_pairs = []
-        current_combination = 0
-
-        # find building - stop pairs
-        for i, geom in enumerate(stops.geometry):
-            stop_id1 = stops.iloc[i]['stop_id']
-
-            if self.crs_grad:
-                dist = convert_meters_to_degrees(dist_m, geom.y)
-            nearest_centroids_buildings = centroids_tree_buildings.query_ball_point(
-                (geom.x, geom.y), dist)
-
-            for j in nearest_centroids_buildings:
-                current_combination = current_combination + 1
-                if current_combination % 5000 == 0:
-                    self.parent.setMessage(f'Processing building-stop pair {current_combination}')
-                    QApplication.processEvents()
-                    if self.verify_break():
-                        return 0
-
-                if self.crs_grad:
-                    distance = self.calculate_geodesic_distance(
-                        geom, centroids_buildings[j][1])
-                else:
-                    distance = geom.distance(centroids_buildings[j][1])
-
-                if distance <= dist_m:
-                    close_pairs.append(
-                        (centroids_buildings[j][0], stop_id1, round(distance)))
-
-        stops_coords = [(geom.x, geom.y) for geom in stops.geometry]
-        stops_tree = cKDTree(stops_coords)
-        # find stop pairs
-        for i, geom in enumerate(stops.geometry):
-            stop_id1 = stops.iloc[i]['stop_id']
-
-            if self.crs_grad:
-                dist = convert_meters_to_degrees(dist_m, geom.y)
-            nearest_stops = stops_tree.query_ball_point((geom.x, geom.y), dist)
-
-            for j in nearest_stops:
-                if i == j:
-                    continue
-                current_combination += 1
-                if current_combination % 1000 == 0:
-                    self.parent.setMessage(f'Processing stop-stop pair {current_combination}')
-                    QApplication.processEvents()
-                    if self.verify_break():
-                        return 0
-
-                if self.crs_grad:
-                    distance = self.calculate_geodesic_distance(
-                        geom, stops.iloc[j]['geometry'])
-                else:
-                    distance = geom.distance(stops.iloc[j]['geometry'])
-
-                if distance <= dist_m and stops.iloc[j]['stop_id'] != stop_id1:
-                    close_pairs.append(
-                        (stops.iloc[j]['stop_id'], stop_id1, round(distance)))
-
-        filename = os.path.join(self.__path_to_file,'footpath_air.txt')
-        with open(filename, 'w') as file:
-            file.write(f'from_stop_id,to_stop_id,min_transfer_time\n')
-            for pair in close_pairs:
-                id_from_points_layer = self.normalize_id(pair[0])
-                stop_id1 = self.normalize_id(pair[1])
-                distance = pair[2]
-                file.write(f'{id_from_points_layer},{stop_id1},{distance}\n')
-                file.write(f'{stop_id1},{id_from_points_layer},{distance}\n')
-       
-
     def normalize_id(self, val):
         if val is None or val == NULL:
             return None

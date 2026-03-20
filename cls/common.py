@@ -13,6 +13,8 @@ import csv
 
 from pathlib import Path
 
+#from openpyxl import load_workbook, Workbook
+
 try:
     import qgis.core
     import qgis.PyQt
@@ -35,6 +37,38 @@ try:
 except ImportError:
     IN_QGIS = False
 
+def transform_log_to_csv_text(raw_text):
+    """
+    Преобразует текстовый лог в строку формата CSV с заголовками.
+    """
+    if not raw_text:
+        return '"Parameter","Value"'
+
+    lines = raw_text.strip().split('\n')
+    csv_rows = []
+        
+    csv_rows.append('"Parameter","Value"')
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Пропускаем пустые строки и заголовки секций в [квадратных скобках]
+        #if not line or (line.startswith('[') and line.endswith(']')):
+        #    continue
+       
+        # Разделяем по ПЕРВОМУ двоеточию
+        if ":" in line:
+            key, value = line.split(":", 1)
+            # Экранируем кавычки (если вдруг они есть в тексте) и оборачиваем в кавычки
+            safe_key = key.strip().replace('"', '""')
+            safe_value = value.strip().replace('"', '""')
+            csv_rows.append(f'"{safe_key}","{safe_value}"')
+        else:
+            # Если двоеточия нет, кладем всё в первую колонку
+            safe_line = line.replace('"', '""')
+            csv_rows.append(f'"{safe_line}",""')
+            
+    return "\n".join(csv_rows)
 
 def check_layer(layer, FIELD_ID = ""):
     if not layer:
@@ -99,23 +133,23 @@ def get_name_columns():
         # ({from-to}, protokol) ....
         return {
             (1, 2): {
-                "star": "Facility_ID", "hash": "Destination_ID",
-                1: "Facility_ID", 2: "Destination_ID",
+                "star": "Facility_aid", "hash": "Destination_aid",
+                1: "Facility_aid", 2: "Destination_aid",
                 "star_short": "Facility", "hash_short": "Destinations",
             },
             (2, 2): {
-                "star": "Facility_ID", "hash": "Origin_ID",
-                1: "Origin_ID", 2: "Facility_ID",
+                "star": "Facility_aid", "hash": "Origin_aid",
+                1: "Origin_aid", 2: "Facility_aid",
                 "star_short": "Facility", "hash_short": "Origins",
             },
             (1, 1): {
-                "star": "Origin_ID", "hash": "Destination_ID",
-                1: "Origin_ID", 2: "Destination_ID",
+                "star": "Origin_aid", "hash": "Destination_aid",
+                1: "Origin_aid", 2: "Destination_aid",
                 "star_short": "Origins", "hash_short": "Destinations",
             },
             (2, 1): {
-                "star": "Destination_ID", "hash": "Origin_ID",
-                1: "Destination_ID", 2: "Origin_ID",
+                "star": "Destination_aid", "hash": "Origin_aid",
+                1: "Destination_aid", 2: "Origin_aid",
                 "star_short": "Destinations", "hash_short": "Origins",
             }
         }    
@@ -390,35 +424,6 @@ def insert_layer_ontop (layer):
             parent_group = current_node
         parent_group.insertChildNode(0, QgsLayerTreeLayer(layer))
 
-def showAllLayersInCombo_Line(cmb):
-        cmb.clear()
-        layer_nodes = QgsProject.instance().layerTreeRoot().findLayers()
-        for node in layer_nodes: 
-            layer = node.layer()
-            if isinstance(layer, QgsVectorLayer) and \
-                layer.geometryType() == QgsWkbTypes.LineGeometry and \
-                not layer.name().startswith("Temp") and \
-                'memory' not in layer.dataProvider().dataSourceUri():
-                cmb.addItem(layer.name(), [])
-
-def showAllLayersInCombo_Point_and_Polygon(cmb):
-        cmb.clear()
-        layer_nodes = QgsProject.instance().layerTreeRoot().findLayers()
-        for node in layer_nodes: 
-            layer = node.layer()
-            if isinstance(layer, QgsVectorLayer) and \
-                (layer.geometryType() == QgsWkbTypes.PointGeometry or 
-                layer.geometryType() == QgsWkbTypes.PolygonGeometry):
-                cmb.addItem(layer.name(), [])
-
-def showAllLayersInCombo_Polygon(cmb):
-        cmb.clear()
-        layer_nodes = QgsProject.instance().layerTreeRoot().findLayers()
-        for node in layer_nodes: 
-            layer = node.layer()
-            if isinstance(layer, QgsVectorLayer) and \
-                (layer.geometryType() == QgsWkbTypes.PolygonGeometry):
-                cmb.addItem(layer.name(), [])
 
 def extract_time_pattern_from_txt(txt_path):
 
@@ -469,3 +474,48 @@ def get_existing_path(folder_path, filename):
         if os.path.exists(path_with_prefix):
             return path_with_prefix
         return path_without_prefix
+
+import sqlite3
+import geopandas as gpd
+
+def fast_write_gpkg(file_name_gpkg, sheets_to_add):
+    conn = sqlite3.connect(file_name_gpkg)
+    try:
+        for name, df in sheets_to_add:
+            if isinstance(df, gpd.GeoDataFrame):
+                df.to_file(file_name_gpkg, layer=name, driver="GPKG")
+            else:
+                df.to_sql(name, conn, if_exists="replace", index=False)
+    finally:
+        conn.commit()
+        conn.close()
+
+
+    
+"""
+def fast_add_sheets(file_name_xlsx, sheets_to_add):
+    
+
+    # 1. Читаем старый файл в read_only (очень быстро)
+    wb_old = load_workbook(file_name_xlsx, read_only=True, data_only=True)
+
+    # 2. Создаём новый файл в write_only (очень быстро)
+    wb_new = Workbook(write_only=True)
+
+    # 3. Копируем все старые листы
+    for name in wb_old.sheetnames:
+        ws_old = wb_old[name]
+        ws_new = wb_new.create_sheet(name)
+
+        for row in ws_old.values:
+            ws_new.append(row)
+
+    # 4. Добавляем новые листы
+    for sheet_name, df in sheets_to_add:
+        ws_new = wb_new.create_sheet(sheet_name)
+        for row in df.itertuples(index=False, name=None):
+            ws_new.append(row)
+
+    # 5. Сохраняем файл один раз
+    wb_new.save(file_name_xlsx)
+"""

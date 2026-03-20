@@ -235,7 +235,7 @@ class generator:
             MaxPathRoad = str(self.max_walking_distance),
             MaxPathAir= str(self.max_walking_distance)
         )
-        calc_GTFS.create_footpath_AIR()
+        
         filename = os.path.join(self.params.folder_name, 'layer_with_projection.geojson')
         calc_GTFS.create_footpath_on_graph(need_save_layer_with_projection = True, 
                                            filename = filename)
@@ -255,8 +255,7 @@ class generator:
         dictionary  = myload_all_dict(
                         self = None,
                         PathToNetwork = self.path_to_PKL,
-                        mode = mode,
-                        RunOnAir = (var.config['Settings']['RunOnAir'] == "True"),
+                        mode = mode,                        
                         )
         
         D_TIME = time_to_seconds(time)

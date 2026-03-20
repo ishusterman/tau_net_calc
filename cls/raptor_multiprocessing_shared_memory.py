@@ -107,7 +107,6 @@ class raptor_multiprocessing:
             self=None,
             PathToNetwork=gen_instance.params.path_to_pkl,
             mode=mode,
-            RunOnAir=(gen_instance.params.config['Settings']['RunOnAir'] == "True"),
         )
         dict_load_end = time.time()
         print(f"Словари загружены. Время загрузки: {dict_load_end - dict_load_start:.2f} сек.")
@@ -203,7 +202,7 @@ if __name__ == '__main__':
                                  'MaxWalkDist3': "400", 'MaxTimeTravel': "40", 'MaxWaitTime': "15",
                                  'MaxWaitTimeTransfer': "15", 'TimeInterval': "1", 'Layer': "Layer",
                                  'Layer_field': "", 'LayerDest': "LayerDest", 'LayerDest_field': "osm_id",
-                                 'LayerViz': "", 'LayerViz_field': "osm_id", 'Field_ch': "", 'RunOnAir': "False"}},
+                                 'LayerViz': "", 'LayerViz_field': "osm_id", 'Field_ch': ""}},
         'folder_name': path_to_result, 'alias': 'output1', 'path_to_pkl': r'c:\doc\Igor\GIS\PKL\exp_08_2025\ISR_2018'
     }
     params = config(config_dict)

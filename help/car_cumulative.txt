@@ -1,0 +1,10 @@
+<b>Car Accessibility Computations, Cumulative Opportunities Maps</b> <br /><br />
+<span style="color: grey;">
+•	<b>TO-Cumulative Opportunities:</b> These maps present aggregate measures calculated across all buildings from which a traveler can use a car to reach each one of the destination buildings within the investigated area, arriving at a specific hour or before.<br />
+•	<b>FROM-Cumulative Opportunities:</b> These maps present aggregate measures calculated across all destination buildings that can be reached by car from each one of the origin buildings in the region, starting at a specific hour. The optional maps aggregate.<br /> 
+•	<b>ROUNDTRIP Cumulative Opportunities:</b> across all destination buildings that can be reached by return car trip from each one of the origin buildings in the region, reaching the destination at a specific hour and starting the trip back at a specific hour.<br /> 
+The default aggregate measure represents the total number of buildings from which a specific building can be reached within the maximum travel time. In case specific building’s attributes are known, like a total building population or a number of jobs in a building, users can extend this analysis by utilizing the sum of these attribute values as an additional measure; for instance, calculating the total population capable of reaching each building in the city, or a number of jobs reachable from each building in a return trip within a specified timeframe. The total duration for any trip cannot exceed the established maximum travel time.
+
+
+
+<span>

@@ -11,10 +11,9 @@ from qgis.utils import iface
 
 from qgis.analysis import QgsGraphAnalyzer
 
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtWidgets import QApplication
 
 from qgis.core import (QgsProject,
-                       QgsVectorFileWriter, 
                        QgsDistanceArea, 
                        QgsWkbTypes,
                        QgsGeometry, 
@@ -25,14 +24,14 @@ from qgis.analysis import QgsGraphBuilder
 
 from visualization import visualization
 from common import (get_existing_path, 
-                    get_name_columns)
+                    get_name_columns,
+                    transform_log_to_csv_text)
 
 
 class car_accessibility:
     def __init__(self,
                  parent,
                  layer_dest,
-                 selected_only2,
                  layerdest_field,
                  max_time_minutes,
                  time_step_minutes,
@@ -57,8 +56,7 @@ class car_accessibility:
         self.crs = self.layer_dest.crs()
         units = self.crs.mapUnits()
         self.crs_grad = (units == 6)
-        self.selected_only2 = selected_only2
-
+        
         self.parent = parent
 
         self.layer_vis = layer_vis
@@ -528,77 +526,6 @@ class car_accessibility:
 
                 self.short_result[(source, building)] = min_cost
 
-    def calc_min_cost_onAir(self):
-        
-        self.min_costs = {}
-        project_directory = os.path.dirname(QgsProject.instance().fileName())
-        file_path = os.path.join(
-            project_directory, 'parameters_accessibility.txt')
-        self.config = configparser.ConfigParser()
-        self.config.read(file_path)
-        speed_str = self.config['Settings'].get('Speed_car_pkl', '').strip()
-        V = int(speed_str) / 3.6 if speed_str.isdigit() else 10 
-        
-        t = self.max_time_sec
-        
-        distance_calculator = QgsDistanceArea()
-        if self.crs_grad:
-            distance_calculator.setEllipsoid('WGS84')
-
-        count = self.layer_orig.featureCount()
-        for i, orig_feature in enumerate(self.layer_orig.getFeatures()):
-
-            self.parent.setMessage(f'Building thematic map for the feature №{i+1} of {count}')
-            self.parent.progressBar.setValue(i+1)
-            QApplication.processEvents()
-            
-            if self.parent.break_on:    
-                return 0
-
-            orig_geom = orig_feature.geometry()
-                
-            if orig_geom.type() == QgsWkbTypes.PointGeometry:
-                orig_feature_pt = orig_geom.asPoint()
-            elif orig_geom.type() == QgsWkbTypes.PolygonGeometry:
-                orig_feature_pt = orig_geom.centroid().asPoint()
-            else:
-                multi_polygon = orig_geom.asMultiPolygon()
-                orig_feature_pt = multi_polygon[0]
-
-            source = orig_feature[self.layerorig_field]
-
-            for num, dest_feature in enumerate(self.layer_dest.getFeatures()):
-
-                if num%100 == 0:
-                    QApplication.processEvents()
-                    if self.parent.break_on:    
-                        return 0
-                    
-                dest_geom = dest_feature.geometry()
-
-                if dest_geom.type() == QgsWkbTypes.PointGeometry:
-                    dest_feature_pt = dest_geom.asPoint()
-                elif dest_geom.type() == QgsWkbTypes.PolygonGeometry:
-                    dest_feature_pt = dest_geom.centroid().asPoint()
-                else:
-                    multi_polygon = dest_geom.asMultiPolygon()
-                    dest_feature_pt = multi_polygon[0]
-
-                building = dest_feature[self.layerdest_field] 
-                   
-                distance = distance_calculator.measureLine(orig_feature_pt, dest_feature_pt)
-                
-                travel_time = (distance / V) / self.factor_speed 
-                if travel_time < t:
-                    pair = (source, building)
-                    cost_res = round(travel_time)
-                    
-                    self.min_costs[pair] = (cost_res,0)
-                    self.short_result[(source, building)] = cost_res
-        
-        
-                    
-
     def makeProtocolMap(self,
                         f,
                         aggregate_dict,
@@ -690,9 +617,7 @@ class car_accessibility:
                     self.aggregate_this_fields[field] = True
 
                     features_dest = self.layer_dest.getFeatures()
-                    
-                    #if self.selected_only2:
-                    #    features_dest = self.layer_dest.selectedFeatures()
+                                        
 
                     for feature in features_dest:
                         attribute_dict[int(feature[field_name_id])] = int(
@@ -750,16 +675,13 @@ class car_accessibility:
             self.f = f'{self.parent.folder_name}//{self.parent.file_name}.csv'
             with open(self.f, 'w') as self.filetowrite:
                 self.filetowrite.write(table_header) 
-       
-        if self.parent.RunOnAir:
-            self.find_car_accessibility_onAIR()
-        else:    
-            self.find_car_accessibility()
+      
+        self.find_car_accessibility()
         if self.parent.protocol_type == 2 and len(self.parent.points) > 1:
             self.f, self.short_result = self.make_service_area_report(self.parent.folder_name, self.parent.file_name)    
         QApplication.processEvents()
-        text = self.parent.textLog.toPlainText()
-        filelog_name = f'{self.parent.folder_name}//log_{self.parent.alias}.txt'
+        text = transform_log_to_csv_text(self.parent.textLog.toPlainText())
+        filelog_name = f'{self.parent.folder_name}//log_{self.parent.alias}.csv'
         with open(filelog_name, "w") as file:
             file.write(text)
 
@@ -815,53 +737,4 @@ class car_accessibility:
         self.parent.textLog.append(f'<a href="file:///{self.parent.folder_name}" target="_blank" >Output in folder</a>')
         self.parent.setMessage(f'Finished')
 
-
-        if self.parent.selected_only1 or self.parent.selected_only2:
-            msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Question)
-            msgBox.setWindowTitle("Confirm")
-            msgBox.setText(
-                f'Do you want to store selected features as a layer?')
-            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            result = msgBox.exec_()
-
-            if result == QMessageBox.Yes:
-                if self.parent.selected_only1:
-
-                    zip_filename1 = f'{self.parent.folder_name}//{self.cols["star"]}_{self.parent.alias}.zip'
-                    filename1 = f'{self.parent.folder_name}//{self.cols["star"]}_{self.parent.alias}.geojson'
-                    self.save_layer_to_zip(
-                        self.layer_orig, zip_filename1, filename1)
-                if self.parent.selected_only2:
-
-                    zip_filename2 = f'{self.parent.folder_name}//{self.cols["hash"]}_{self.parent.alias}.zip'
-                    filename2 = f'{self.parent.folder_name}//{self.cols["hash"]}_{self.parent.alias}.geojson'
-                    self.save_layer_to_zip(
-                        self.layer_dest, zip_filename2, filename2)
-
-    def save_layer_to_zip(self, layer, zip_filename, filename):
-
-        with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp_file:
-            temp_file = tmp_file.name
-
-        QApplication.processEvents()
-        options = QgsVectorFileWriter.SaveVectorOptions()
-        options.driverName = "GeoJSON"
-        options.fileEncoding = "UTF-8"
-        options.onlySelectedFeatures = True
-
-        QgsVectorFileWriter.writeAsVectorFormatV3(
-                layer, 
-                temp_file, 
-                QgsProject.instance().transformContext(), 
-                options)
-
-        QApplication.processEvents()
-
-        with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            zipf.write(temp_file, os.path.basename(filename))
-
-        QApplication.processEvents()
-
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+        

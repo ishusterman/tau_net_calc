@@ -137,30 +137,7 @@ class roundtrip_analyzer:
         result = self.path_stats if self.service_area else self.path_bins
 
         return result
-    """
-    def _save_bins(self, final_results):
-        bin_counts = defaultdict(lambda: defaultdict(int))
-        max_bin_code = self.duration_max // 600
-
-        for (o_id, d_id), data in final_results.items():
-            bin_code = int(data["mean"] // 600)
-            if bin_code >= max_bin_code: bin_code = max_bin_code - 1
-            bin_counts[o_id][bin_code] += 1
-
-        all_bins = sorted({b for bins in bin_counts.values() for b in bins.keys()})
-        
-        with open(self.path_bins, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow([self.field_star] + [f"bin_{b}" for b in all_bins])
-            for o_id, bins in bin_counts.items():
-                row, cumulative = [o_id], 0
-                for b in all_bins:
-                    cumulative += bins.get(b, 0)
-                    row.append(cumulative)
-                writer.writerow(row)
-        
-        return 
-    """
+    
     def _save_bins(self, final_results):
         bin_counts = defaultdict(lambda: defaultdict(int))
         step = 600 

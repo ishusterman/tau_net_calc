@@ -1,0 +1,8 @@
+<b>Data Preprocessing: Clean Road Network</b> <br /><br />
+<span style="color: grey;">
+The road layer undergoes topological cleaning through the repeated application of various options of the GRASS <a href="https://grass.osgeo.org/grass-stable/manuals/v.clean.html" target="_blank">v.clean</a> procedure. This cleaning process is executed in three distinct steps: <br />
+<b>Step 1:</b> The v.clean algorithm is applied to the initial road layer using the snap option. This specific stage utilizes a snap threshold of 0.5 meters.<br />
+<b>Step 2:</b> The v.clean algorithm is then applied to the output of Step 1 using the break option, which breaks intersecting links exactly at their points of intersection. This action generates new junctions at these intersection points.<br />
+<b>Step 3:</b> Finally, the v.clean algorithm is applied to the output of Step 2 using the rmdupl option to identify overlapping links. The algorithm ensures that only one of the overlapping links is preserved.<br />
+To ensure strict data consistency during subsequent accessibility calculations, every road link must have a unique identifier. To achieve this, a new identifier field named <i>aid</i> is generated and populated with consecutive integers starting from 0.
+<span>

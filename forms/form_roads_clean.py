@@ -3,6 +3,7 @@ import webbrowser
 import configparser
 from datetime import datetime
 import glob
+import re
 
 from qgis.core import (QgsApplication,
                        QgsProject,
@@ -30,7 +31,8 @@ from common import (get_qgis_info,
                     check_file_parameters_accessibility, 
                     getDateTime, 
                     insert_layer_ontop,
-                    check_layer
+                    check_layer,
+                    transform_log_to_csv_text
                     )
 
 from layer_clean import cls_clean_roads
@@ -89,26 +91,41 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.show_info()
 
     def open_file_dialog(self):
-
         project_path = QgsProject.instance().fileName()
         initial_dir = os.path.dirname(project_path) if project_path else ""
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
             initial_dir,
-            "Shapefile (*.shp);"
+            "All supported (*.shp *.gpkg);;Shapefile (*.shp);;GeoPackage (*.gpkg)"
         )
+        if not file_path:
+            return
 
-        if file_path:
+        added_layers = []
+        if file_path.lower().endswith(".gpkg"):
+            temp_layer = QgsVectorLayer(file_path, "temp_discovery", "ogr")
+            if not temp_layer.isValid():
+                return
+            sublayers = temp_layer.dataProvider().subLayers()
+            for sub_info in sublayers:
+                parts = sub_info.split('!!::!!')
+                if len(parts) >= 2:
+                    layer_name = parts[1]
+                    uri = f"{file_path}|layername={layer_name}"
+                    new_layer = QgsVectorLayer(uri, layer_name, "ogr")
+                    if new_layer.isValid():
+                        QgsProject.instance().addMapLayer(new_layer)
+                        added_layers.append(new_layer)
+        else:
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             layer = QgsVectorLayer(file_path, file_name, "ogr")
-            
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
-                self.cmbLayersRoad.setLayer(layer)
-            else:
-                self.setMessage(f"Layer '{file_name}' is invalid or corrupted.")
-
+                added_layers.append(layer)
+        if added_layers:
+            target_layer = added_layers[-1] 
+            self.cmbLayersRoad.setLayer(target_layer)
     
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(
@@ -229,8 +246,8 @@ class form_roads_clean(QDialog, FORM_CLASS):
     def save_log(self, need_save):
         if need_save:
             postfix = getDateTime()
-            filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.txt'
-            text = self.textLog.toPlainText()
+            filelog_name = f'{self.folder_name}//log_roads_clean_{postfix}.csv'
+            text = transform_log_to_csv_text(self.textLog.toPlainText())
             with open(filelog_name, "w") as file:
                 file.write(text)
             
@@ -341,17 +358,18 @@ class form_roads_clean(QDialog, FORM_CLASS):
         return super().eventFilter(obj, event)
     
     def show_info(self):
-        
-        html = '<b>Clean road network:</b> <br /> <br />'
-        html += '<span style="color: grey;">The layer of roads is topologically cleaned by repeatedly applying different options of the <b>v.clean</b> GRASS procedure, see <a href="https://grass.osgeo.org/grass-stable/manuals/v.clean.html" target="_blank">v.clean documentation</a>. The cleaning is done in three steps:<br />'
-        html += '1. The <b>v.clean</b> is applied with the <b>snap</b> option to the initial layer of roads. This stage of cleaning employed the snap threshold of 1 meter.<br />'
-        html += '2. The <b>v.clean</b> is applied with the <b>break</b> option to the result of step 1, to break intersecting links at the points of intersection. New junctions are created at these points.<br />'
-        html += '3. The <b>v.clean</b> is applied with the <b>rmdupl</b> option to the results of step 2, to reveal the overlapping links. Only one of them is preserved.<br /><br />'
-        html += 'The road links identifier must be unique. This condition is tested, and the repeating or NULL identifiers are made unique by substituting the repeating values by MAX+1, MAX+2, etc., where MAX is the maximum value of the identifier before the test.<br />'
-        html += 'If the option “Create ID” is chosen, a new field <i>link_id</i> is created as the first field of the layer’s attribute table, and filled by the consecutive integer numbers, starting from 0.'
-        html += '</span>'
+
+        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+        help_filename = "clean_road_network.txt"
+        hlp_file = os.path.join(hlp_directory, help_filename)
+
+        if os.path.exists(hlp_file):
+            with open(hlp_file, 'r', encoding='utf-8') as f:
+                html = f.read()
 
         self.textInfo.setOpenExternalLinks(False)  
         self.textInfo.setOpenLinks(False)          
         self.textInfo.setHtml(html)
-        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))
+        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))    
+               
+            

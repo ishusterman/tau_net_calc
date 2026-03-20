@@ -1,0 +1,6 @@
+<b>Prepare Databases: Add Lines to GTFS</b> <br /><br />
+<span style="color: grey;">
+To integrate new transit lines into your GTFS dataset, you must first organize the information for these additional lines into a separate, distinct GTFS dataset. <br />
+Before proceeding, it is crucial to validate this newly prepared dataset using official validation tools, such as the one available at <a href="https://gtfs.org/getting-started/validate/">https://gtfs.org/getting-started/validate/</a>. <br />
+Because studying transit network development typically requires comparing multiple scenarios, we highly recommend constructing a single, comprehensive GTFS dataset containing all possible additional lines. Once compiled, you can use this interface to selectively choose which specific lines to add for any given scenario.
+<span>

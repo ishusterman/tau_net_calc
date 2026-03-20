@@ -1,8 +1,6 @@
 import os
 import csv
 import webbrowser
-import re
-import urllib.parse
 import configparser
 
 from qgis.core import (QgsProject,
@@ -13,7 +11,6 @@ from qgis.core import (QgsProject,
 from PyQt5.QtWidgets import (QDialogButtonBox,
                             QFileDialog,
                             QMessageBox,
-                            QPushButton,
                             QTableWidgetItem,
                             QDialog,
                             QHeaderView
@@ -21,9 +18,7 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
 
 from PyQt5.QtCore import (Qt,
                           QRegExp,
-                          QEvent,
-                          QVariant,
-                          QUrl
+                          QEvent                          
                           )
 
 
@@ -57,15 +52,16 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.setWindowTitle(title)
 
-        fix_size = 12 * self.txtSpeed.fontMetrics().width('x')
+        fix_size = 15 * self.txtSpeed.fontMetrics().width('x')
         fix_size2 = 22 * self.txtSpeed.fontMetrics().width('x')
 
         self.txtSpeed.setFixedWidth(fix_size)
-
-        self.cmbLayersRoad_type_road.setFixedWidth(fix_size2)
+        
         self.cmbFieldsDirection.setFixedWidth(fix_size2)
         self.cmbFieldsSpeed.setFixedWidth(fix_size2)
 
+        self.cbDirection.setFixedWidth(fix_size2)
+        
         self.splitter.setSizes([int(self.width() * 0.70), int(self.width() * 0.30)])
         
         self.tabWidget.setCurrentIndex(0)
@@ -74,8 +70,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.break_on = False
 
         self.title = title
-
-        self.lblOSM_need_update = False
 
         self.progressBar.setValue(0)
 
@@ -99,24 +93,20 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.cmbFieldsSpeed.installEventFilter(self)
         self.cmbFieldsDirection.installEventFilter(self)
-        self.cmbLayersRoad_type_road.installEventFilter(self)
-        
+                
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
         self.run_button = self.buttonBox.addButton("Run", QDialogButtonBox.ActionRole)
+        self.run_button.setEnabled(False)
         self.close_button = self.buttonBox.addButton("Close", QDialogButtonBox.RejectRole)
         self.help_button = self.buttonBox.addButton("Help", QDialogButtonBox.HelpRole)
 
         self.run_button.clicked.connect(self.on_run_button_clicked)
         self.close_button.clicked.connect(self.on_close_button_clicked)
         self.help_button.clicked.connect(self.on_help_button_clicked)
-        
-        # Отключаем все существующие сигналы
-        try:
-            self.test_button.clicked.disconnect()
-        except:
-            pass
-        self.test_button.clicked.connect(self.on_test_button_clicked)
+
+        self.btnCheckOSM.clicked.connect(self.on_btnCheckOSM_click)
+        self.test_button.clicked.connect(self.on_test_button_click)
 
         # floating, two digit after dot
         regex3 = QRegExp(r"^\d+(\.\d{1,2})?$")
@@ -127,9 +117,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.ParametrsShow()
         self.onLayerRoadChanged()
         self.cbRoads.currentIndexChanged.connect(self.onLayerRoadChanged)
-
-        self.cmbFieldsSpeed.currentIndexChanged.connect(self.onFieldChanged)
-        self.cmbFieldsDirection.currentIndexChanged.connect(self.onFieldChanged)
 
         self.textInfo.anchorClicked.connect(self.open_file)
         
@@ -147,13 +134,33 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.fill_table(self.table2, self.factor_speed_by_hour, mode = "CDI")    
         self.show_info()
         
-        self.checkBox_show_tables.toggled.connect(self.toggle_tables_visibility)
-        self.groupBox_tables.setVisible(False)
+        self.setEnabledAll(False)
 
-        self.cmbLayersRoad_type_road.setEnabled(False)
-        self.cmbFieldsDirection.setEnabled(False)
-        self.cmbFieldsSpeed.setEnabled(False)
-        
+        self.lblOSMInfo.setText("")
+        self.lblOSM.setText("")
+
+
+    def setEnabledAll (self, status):
+        widgets_to_hide = [
+                self.widget_candidates,
+                self.lblDefault,
+                self.lblDirection, self.cbDirection,
+                self.lblSpeed, self.txtSpeed,
+
+                self.lblCandidates, 
+                self.lblFieldsDirection, self.cmbFieldsDirection,
+                self.lblFieldsSpeed, self.cmbFieldsSpeed,
+                
+                self.lblFolderStore, self.txtPathToProtocols, self.toolButton_protocol,
+                self.test_button,
+
+                self.cmbFieldsDirection,
+                self.cmbFieldsSpeed
+
+            ]
+        for widget in widgets_to_hide:
+            widget.setEnabled(status)
+
 
     def toggle_tables_visibility(self, checked):
         self.groupBox_tables.setVisible(checked)
@@ -185,11 +192,11 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.setMessage (message)    
         self.progressBar.setValue(progress)
     
-    def on_test_button_clicked(self):   
+    def on_test_button_click(self):   
         
         self.test_button.setEnabled(False)
         self.run_button.setEnabled(False)
-        self.progressBar.setMaximum(3)
+        
         self.layer_road = self.cbRoads.currentLayer() 
         self.layer_road_name = self.layer_road.name()
               
@@ -197,27 +204,24 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.processor_road = RoadLayerProcessor(self,
                                                  self.layer_road, 
                                                  self.layer_road_name, 
-                                                 mode = "pkl")
+                                                 self.checkOSM_result)
         
-        self.lblOSM_need_update = self.processor_road.run()
-        
+        result, self.text_for_log = self.processor_road.run()
+        if result:
+            self.setEnabledAll(True)
+        self.run_button.setEnabled(result)
 
-    def onFieldChanged(self):
-        pass
-        #if self.lblOSM_need_update:
-        #    message_type = "Source of the road layer: <b>Unknown</b>;"
-        #    self.lblOSM.setText (f"{message_type} Direction: <b>{self.cmbFieldsDirection.currentData()}</b>, Speed <b>{self.cmbFieldsSpeed.currentData()}</b>")
-
+    
     def onLayerRoadChanged(self):
-
-        self.test_button.setEnabled(True)
-        self.cmbFieldsSpeed.clear()
+        
+        self.textLog.clear()
+        self.run_button.setEnabled(False)
+        self.btnCheckOSM.setEnabled(True)
         self.cmbFieldsDirection.clear()
-        self.cmbLayersRoad_type_road.clear()
-        self.cmbLayersRoad_type_road.setEnabled(False)
-        self.cmbFieldsDirection.setEnabled(False)
-        self.cmbFieldsSpeed.setEnabled(False)
-        self.lblOSM.setText ("")
+        self.cmbFieldsSpeed.clear()
+        self.lblOSMInfo.setText("")
+        self.lblOSM.setText("")
+        self.setEnabledAll(False)
 
     def open_file(self, url):
         file_path = url.toLocalFile()
@@ -234,6 +238,38 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.break_on = True
         self.close_button.setEnabled(True)
         
+    def on_btnCheckOSM_click(self):
+        
+        self.lblOSM.setText("")
+        self.lblOSMInfo.setVisible(False)
+        self.layer_road = self.cbRoads.currentLayer() 
+        if self.layer_road:
+            self.checkOSM_result = self.checkOSM(self.layer_road)
+            
+            if self.checkOSM_result:
+                self.progressBar.setMaximum(2)
+                self.lblOSMInfo.setVisible(True)
+                self.lblOSMInfo.setText("OSM (FCLASS, Direction, and MAXSPEED fields found)")
+                                
+            else:
+                self.progressBar.setMaximum(2)
+                self.lblOSMInfo.setVisible(True)
+                self.lblOSMInfo.setText("Local GIS")
+                
+        self.btnCheckOSM.setEnabled(False)
+        self.test_button.setEnabled(True)
+        
+    def checkOSM(self, layer):
+        required_fields = {'fclass', 'oneway', 'maxspeed'}
+                
+        layer_field_names = {field.name().lower() for field in layer.fields()}
+        
+        # Проверяем, являются ли все искомые поля подмножеством полей слоя
+        if required_fields.issubset(layer_field_names):
+            return True
+        else:
+            return False
+    
     def on_run_button_clicked(self):
             
         self.run_button.setEnabled(False)
@@ -257,18 +293,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
-        
-        if not self.cmbFieldsSpeed.currentData() or not self.cmbFieldsDirection.currentData():
-            msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Information)
-            msgBox.setWindowTitle("Information")
-            message = 'Attributes not tested yet! Push "Test attributes" button to pass the test'
-            msgBox.setText(message)
-            ok_button = QPushButton("Ok")
-            msgBox.addButton(ok_button, QMessageBox.AcceptRole)
-            msgBox.exec_()
-            if msgBox.clickedButton() == ok_button:
-                return 0  
+       
         
         self.folder_name = f'{self.txtPathToProtocols.text()}'
 
@@ -290,30 +315,30 @@ class form_pkl_car(QDialog, FORM_CLASS):
             [f"{key}: {value}" for key, value in qgis_info.items()])
         self.textLog.append(f'<a> {info_str}</a>')
 
-        self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Input]</a>")
         self.textLog.append(f"<a> Layer of buildings: {self.layer_origins_path}</a>")
+        self.textLog.append(f"<a> Layer of roads: {self.layer_roads_path}</a>")
 
-        self.textLog.append(f"<a> Layer of roads: {self.config['Settings']['Roads_car_pkl']}</a>")
-
+        self.textLog.append("<a style='font-weight:bold;'>[Verify road data]</a>")
+        self.textLog.append(f"<a> Check if road layer is OSM: {self.lblOSMInfo.text()} </a>")
+        self.textLog.append(f"<a> Test attributes: {self.lblOSM.text()} </a>")
         self.message_for_log = f"Direction: <b>{self.cmbFieldsDirection.currentText()}</b>, Speed: <b>{self.cmbFieldsSpeed.currentText()}</b>"
-        if self.cmbLayersRoad_type_road.currentText() == "":
-            message_type = "Source of the road layer: <b>Unknow</b>;"
-            self.message_for_log = f'{message_type} {self.message_for_log}'
-        else:
-            message_type = "Source of the road layer: <b>OSM</b>;"
-            self.message_for_log = f'{message_type} {self.message_for_log}, Link type: <b>{self.cmbLayersRoad_type_road.currentText()}<b>'
+        if self.checkOSM_result:
+            self.message_for_log=f'{self.message_for_log}, FClass: <b>FClass</b>' 
         self.textLog.append(self.message_for_log)        
-        
+
+        self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")
         self.textLog.append(f"<a> Default direction: {self.default_direction} </a>")
         self.textLog.append(f"<a> Default speed: {self.config['Settings']['speed_car_pkl']} km/h</a>")
-        
-
-        self.textLog.append(f"<a> Folder to store car database: {self.config['Settings']['pathtoprotocols_car_pkl']}</a>")
+        self.textLog.append(f"<a> Folder to store car routing database: {self.config['Settings']['pathtoprotocols_car_pkl']}</a>")
 
         self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
 
         pkl_car_calc = pkl_car(self)
         pkl_car_calc.create_files()
+
+        #self.textLog.append('---------------')
+        #self.textLog.append(self.text_for_log)
 
         self.close_button.setEnabled(True)
 
@@ -391,9 +416,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
         if 'FieldSpeed_car_pkl' not in self.config['Settings']:
             self.config['Settings']['FieldSpeed_car_pkl'] = '0'
 
-        if 'FieldSpeed_car_pkl' not in self.config['Settings']:
-            self.config['Settings']['FieldSpeed_car_pkl'] = '0'
-
         if 'FieldDirection_car_pkl' not in self.config['Settings']:
             self.config['Settings']['FieldDirection_car_pkl'] = '0'
 
@@ -419,8 +441,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.config['Settings']['FieldDirection_car_pkl'] = str(self.cmbFieldsDirection.currentData())
         self.config['Settings']['FieldSpeed_car_pkl'] = str(self.cmbFieldsSpeed.currentData())
-        self.config['Settings']['LayerRoad_type_road_car_pkl'] = self.cmbLayersRoad_type_road.currentData() or ''
-        
+                
         self.config['Settings']['Roads_car_pkl'] = self.cbRoads.currentLayer().id()
         self.config['Settings']['Layer_buildings_car_pkl'] = self.cmbLayers_buildings.currentLayer().id()
 
@@ -435,6 +456,9 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.count_layer_origins = layer.featureCount()
         self.layer_origins_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
 
+        layer = self.layer_road 
+        self.layer_roads_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
+
     def ParametrsShow(self):
 
         self.readParameters()
@@ -443,7 +467,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
             os.path.normpath(self.config['Settings']['PathToProtocols_car_pkl']))
 
         self.cmbFieldsSpeed.setCurrentText(self.config['Settings']['FieldSpeed_car_pkl'])
-        self.cmbLayersRoad_type_road.setCurrentText(self.config['Settings']['LayerRoad_type_road_car_pkl'])
         self.cmbFieldsDirection.setCurrentText(self.config['Settings']['FieldDirection_car_pkl'])
         self.txtSpeed.setText(self.config['Settings']['Speed_car_pkl'])
 
@@ -486,8 +509,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
-   
-
     def save_var(self):
         self.path_to_protocol = self.config['Settings']['pathtoprotocols_car_pkl']
         self.idx_field_direction = self.layer_road.fields().indexFromName(self.cmbFieldsDirection.currentData())
@@ -495,7 +516,13 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.idx_field_speed = self.layer_road.fields().indexFromName(self.cmbFieldsSpeed.currentData())
         self.speed_fieldname = self.cmbFieldsSpeed.currentData()
 
-        self.layer_road_type_road = self.config['Settings']['LayerRoad_type_road_car_pkl']
+        #self.layer_road_type_road = self.config['Settings']['LayerRoad_type_road_car_pkl']
+        if self.checkOSM_result:
+            idx = self.layer_road.fields().indexOf("fclass")
+            self.layer_road_type_road = self.layer_road.fields()[idx].name()
+        else:
+            self.layer_road_type_road = ""
+
         self.layer_road_direction = self.config['Settings']['FieldDirection_car_pkl']
         self.layer_buildings_field = FIELD_ID
         self.speed = float(self.config['Settings']['Speed_CAR_pkl'].replace(',', '.'))
@@ -545,61 +572,19 @@ class form_pkl_car(QDialog, FORM_CLASS):
         table.horizontalHeader().setStretchLastSection(True)
         header = table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
-       
-    def load_text_with_bold_first_line(self, file_path):
-        if not os.path.exists(file_path):
-            return
-        with open(file_path, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-            if not lines:
-                return  
-            first_line = f"<b>{lines[0].strip()}</b>"  
-            other_lines = "".join(lines[1:]) 
-
-        other_lines_with_br = other_lines.replace("\n", "<br>")
-        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
-        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
-        self.textInfo.setHtml(full_text)
-    
     
     def show_info(self):
+
+            hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
         
-        file_url1 = QUrl.fromLocalFile(self.file_path_road_speed_default).toString()
-        file_url2 = QUrl.fromLocalFile(self.file_path_factor_speed_by_hour).toString()
-        html = f'<b>Construct databases, Car routing database:</b> <br /> <br />'
-        html += '<span style="color: grey;">The car routing database is constructed based on the links’ traffic direction and maximum traffic speed, and the congestion delay coefficient that depends on the hour of a day:  <br /> <br />'
-        html += f'1. If the source of the road layer is the OSM database, then maximum traffic speed along the link is retrieved, depending on the road link type, from the table of average free speed on the road links.  To edit this table, click <a href="{file_url1}" target="_blank">here</a>. If this table is edited, the new version substitutes the previous one and the user is responsible for storing the latter, if necessary.If the source is different, the maximum traffic speed is used as is. In case the data on the traffic directions on a link or maximum traffic speed are absent or incorrect, the user is asked to fix the problem and repeat the computations.<br />'
-        html += f'2. The congestion delay coefficients depend on the hour of the trip’s start and are applied during the entire trip. To edit this table, click <a href="{file_url2}" target="_blank">here</a>. If this table is edited, the new version substitutes the previous one and the user is responsible for storing the latter, if necessary. <br />'
-        html += '3. The data on the road network and buildings are translated into a pkl (Pickled Python Objects) binary format that allows fast accessibility computations.<br />'
-        html += '</span>'
-        self.textInfo.setHtml(html)
-        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))  
+            help_filename = "build_car_routing_database.txt"
+            hlp_file = os.path.join(hlp_directory, help_filename)
 
-    def load_text_with_bold_first_line(self, file_path):
-        if not os.path.exists(file_path):
-            return
-        with open(file_path, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-            if not lines:
-                return  
-            first_line = f"<b>{lines[0].strip()}</b>"  
-            other_lines = "".join(lines[1:]) 
+            if os.path.exists(hlp_file):
+                with open(hlp_file, 'r', encoding='utf-8') as f:
+                    html = f.read()
 
-        other_lines_with_br = other_lines.replace("\n", "<br>")
-        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
-        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
-        self.textInfo.setHtml(full_text)
-
-    """    
-    def show_info(self):
-        
-        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
-        help_filename = "transit_db_car.txt"
-            
-        hlp_file = os.path.join(hlp_directory, help_filename)
-        hlp_file = os.path.normpath(hlp_file)
-        self.load_text_with_bold_first_line (hlp_file)
-    """
-    def closeEvent(self, event):
-        self.break_on = True
-        event.accept()
+            self.textInfo.setOpenExternalLinks(False)  
+            self.textInfo.setOpenLinks(False)          
+            self.textInfo.setHtml(html)
+            self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))  

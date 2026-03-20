@@ -5,6 +5,8 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QColor
 
+from PyQt5.QtCore import Qt
+
 from qgis.core import (
     QgsProject,
     QgsVectorLayer,
@@ -42,7 +44,6 @@ class visualization:
             self.fieldname_in_protocol = cols["star"]
         else:  # AREA
             self.fieldname_in_protocol = cols["hash"]
-
 
         self.fieldname_layer = fieldname_layer
         self.parent = parent
@@ -183,6 +184,7 @@ class visualization:
                 self.slyle_Region()
     
     def slyle_compare(self):
+        
         if self.type_compare == "CompareFirstOnly":
             style_filename = "CompareFirstOnly.qml"
         elif self.type_compare == "CompareSecondOnly":
@@ -220,64 +222,73 @@ class visualization:
         renderer = layer.renderer()
         ranges = renderer.ranges()
         
-        new_max = self.round_up_to_nearest(self.max_abs_value)  # Максимальное абсолютное значение, округлённое вверх
-        new_min = -new_max  # Симметричный минимум
-        num_classes = 9  # Требуется 9 диапазонов
+        new_max = self.round_up_to_nearest(self.max_abs_value)
+        new_min = -new_max
+        num_classes = 9
 
         new_ranges = []
-        new_step = (new_max - new_min) / num_classes  # Новый размер класса
+        new_step = (new_max - new_min) / num_classes
 
-        # Генерация градиента цветов
         start_color = ranges[0].symbol().color()
         mid_color = ranges[len(ranges) // 2].symbol().color()
         end_color = ranges[-1].symbol().color()
         colors = self.generate_gradient(start_color, mid_color, end_color, num_classes)
 
         for i in range(num_classes):
-            
             lower_value = new_min + i * new_step
             upper_value = lower_value + new_step
             if upper_value > new_max:
-                upper_value = new_max  # Не допускаем выхода за максимальное значение
+                upper_value = new_max
 
-            # Клонируем символ и создаем новый интервал
-            symbol = ranges[i % len(ranges)].symbol().clone()  # Повторяем символы, если их меньше 9
-            symbol.setColor(QColor(colors[i]))
+            symbol = ranges[i % len(ranges)].symbol().clone()
+            
+            # --- Настройка отсутствия рамки и цвета ---
+            if symbol.symbolLayerCount() > 0:
+                symbol_layer = symbol.symbolLayer(0)
+                symbol_layer.setFillColor(QColor(colors[i]))
+                symbol_layer.setStrokeStyle(Qt.NoPen) # Убираем рамку
+            # ------------------------------------------
+
             label = f"{lower_value:.0f} - {upper_value:.0f}"
             new_ranges.append(QgsRendererRange(lower_value, upper_value, symbol, label))
 
-        # Создаём новый рендерер
         new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
         new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
         new_renderer.setClassAttribute(self.targetField)
     
         return new_renderer
     
+    def slyle_Region(self):
 
-
-    def slyle_Region (self):
         layer = self.layer_clone
         layer.loadNamedStyle(self.style_file)
         
         renderer = layer.renderer()
         ranges = renderer.ranges()
 
-        old_min = ranges[0].lowerValue()  # Минимальное значение
+        old_min = ranges[0].lowerValue()
         new_max = self.round_up_to_nearest(self.max_value)  
         num_classes = len(ranges)
 
         new_ranges = []
-
-        new_step = (new_max - old_min) / num_classes  # Новый размер класса
+        new_step = (new_max - old_min) / num_classes
 
         for i in range(num_classes):
             lower_value = old_min + i * new_step
             upper_value = lower_value + new_step
             if upper_value > new_max:
-                upper_value = new_max  # Не допускаем, чтобы верхняя граница выходила за максимальное значение
+                upper_value = new_max
 
-            # Клонируем символ и создаем новый интервал
+            # Клонируем символ из исходного стиля
             symbol = ranges[i].symbol().clone()
+            
+            # Убираем рамку и настраиваем заливку
+            if symbol.symbolLayerCount() > 0:
+                symbol_layer = symbol.symbolLayer(0)
+                # Если в этом методе вы используете цвета из стиля, 
+                # просто отключаем перо:
+                symbol_layer.setStrokeStyle(Qt.NoPen)
+
             label = f"{lower_value:.0f} - {upper_value:.0f}"
             new_ranges.append(QgsRendererRange(lower_value, upper_value, symbol, label))
 
@@ -285,70 +296,63 @@ class visualization:
         new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
         new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
         new_renderer.setClassAttribute(self.targetField)
+        
         layer.setRenderer(new_renderer)
         layer.renderer().setClassAttribute(self.targetField_base)
         layer.triggerRepaint()
-    
+
+
     def style_ServiceArea(self):
+
         layer = self.layer_clone
         layer.loadNamedStyle(self.style_file)
         
         renderer = layer.renderer()
         ranges = renderer.ranges()
 
-        old_min = ranges[0].lowerValue()  # Минимальное значение
-        old_step = ranges[0].upperValue() - old_min  # Размер одного класса
+        old_min = ranges[0].lowerValue()
+        old_step = ranges[0].upperValue() - old_min
 
         new_max = self.max_value  
         num_classes = int((new_max - old_min) // old_step)
         if (new_max - old_min) % old_step != 0:
             num_classes += 1
-        num_classes = max(num_classes, 2)  # Минимум 2 класса
-
-        new_ranges = []
-
-        # Сохраняем старые интервалы, если их максимальное значение больше или равно новому максимуму
-        for num, range_ in enumerate(ranges):
-            if num + 1 <= num_classes:
-                new_ranges.append(range_)
+        num_classes = max(num_classes, 2)
 
         start_color = ranges[0].symbol().color()
         mid_color = ranges[len(ranges) // 2].symbol().color()
         end_color = ranges[-1].symbol().color()
         colors = self.generate_gradient(start_color, mid_color, end_color, num_classes)
 
-        for i, range_ in enumerate(new_ranges):
-            symbol = range_.symbol().clone()  # Клонируем существующий символ
-            symbol.setColor(QColor(colors[i]))  # Применяем новый цвет из градиента
-            new_ranges[i] = QgsRendererRange(range_.lowerValue(), range_.upperValue(), symbol, range_.label())
-
-
-        # Добавляем новые интервалы, если их нет
-        for i in range(len(new_ranges), num_classes):
-            new_min = old_min + i * old_step
-            new_max = new_min + old_step
-
-            # Берём символ из ближайшего существующего класса
+        new_ranges = []
+        for i in range(num_classes):
+            low = old_min + i * old_step
+            up = low + old_step
+            
+            # Берем базовый символ
             symbol = ranges[min(i, len(ranges) - 1)].symbol().clone()
-            symbol.setColor(QColor(colors[i]))
+            
+            # Настраиваем слой символа
+            if symbol.symbolLayerCount() > 0:
+                sl = symbol.symbolLayer(0)
+                sl.setFillColor(QColor(colors[i]))
+                sl.setStrokeStyle(Qt.NoPen) # Убираем рамку
 
-            new_min_minutes = round(new_min / 60)
-            new_max_minutes = round(new_max / 60)
+            if i < len(ranges):
+                label = ranges[i].label()
+            else:
+                label = f"{round(low/60)} - {round(up/60)} min"
 
-            new_range = QgsRendererRange(
-            new_min, new_max, symbol, f"{new_min_minutes} - {new_max_minutes} min" )
-            new_ranges.append(new_range)
+            new_ranges.append(QgsRendererRange(low, up, symbol, label))
 
-        # Создаём новый рендерер
         new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
-        #new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
         new_renderer.setClassificationMethod(QgsClassificationEqualInterval())
-        
         new_renderer.setClassAttribute(self.targetField)
+        
         layer.setRenderer(new_renderer)
         layer.renderer().setClassAttribute(self.targetField_base)
         layer.triggerRepaint()
-    
+        
     def round_up_to_nearest(self, x):
         
         order_of_magnitude = 10 ** math.floor(math.log10(x))  # Порядок величины числа

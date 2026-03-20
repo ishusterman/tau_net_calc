@@ -37,7 +37,8 @@ from common import (get_qgis_info,
                     getDateTime, 
                     check_file_parameters_accessibility, 
                     get_documents_path,
-                    get_gtfs_date_range
+                    get_gtfs_date_range,
+                    transform_log_to_csv_text
                     )
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -56,7 +57,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.setWindowTitle(title)
 
         self.splitter.setSizes(
-            [int(self.width() * 0.6), int(self.width() * 0.4)])
+            [int(self.width() * 0.7), int(self.width() * 0.3)])
        
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
@@ -115,6 +116,11 @@ class form_gtfs(QDialog, FORM_CLASS):
             self.lblAddLines.hide()
             parent_layout = self.horizontalLayout_11.parent()
             parent_layout.removeItem(self.horizontalLayout_11)
+
+            self.lblNumbers.setText('Enter route short names to delete (comma separated)')
+        
+        else:
+            self.lblNumbers.setText('Enter route short names to add (comma separated)')
 
         self.progressBar.setMaximum(5)
 
@@ -192,13 +198,19 @@ class form_gtfs(QDialog, FORM_CLASS):
             best_desc_col = self.detect_best_description_column(df)
 
             # --- 4. Фильтрация ---
+
+            #unique_cols = list(set(["route_id", "route_short_name", best_desc_col]))
+            
             if show_all:
                 routes = df.loc[:, ["route_id", "route_short_name", best_desc_col]].copy()
+                #routes = df.loc[:, unique_cols].copy()
+                
             else:
                 parts = re.split(r"[,\s;]+", search_text)
                 search_values = [p.lower() for p in parts if p.strip()]
                 mask = df["route_short_name"].str.lower().isin(search_values)
                 routes = df[mask].loc[:, ["route_id", "route_short_name", best_desc_col]].copy()
+                #routes = df.loc[:, unique_cols].copy()
 
             # ПРИНУДИТЕЛЬНЫЙ СБРОС ДЛЯ ВСЕХ ВАРИАНТОВ
             routes = routes.reset_index(drop=True)
@@ -214,7 +226,7 @@ class form_gtfs(QDialog, FORM_CLASS):
             self.table1.setItem(i, 0, QTableWidgetItem(str(row["route_id"])))
             self.table1.setItem(i, 1, QTableWidgetItem(str(row["route_short_name"])))
             self.table1.setItem(i, 2, QTableWidgetItem(str(row[best_desc_col])))
-
+            
         QTimer.singleShot(0, self.adjust_table1_rows) 
     
     def adjust_table1_rows(self): 
@@ -254,10 +266,22 @@ class form_gtfs(QDialog, FORM_CLASS):
             self.table2.setItem(new_row, 1, QTableWidgetItem(name))
             self.table2.setItem(new_row, 2, QTableWidgetItem(desc))
         
-        self.table2.resizeRowsToContents()
+        #self.table2.resizeRowsToContents()
+
+        QTimer.singleShot(0, lambda: self.adjust_rows_height(self.table2))
+
+        """
         for row in range(self.table2.rowCount()): 
             self.table2.resizeRowToContents(row) 
         
+        header = self.table2.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        """
+    def adjust_rows_height(self, table):
+        for row in range(table.rowCount()):
+            table.resizeRowToContents(row)    
  
     def btnRemove_on_click(self):
 
@@ -275,25 +299,36 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.table2.resizeRowsToContents()
 
 
-
+    def apply_table_style(self, table):
+        table.setSelectionBehavior(QTableWidget.SelectRows)
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        table.setWordWrap(True)
+        table.setColumnHidden(0, True) # Прячем ID
+        
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.Stretch) # Описание растягивается
     def InitTable1(self):
         self.table1.clear()
         self.table1.setRowCount(0)
         self.table1.setColumnCount(3)
-        self.table1.setHorizontalHeaderLabels(["ID", "Name", "Description"])
-        self.table1.setColumnHidden(0, True)
-        self.table1.setSelectionBehavior(self.table2.SelectRows)
-        self.table1.setWordWrap(True)
-        header = self.table1.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        self.table1.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
+        self.apply_table_style(self.table1)
+
+    def InitTable2(self):
+        self.table2.clear()
+        self.table2.setRowCount(0)
+        self.table2.setColumnCount(3)
+        self.table2.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
+        self.apply_table_style(self.table2)
+
         
     def InitTable2(self):
         self.table2.clear()
         self.table2.setRowCount(0)
         self.table2.setColumnCount(3)
-        self.table2.setHorizontalHeaderLabels(["ID", "Name", "Description"])
+        self.table2.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
         self.table2.setColumnHidden(0, True)
         self.table2.setSelectionBehavior(self.table2.SelectRows)
         self.table2.setWordWrap(True)
@@ -370,7 +405,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Mode]</a>")
         self.textLog.append(f'<a> Mode: {self.title}</a>')
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
-        self.textLog.append(f"<a> The folder of the initial GTFS dataset: {self.config['Settings']['PathToGTFS_gtfs']}</a>")
+        self.textLog.append(f"<a> The folder of the GTFS dataset: {self.config['Settings']['PathToGTFS_gtfs']}</a>")
         
         
         if self.mode == 2:
@@ -609,10 +644,10 @@ class form_gtfs(QDialog, FORM_CLASS):
         duration_computation).split('.')[0]
         self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
-        text = self.textLog.toPlainText()
+        text = transform_log_to_csv_text(self.textLog.toPlainText())
         postfix = getDateTime()
             
-        filelog_name = os.path.join(path_to_GTFS_mod, f'log_gtfs_pt_{postfix}.txt')
+        filelog_name = os.path.join(path_to_GTFS_mod, f'log_gtfs_pt_{postfix}.csv')
         with open(filelog_name, "w") as file:
                 file.write(text)
 
@@ -635,30 +670,24 @@ class form_gtfs(QDialog, FORM_CLASS):
                 event.ignore()
                 return True
         return super().eventFilter(obj, event)
-    
-    def load_text_with_bold_first_line(self, file_path):
-        if not os.path.exists(file_path):
-            return
-        with open(file_path, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-            if not lines:
-                return  
-            first_line = f"<b>{lines[0].strip()}</b>"  
-            other_lines = "".join(lines[1:]) 
-
-        other_lines_with_br = other_lines.replace("\n", "<br>")
-        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
-        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
-        self.textInfo.setHtml(full_text)
-    
-    def show_info(self):
         
+    def show_info(self):
+
         hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
-        help_filename = "transit_db.txt"
-            
+        if self.mode == 1:
+            help_filename = "add_lines.txt"
+        else:
+            help_filename = "delete_lines.txt"
         hlp_file = os.path.join(hlp_directory, help_filename)
-        hlp_file = os.path.normpath(hlp_file)
-        self.load_text_with_bold_first_line (hlp_file)
+
+        if os.path.exists(hlp_file):
+            with open(hlp_file, 'r', encoding='utf-8') as f:
+                html = f.read()
+
+        self.textInfo.setOpenExternalLinks(False)  
+        self.textInfo.setOpenLinks(False)          
+        self.textInfo.setHtml(html)
+        self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))  
 
     def closeEvent(self, event):
         self.break_on = True

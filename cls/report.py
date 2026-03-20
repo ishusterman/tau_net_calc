@@ -1,6 +1,10 @@
 import os
+import io
 import pandas as pd
 from common import seconds_to_time
+
+import pandas as pd
+
 
 # for type_protokol = 1
 def make_protocol_summary(SOURCE,
@@ -88,7 +92,9 @@ def make_protocol_summary(SOURCE,
         filetowrite.write(f'{row},{Total}\n')
 
 # for type_protokol =2
-def make_protocol_detailed(raptor_mode,
+def make_protocol_detailed(protocol_header,
+                           prefix, 
+                           raptor_mode,
                            D_TIME,
                            dictInput,
                            protocol_full_path,
@@ -523,8 +529,29 @@ def make_protocol_detailed(raptor_mode,
     
     with open(protocol_full_path, 'a') as f:
         f.write('\n'.join(rows_to_write) + '\n')
-   
-    return 1
+
+    #### experiment
+    """
+    full_csv_content = protocol_header + '\n'.join(rows_to_write)
+    df_final = pd.read_csv(io.StringIO(full_csv_content))
+    sheet_name = f"{prefix}_{SOURCE}"[:31]
+    if os.path.exists(file_name_xlsx):
+        mode = 'a'
+        if_exists = 'replace'
+    else:
+        mode = 'w'
+        if_exists = None
+    with pd.ExcelWriter(file_name_xlsx, engine='openpyxl', mode=mode, if_sheet_exists=if_exists) as writer:
+        df_final.to_excel(writer, sheet_name=sheet_name, index=False)
+    """
+    
+    header_list = protocol_header.split(',')
+    data_body = [row.split(',') for row in rows_to_write]
+    df_final = pd.DataFrame(data_body, columns=header_list)
+    sheet_name = f"{prefix}_{SOURCE}"[:31]
+
+    return  df_final, sheet_name
+
 
 def make_service_area_report(file_path, alias, col_star, col_hash):
 
@@ -546,4 +573,51 @@ def make_service_area_report(file_path, alias, col_star, col_hash):
 
     result.to_csv(filename, index=False)
     return filename, short_result
+
+
+def make_service_area_report_xlsx(file_name_xlsx, prefix, col_star, col_hash):
+    
+    print ("1")
+    all_sheets = pd.read_excel(file_name_xlsx, sheet_name=None)
+
+    # 2. Собираем только те листы, которые начинаются с префикса
+    df_list = []
+    for sheet_name, df_sheet in all_sheets.items():
+        if sheet_name.startswith(prefix):
+            if not df_sheet.empty:
+                df_list.append(df_sheet)
+
+    if not df_list:
+        print(f"No sheets found with prefix: {prefix}")
+        return None, {}
+
+    print ("2")
+    df = pd.concat(df_list, ignore_index=True)
+    # Приведение типов для корректной группировки
+    df[col_hash] = pd.to_numeric(df[col_hash], errors='coerce').fillna(0).astype(int)
+    df['Duration'] = pd.to_numeric(df['Duration'], errors='coerce').fillna(0).astype(int)
+
+    # Оставляем только строки с минимальной длительностью
+    result = df.loc[df.groupby(col_hash)['Duration'].idxmin()]
+    print ("3")
+    # 4. Формируем словарь short_result
+    short_result = {
+        (int(row[col_star]), int(row[col_hash])): int(row['Duration']) 
+        for _, row in result.iterrows()
+    }
+
+    # 5. Сохранение результата как новый лист в Excel
+    """
+    result_sheet_name = f"sa_{prefix}"[:31] # Имя листа для результата
+    print ("4")
+    # Используем ExcelWriter для добавления листа в существующий файл
+    with pd.ExcelWriter(file_name_xlsx, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+        result.to_excel(writer, sheet_name=result_sheet_name, index=False)
+        
+        wb = writer.book
+        idx = wb.sheetnames.index(result_sheet_name)
+        wb._sheets.insert(0, wb._sheets.pop(idx))
+    """
+
+    return  short_result
 

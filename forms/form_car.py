@@ -41,7 +41,8 @@ from common import (get_qgis_info,
                     seconds_to_time,
                     get_name_columns,
                     FIELD_ID,
-                    check_layer
+                    check_layer,
+                    transform_log_to_csv_text
                     )
 
 from AnalyzerFromTo_incremental import roundtrip_analyzer
@@ -65,12 +66,20 @@ class CarAccessibility(QDialog, FORM_CLASS):
         check_file_parameters_accessibility()
 
         self.setWindowTitle(title)
+
+        if protocol_type == 2:
+            self.resize(self.width() - 100, self.height())
+
         self.splitter.setSizes([int(self.width() * 0.75), int(self.width() * 0.25)])
 
         fix_size = 15 * self.txtTimeInterval.fontMetrics().width('x')
 
         self.txtMaxTimeTravel.setFixedWidth(fix_size)
-        self.txtTimeInterval.setFixedWidth(fix_size)
+        fix_size2 = 7 * self.txtTimeInterval.fontMetrics().width('x')
+        self.txtTimeInterval.setFixedWidth(fix_size2)
+
+        self.fix_size3 = 25 * self.txtTimeInterval.fontMetrics().width('x')
+        self.txtAlias.setFixedWidth(self.fix_size3)
 
         self.txtWalkToCAR.setFixedWidth(fix_size)
         self.txtWalkToDestination.setFixedWidth(fix_size)
@@ -145,13 +154,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
         if self.protocol_type == 2:
 
             self.txtTimeInterval.setVisible(False)
-            self.label_6.setVisible(False)
+            self.lblTimeInterval.setVisible(False)
+            self.lblTimeInterval2.setVisible(False)
 
             self.cmbFields_ch.setVisible(False)
             self.label.setVisible(False)
-            #self.widget_spacer1.setVisible(False)
-            self.widget_spacer2.setVisible(False)
-
+            
         self.ParametrsShow()
         
         self.show_info()
@@ -187,42 +195,78 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.rbTo.setText("TO Facility")
         self.rbRound.setText("ROUNDTRIP")
 
-        widgets_to_hide = [
-        self.lblRoundtrip4, self.lblRoundtrip5,self.lblRoundtrip9,
-        self.lblRoundtrip10,self.txtRountrip_timedelta1, self.txtRountrip_timedelta2]
-        for widget in widgets_to_hide:
-                widget.setVisible(False)
 
         if self.protocol_type == 2:
             self.lblLayer2.setText('Layer of facilities')
         else:
             self.lblLayer2.setText('Layer of opportunities')
 
+        self.lblAlias.setVisible(False)
+        self.txtAlias.setVisible(False)
+
+        self.dtRoundtripStartTime1.timeChanged.connect(lambda: self.update_timedelta(1))
+        self.dtRoundtripStartTime2.timeChanged.connect(lambda: self.update_timedelta(1))
+        self.dtRoundtripStartTime3.timeChanged.connect(lambda: self.update_timedelta(2))
+        self.dtRoundtripStartTime4.timeChanged.connect(lambda: self.update_timedelta(2))
+
+    def update_timedelta(self, pair_index):
+        
+        if pair_index == 1:
+            t1, t2 = self.dtRoundtripStartTime1, self.dtRoundtripStartTime2
+            output_field = self.txtRountrip_timedelta1
+        else:
+            t1, t2 = self.dtRoundtripStartTime3, self.dtRoundtripStartTime4
+            output_field = self.txtRountrip_timedelta2
+        seconds_1 = t1.time().msecsSinceStartOfDay() // 1000
+        seconds_2 = t2.time().msecsSinceStartOfDay() // 1000
+        # 300 сек (5 мин) за каждый час, но не более 900 сек (15 мин)
+        duration_hours = math.ceil((seconds_2 - seconds_1) / 3600)
+        time_delta_sec = min(900, duration_hours * 300)
+               
+        time_delta_min = round(time_delta_sec / 60)
+        output_field.setText(str(abs(time_delta_min)))
 
     def open_file_dialog(self, layer_type):
-
         project_path = QgsProject.instance().fileName()
         initial_dir = os.path.dirname(project_path) if project_path else ""
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Choose a File",
             initial_dir,
-            "Shapefile (*.shp);"
+            "All supported (*.shp *.gpkg);;Shapefile (*.shp);;GeoPackage (*.gpkg)"
         )
-        
-        if file_path:
+        if not file_path:
+            return
+
+        added_layers = []
+        if file_path.lower().endswith(".gpkg"):
+            temp_layer = QgsVectorLayer(file_path, "temp_discovery", "ogr")
+            if not temp_layer.isValid():
+                return
+            sublayers = temp_layer.dataProvider().subLayers()
+            for sub_info in sublayers:
+                parts = sub_info.split('!!::!!')
+                if len(parts) >= 2:
+                    layer_name = parts[1]
+                    uri = f"{file_path}|layername={layer_name}"
+                    new_layer = QgsVectorLayer(uri, layer_name, "ogr")
+                    if new_layer.isValid():
+                        QgsProject.instance().addMapLayer(new_layer)
+                        added_layers.append(new_layer)
+        else:
             file_name = os.path.splitext(os.path.basename(file_path))[0]
             layer = QgsVectorLayer(file_path, file_name, "ogr")
             if layer.isValid():
                 QgsProject.instance().addMapLayer(layer)
-                
-                if layer_type == "layer1":
-                    self.cmbLayers.setLayer(layer)
-                elif layer_type == "layer2":
-                    self.cmbLayersDest.setLayer(layer)
-                elif layer_type == "viz":
-                    self.cmbVizLayers.setLayer(layer)
-
+                added_layers.append(layer)
+        if added_layers:
+            target_layer = added_layers[-1] 
+            if layer_type == "layer1":
+                self.cmbLayers.setLayer(target_layer)
+            elif layer_type == "layer2":
+                self.cmbLayersDest.setLayer(target_layer)
+            elif layer_type == "viz":
+                self.cmbVizLayers.setLayer(target_layer)
 
     def on_radio_button_changed(self):
         sender = self.sender()
@@ -243,6 +287,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
     def changeInterface (self):
 
+        if self.roundtrip or self.mode == 2:
+            self.lblLayer1.setText('Layer of origins')
+        else:
+            self.lblLayer1.setText('Layer of destinations')
+
         if self.mode == 1:
             self.lblStartTime.setText("Start from facility at (hh:mm:ss)")
         if self.mode == 2:
@@ -254,6 +303,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 self.lblRoundtrip1, self.lblRoundtrip2, self.lblRoundtrip3,
                 self.lblRoundtrip6, self.lblRoundtrip7, self.lblRoundtrip8, 
                 self.widget_spacer3, self.widget_spacer4,
+
+                self.lblRoundtrip4, self.lblRoundtrip5,self.lblRoundtrip9,
+                self.lblRoundtrip10,self.txtRountrip_timedelta1, self.txtRountrip_timedelta2
             ]
          
         for widget in widgets_to_hide:
@@ -271,6 +323,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
                                 )
         
         self.txtAlias.setText(self.default_alias)
+   
         
     def onLayerDestChanged(self):
         self.cmbFields_ch.clear()
@@ -373,8 +426,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         else:
             name2 = "facility"
 
-        self.textLog.append(f'<a> Layer of {name1}: {self.layer1_path}, selected: {self.config['Settings']['selectedonly1_car']}</a>')
-        self.textLog.append(f"<a> Layer of {name2}: {self.layer2_path}, selected: {self.config['Settings']['selectedonly2_car']} </a>")
+        self.textLog.append(f'<a> Layer of {name1}: {self.layer1_path}</a>')
+        self.textLog.append(f"<a> Layer of {name2}: {self.layer2_path}</a>")
         
         if self.protocol_type == 1:  # MAP mode
 
@@ -386,27 +439,30 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")
         self.textLog.append(f"<a> Output folder: {self.config['Settings']['pathtoprotocols_car']}</a>")
+        if self.protocol_type == 1:  # MAP mode
+            self.textLog.append(f"<a> Save the accumulated number of opportunities at a time resolution of: {self.config['Settings']['timeinterval']} min</a>")
         self.textLog.append(f"<a> Output alias: {self.alias}</a>")
         self.textLog.append(f'<a> Visualization layer: {self.layer_visualization_path}</a>')
 
 
-        self.textLog.append("<a style='font-weight:bold;'>[Numbers of transfers, walking distances, walking speed, waiting times]</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Parking Access and Egress, Maximum travel time]</a>")
 
-        self.textLog.append(f"<a> Walking distance from origin to car parking: {self.config['Settings']['Walk_to_car_car']} m</a>")
-        self.textLog.append(f"<a> Walking distance from parking to destination: {self.config['Settings']['Walk_to_destination_car']} m</a>")
+        self.textLog.append(f"<a> Average walking distance from the origin building to the parking place: {self.config['Settings']['Walk_to_car_car']} m</a>")
+        self.textLog.append(f"<a> Average walking distance from the parking place to the destination building: {self.config['Settings']['Walk_to_destination_car']} m</a>")
         self.textLog.append(f"<a> Walking speed: {self.config['Settings']['Walking_speed_car']} km/h</a>")
-        self.textLog.append(f"<a> Aerial distance: {self.config['Settings']['RunOnAir_car']}</a>")
+        self.textLog.append(f"<a> Maximum total travel time: {self.config['Settings']['maxtimetravel_car']} min</a>")
         
-        self.textLog.append("<a style='font-weight:bold;'>[Departure/arrival times, maximum travel times]</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Arrival/Departure times]</a>")
 
         if not (self.roundtrip):
             if self.mode == 1:
-                self.textLog.append(f"<a> Start from facility at (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
+                self.textLog.append(f"<a> Start from facility at: {self.config['Settings']['Start_time_car']}</a>")
             else:
-                self.textLog.append(f"<a> Arrive to facility before (hh:mm:ss): {self.config['Settings']['Start_time_car']}</a>")
+                self.textLog.append(f"<a> Arrive to facility before: {self.config['Settings']['Start_time_car']}</a>")
         
         self.prepare()
         self.close_button.setEnabled(True)
+
 
     def on_close_button_clicked(self):
         self.reject()
@@ -482,9 +538,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         if 'Start_time_car' not in self.config['Settings']:
             self.config['Settings']['Start_time_car'] = '08:00:00'
-
-        if 'RunOnAir_car' not in self.config['Settings']:
-            self.config['Settings']['RunOnAir_car'] = 'False'
         
         if 'PathToProtocols_car' not in self.config['Settings'] or self.config['Settings']['PathToProtocols_car'] == "C:/":
             self.config['Settings']['PathToProtocols_car'] = PathToProtocols_car
@@ -545,9 +598,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['LayerDest_car'] = self.cmbLayersDest.currentLayer().id()
         self.config['Settings']['LayerViz_car'] = self.cmbVizLayers.currentLayer().id()
         
-        self.config['Settings']['SelectedOnly1_car'] = str(self.cbSelectedOnly1.isChecked())
-        self.config['Settings']['SelectedOnly2_car'] = str(self.cbSelectedOnly2.isChecked())
-
         self.config['Settings']['MaxTimeTravel_car'] = self.txtMaxTimeTravel.text()
         self.config['Settings']['TimeInterval_car'] = self.txtTimeInterval.text()
 
@@ -555,9 +605,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['Walk_to_destination_car'] = self.txtWalkToDestination.text()
         self.config['Settings']['Walking_speed_car'] = self.txtWalkingSpeed.text()
         self.config['Settings']['Start_time_car'] = self.dtStartTime.dateTime().toString("HH:mm:ss")
-
-        self.config['Settings']['RunOnAir_car'] = str(self.cbRunOnAir.isChecked())
-
 
         self.config['Settings']['to_time_start'] = self.dtRoundtripStartTime1.dateTime().toString("HH:mm:ss")
         self.config['Settings']['to_time_end'] = self.dtRoundtripStartTime2.dateTime().toString("HH:mm:ss")
@@ -586,9 +633,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.layer2 = self.cmbLayersDest.currentLayer() 
         self.layer2_path = os.path.normpath(self.layer2.dataProvider().dataSourceUri().split("|")[0])
         self.count_layer_destinations = self.layer2.featureCount()
-        if self.cbSelectedOnly2.isChecked():
-            self.count_layer_destinations = self.layer2.selectedFeatureCount()
-
+        
         layer = self.cmbVizLayers.currentLayer()
         self.layer_visualization_path = os.path.normpath(layer.dataProvider().dataSourceUri().split("|")[0])
         self.layer_vis_field = FIELD_ID
@@ -602,11 +647,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.txtPathToPKL.setText(os.path.normpath(self.config['Settings']['PathToPKL_car']))
         self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols_car']))
-
-        selected_only1 = self.config['Settings']['SelectedOnly1_car'].lower() == "true"
-        self.cbSelectedOnly1.setChecked(selected_only1)
-        selected_only2 = self.config['Settings']['SelectedOnly2_car'].lower() == "true"
-        self.cbSelectedOnly2.setChecked(selected_only2)
 
         self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer_car']))
         self.cmbLayersDest.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerDest_car']))
@@ -634,10 +674,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         datetime = QDateTime.fromString(self.config['Settings']['Start_time_car'], "HH:mm:ss")
         self.dtStartTime.setDateTime(datetime)
-
-        RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
-        self.cbRunOnAir.setChecked(RunOnAir)
-
 
         self.txtRountrip_timedelta1.setText(self.config['Settings']['time_delta_to'])
         self.txtRountrip_timedelta2.setText(self.config['Settings']['time_delta_from'])
@@ -719,31 +755,14 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
     def get_feature_from_layer(self):
         layer = self.layer2
-        isChecked = self.cbSelectedOnly2.isChecked()
-
+      
         ids = []
         count = 0
 
-        if isChecked:
-            features = layer.selectedFeatures()
-
-            if len(features) == 0:
-
-                msgBox = QMessageBox()
-                msgBox.setIcon(QMessageBox.Information)
-                msgBox.setText(
-                    f"'Selected features only' option is chosen but selection set is empty.")
-                msgBox.setWindowTitle("Information")
-                msgBox.setStandardButtons(QMessageBox.Ok)
-                msgBox.exec_()
-                self.setMessage('')
-                return 0
 
         feature_id_field = self.layer_field
 
         features = layer.getFeatures()
-        if isChecked:
-            features = layer.selectedFeatures()
 
         for feature in features:
             count += 1
@@ -763,9 +782,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.layer_dest = self.layer1
         self.layer_origins_name = self.layer2.name()
         layer_vis = self.layer_visualization
-
-        self.selected_only1 = self.config['Settings']['SelectedOnly2_car'] == "True"
-        self.selected_only2 = self.config['Settings']['SelectedOnly1_car'] == "True"
 
         max_time_minutes = int(self.config['Settings']['MaxTimeTravel_car'])
         time_step_minutes = int(self.config['Settings']['TimeInterval_car'])
@@ -791,8 +807,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
        
-        self.RunOnAir = self.config['Settings']['RunOnAir_car'].lower() == "true"
-
         cols_dict = get_name_columns()
         cols = cols_dict[(self.mode, self.protocol_type)]
         self.col_star = cols["star"]
@@ -800,7 +814,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         car = car_accessibility(self,
                                 self.layer_dest,
-                                self.selected_only2,
                                 layerdest_field,
                                 max_time_minutes,
                                 time_step_minutes,
@@ -814,9 +827,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         if not (self.roundtrip):
             
-            self.textLog.append(f"<a> Maximum total travel time: {self.config['Settings']['maxtimetravel_car']} min</a>")
-            if self.protocol_type == 1:  # MAP mode
-                self.textLog.append(f"<a> Store output every: {self.config['Settings']['timeinterval_car']} min</a>")
             self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
             self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
 
@@ -843,20 +853,15 @@ class CarAccessibility(QDialog, FORM_CLASS):
             to_time_start = time_to_seconds(self.config['Settings']['to_time_start'])
             to_time_end = time_to_seconds(self.config['Settings']['to_time_end'])
 
-            time_delta_from = min(900, math.ceil((from_time_end - from_time_start) / 3600) * 300)
-            time_delta_from_min = round(time_delta_from/60)
-            time_delta_to = min(900, math.ceil((to_time_end - to_time_start) / 3600) * 300)
-            time_delta_to_min = round(time_delta_to/60)
+            time_delta_to_min = int(self.config['Settings']['time_delta_to']) 
+            time_delta_from_min = int(self.config['Settings']['time_delta_from']) 
+            time_delta_to  = time_delta_to_min * 60
+            time_delta_from  = time_delta_from_min * 60
 
-            str_to = f'<a> Arrive to facility between {seconds_to_time(to_time_start)} and {seconds_to_time(to_time_end)} schedule-adjustment gap {time_delta_to_min} minutes</a>'
+            str_to = f'<a> Arrive to facility: between {seconds_to_time(to_time_start)} and {seconds_to_time(to_time_end)} schedule-adjustment gap {time_delta_to_min} minutes</a>'
             self.textLog.append(str_to)
-            str_from = f'<a>Start trip back from facility between {seconds_to_time(from_time_start)} and {seconds_to_time(from_time_end)} schedule-adjustment gap {time_delta_from_min} minutes</a>'
+            str_from = f'<a>Start trip back from facility: between {seconds_to_time(from_time_start)} and {seconds_to_time(from_time_end)} schedule-adjustment gap {time_delta_from_min} minutes</a>'
             self.textLog.append(str_from)
-
-            self.textLog.append(f"<a> Maximum total travel time: {self.config['Settings']['maxtimetravel_car']} min</a>")
-            if self.protocol_type == 1:  # MAP mode
-            
-                self.textLog.append(f"<a> Store output every: {self.config['Settings']['timeinterval_car']} min</a>")
             
             self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
             self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
@@ -865,14 +870,16 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.textLog.append(f"<a style='font-weight:bold;'> Calculating roundtrip accessibility</a>")
 
             self.folder_name_copy = self.folder_name
-            self.folder_name_from = os.path.join(self.folder_name_copy, "from")
+            self.folder_name_from = os.path.join(self.folder_name_copy, f'{self.alias}_from')
             os.makedirs(self.folder_name_from, exist_ok=True)
+            self.folder_name_to = os.path.join(self.folder_name_copy, f'{self.alias}_to')
+            os.makedirs(self.folder_name_to, exist_ok=True)
 
             duration_max = max_time_minutes * 60 * 1.5
             cols_dict = get_name_columns()
             cols = cols_dict[(1, self.protocol_type)]
             analyzer = roundtrip_analyzer(
-                                        report_path = os.path.dirname(self.folder_name_from), 
+                                        report_path = self.folder_name_copy, 
                                         duration_max = duration_max, 
                                         alias = self.alias,
                                         field_star = cols["star"],
@@ -882,68 +889,20 @@ class CarAccessibility(QDialog, FORM_CLASS):
       
             graph = self.read_pkl(1)
             graph_rev = self.read_pkl(2)
-
-            ###########################
-            #  First From + First TO
-            # #########################
-            # #########################
-            # First From
-            # #########################
             
-            self.textLog.append(f"<a style='font-weight:bold;'> Calculating first from accessibility</a>")
-            D_TIME_str = seconds_to_time(from_time_start)
-            self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
-            postfix = 1
-            self.folder_name = os.path.join(self.folder_name_from, str(postfix)) 
-            os.makedirs(self.folder_name, exist_ok=True)
             
-            hour = from_time_start // 3600
-            short_result = car.run(begin_computation_time, 
-                                   hour,
-                                   graph, 
-                                   write_info = False)
-
-            if not(self.break_on):
-                first_from = analyzer.get_data_for_analyzer_from_to(short_result)
-
-            
-            # #########################
-            # First to
-            # #########################
-            self.textLog.append(f"<a style='font-weight:bold;'> Calculating first to accessibility</a>")
-            self.mode = 2
-            self.folder_name_to = os.path.join(self.folder_name_copy, "to")
-            os.makedirs(self.folder_name_to, exist_ok=True)
-            D_TIME_str = seconds_to_time(to_time_start)
-            self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
-            postfix = 1
-            self.folder_name = os.path.join(self.folder_name_to, str(postfix)) 
-            os.makedirs(self.folder_name, exist_ok=True)
-            hour = to_time_start // 3600 
-            short_result = car.run(begin_computation_time, 
-                                   hour,
-                                   graph_rev,
-                                   write_info = False)
-
-            
-            if not(self.break_on):
-                first_to = analyzer.get_data_for_analyzer_from_to (short_result)
-                analyzer.init_from_data(first_to, first_from)
-            
+                        
             ###########################
             #  From
             # #########################
-            self.textLog.append(f"<a style='font-weight:bold;'> Calculating remained from accessibility</a>")
+            self.textLog.append(f"<a style='font-weight:bold;'> Calculating from accessibility</a>")
             self.mode = 1
-            i = 1
+            i = 0
+            D_TIME = from_time_start
             while True:
                 
-                D_TIME = from_time_start + i * time_delta_from 
-                if D_TIME > from_time_end + time_delta_from / 2: 
-                    break
-
                 D_TIME_str = seconds_to_time(D_TIME)
-                self.textLog.append(f"<a style='font-weight:bold;'> Start at (hh:mm:ss): {D_TIME_str}</a>")
+                self.textLog.append(f"<a style='font-weight:bold;'> Start at: {D_TIME_str}</a>")
                  
                 postfix = i + 1
                 self.folder_name = os.path.join(self.folder_name_from, str(postfix)) 
@@ -967,20 +926,24 @@ class CarAccessibility(QDialog, FORM_CLASS):
                     return 0
                 i += 1
                 
+                if D_TIME > from_time_end: 
+                    break
+
+                D_TIME = from_time_start + i * time_delta_from 
+                
             ###########################
             #  TO
             # #########################
                 
-            self.textLog.append(f"<a style='font-weight:bold;'> Calculating remained to accessibility</a>")
+            self.textLog.append(f"<a style='font-weight:bold;'> Calculating to accessibility</a>")
             self.mode = 2
-            i = 1
+            i = 0
+            D_TIME = to_time_start
 
             while True:
-                D_TIME = to_time_start + i * time_delta_to 
-                if D_TIME > to_time_end + time_delta_to / 2: 
-                        break
+                
                 D_TIME_str = seconds_to_time(D_TIME)
-                self.textLog.append(f"<a style='font-weight:bold;'> Arrive before (hh:mm:ss): {D_TIME_str}</a>")
+                self.textLog.append(f"<a style='font-weight:bold;'> Arrive before: {D_TIME_str}</a>")
                     
                 postfix = i + 1
                 self.folder_name = os.path.join(self.folder_name_to, str(postfix)) 
@@ -1001,6 +964,12 @@ class CarAccessibility(QDialog, FORM_CLASS):
                     self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
                     self.progressBar.setValue(0)
                     return 0
+                               
+                if D_TIME > to_time_end: 
+                    break
+                
+                D_TIME = to_time_start + i * time_delta_to 
+                        
                                 
             if not(self.break_on):
                     
@@ -1008,7 +977,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
                     self.textLog.append(f'<a href="file:///{os.path.dirname(self.folder_name_from)}" target="_blank" >Statistics in folder</a>')
 
                     vis = visualization(self, 
-                            self.layer_visualization_name,
+                            self.layer_visualization,
                             mode = self.protocol_type, # service area
                             fieldname_layer = self.layer_vis_field, 
                             from_to = 1, # from
@@ -1017,13 +986,13 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
                     after_computation_time = datetime.now()
                     after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
-                    self.textLog.append(f'<a>Finished {after_computation_str}</a>')
+                    self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
                     duration_computation = after_computation_time - begin_computation_time
                     duration_without_microseconds = str(duration_computation).split('.')[0]
                     self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
-                    text = self.textLog.toPlainText()
-                    filelog_name = f'{self.folder_name_copy}//log_{self.alias}.txt'
+                    text = transform_log_to_csv_text(self.textLog.toPlainText())
+                    filelog_name = f'{self.folder_name_copy}//log_{self.alias}.csv'
                     
                     with open(filelog_name, "w") as file:
                         file.write(text)
@@ -1098,38 +1067,21 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 return True
         return super().eventFilter(obj, event)
     
-    def load_text_with_bold_first_line(self, file_path):
-        if not os.path.exists(file_path):
-            return
-        with open(file_path, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-            if not lines:
-                return  
-            first_line = f"<b>{lines[0].strip()}</b>"  
-            other_lines = "".join(lines[1:]) 
-
-        other_lines_with_br = other_lines.replace("\n", "<br>")
-        styled_other_lines = f'<span style="color: gray;">{other_lines_with_br}</span>'
-        full_text = f"<html><body>{first_line}<br>{styled_other_lines}</body></html>"
-        self.textInfo.setHtml(full_text)
-    
     def show_info(self):
-        
-        hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
 
-        
-        if self.protocol_type == 2:
-            if self.mode == 1: 
-                help_filename = "car_sa_from.txt"
-        if self.mode == 2:
-                help_filename = "car_sa_to.txt"
-                    
-        if self.protocol_type == 1:
-            if self.mode == 1:
-                help_filename = "car_reg_from.txt"
-            if self.mode == 2:
-                help_filename = "car_reg_to.txt"
-            
-        hlp_file = os.path.join(hlp_directory, help_filename)
-        hlp_file = os.path.normpath(hlp_file)
-        self.load_text_with_bold_first_line (hlp_file)       
+            hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+
+            if self.protocol_type == 1:
+                help_filename = "car_cumulative.txt"
+            else:
+                help_filename = "car_sa.txt"
+            hlp_file = os.path.join(hlp_directory, help_filename)
+
+            if os.path.exists(hlp_file):
+                with open(hlp_file, 'r', encoding='utf-8') as f:
+                    html = f.read()
+
+            self.textInfo.setOpenExternalLinks(False)  
+            self.textInfo.setOpenLinks(False)          
+            self.textInfo.setHtml(html)
+            self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString()))       
