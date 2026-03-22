@@ -377,7 +377,7 @@ def runRaptorWithProtocol(self,
 
     for i in range(0, count):
 
-        #if i == 100:
+        #if i == 5:
         #    break
         if hasattr(self, 'progressBar'):
             self.progressBar.setValue(i + 6)

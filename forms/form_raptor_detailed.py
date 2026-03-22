@@ -1008,9 +1008,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 to_time_start = time_to_seconds(self.config['Settings']['to_time_start'])
                 to_time_end = time_to_seconds(self.config['Settings']['to_time_end'])
                     
-                str_from = f'<a>Arrive to facility between {seconds_to_time(to_time_start)} and {seconds_to_time(to_time_end)} schedule-adjustment gap {time_delta_to_min} minutes</a>'
+                str_from = f'<a>Arrive to facility between: {seconds_to_time(to_time_start)} and {seconds_to_time(to_time_end)} schedule-adjustment gap {time_delta_to_min} minutes</a>'
                 self.textLog.append(str_from)
-                str_to = f'<a>Start trip back from facility between {seconds_to_time(from_time_start)} and {seconds_to_time(from_time_end)} schedule-adjustment gap {time_delta_from_min} minutes</a>'
+                str_to = f'<a>Start trip back from facility between: {seconds_to_time(from_time_start)} and {seconds_to_time(from_time_end)} schedule-adjustment gap {time_delta_from_min} minutes</a>'
                 self.textLog.append(str_to)
                 
                 
@@ -1039,7 +1039,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 os.makedirs(self.folder_name_from, exist_ok=True)
 
                 cols_dict = get_name_columns()
-                cols = cols_dict[(1, protocol_type)]
+                cols = cols_dict[(2, protocol_type)]
                 MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60
                 duration_max = MaxTimeTravel * 1.5
                 analyzer = roundtrip_analyzer(
@@ -1220,7 +1220,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                             self.layer_visualization,
                             mode = protocol_type,
                             fieldname_layer=self.layer_vis_field, 
-                            from_to = 1, # from
+                            from_to = 2, # to
                             )
                     vis.add_thematic_map(PathToRep, self.alias, set_min_value=0)   
 
