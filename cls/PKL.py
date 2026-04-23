@@ -1,8 +1,8 @@
 import pandas as pd
 import os
 import pickle
-from io import StringIO
 from collections import defaultdict
+import shutil
 
 try:
     from PyQt5.QtWidgets import QApplication
@@ -19,7 +19,8 @@ class PKL ():
                  path_to_pkl='', 
                  path_to_GTFS='', 
                  layer_buildings='', 
-                 building_id_field = "osm_id"):
+                 building_id_field = "osm_id",
+                 to_delete_gtfs = True):
         
         if path_to_GTFS == '':
             self.__path_gtfs = path_to_pkl
@@ -28,15 +29,12 @@ class PKL ():
 
         self.__path_pkl = path_to_pkl
         self.prefix = os.path.basename(self.__path_pkl)
-
-        
         self.parent = parent
         self.layer_buildings = layer_buildings
 
-        self.__transfers_start_file1 = pd.read_csv(
-            f'{self.__path_gtfs}/footpath_air.txt', sep=',', dtype={'from_stop_id': str, 'to_stop_id': str})
-        self.__transfers_start_file2 = pd.read_csv(
-            f'{self.__path_gtfs}/footpath_road_projection.txt', sep=',', dtype={'from_stop_id': str, 'to_stop_id': str})
+        self.to_delete_gtfs = to_delete_gtfs
+        
+        self.__transfers_start_file2 = pd.read_csv(f'{self.__path_gtfs}/footpath_road_projection.txt', sep=',', dtype={'from_stop_id': str, 'to_stop_id': str})
 
         os.makedirs(self.__path_pkl, exist_ok=True)
 
@@ -46,7 +44,6 @@ class PKL ():
         self.IN_QGIS = True
         if self.parent == None:
             self.IN_QGIS = False
-
 
     def build_list_stops(self):
         list_stops = pd.read_csv(
@@ -85,16 +82,8 @@ class PKL ():
             self.parent.progressBar.setValue(4)
         if self.verify_break():
             return 0
-        
-        self.build_footpath_dict(
-            self.__transfers_start_file1, "transfers_dict_air.pkl")
-        if self.IN_QGIS:
-            self.parent.progressBar.setValue(5)
-        if self.verify_break():
-            return 0
-
-        self.build_footpath_dict(
-            self.__transfers_start_file2, "transfers_dict_projection.pkl")
+       
+        self.build_footpath_dict(self.__transfers_start_file2, "transfers_dict_projection.pkl")
         if self.IN_QGIS:
             self.parent.progressBar.setValue(5)
         if self.verify_break():
@@ -136,6 +125,10 @@ class PKL ():
         if self.verify_break():
             return 0
         
+        if self.to_delete_gtfs:
+            if os.path.exists(self.__path_gtfs):
+                shutil.rmtree(self.__path_gtfs)
+        
         return 1
 
     def load_gtfs(self):
@@ -146,61 +139,25 @@ class PKL ():
         if self.verify_break():
             return 0
 
-        self.__trips_file = pd.read_csv(
-            f'{self.__path_gtfs}/trips.txt', sep=',', dtype={'trip_id': str})
+        self.__trips_file = pd.read_csv(f'{self.__path_gtfs}/trips.txt', sep=',', dtype={'trip_id': str})
         
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
             return 0
         
-        self.__stop_times_file = pd.read_csv(
-            f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
+        self.__stop_times_file = pd.read_csv(f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
         
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
             return 0
 
-        self.__stop_times_file = pd.merge(
-            self.__stop_times_file, self.__trips_file, on='trip_id')
+        self.__stop_times_file = pd.merge(self.__stop_times_file, self.__trips_file, on='trip_id')
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
             return 0
-
-        self.__routes_file = pd.read_csv(
-            f'{self.__path_gtfs}/routes.txt', sep=',')
-        if self.IN_QGIS:
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-
-    def build_route_desc__route_id_dict(self):
-
-        if self.IN_QGIS:
-            self.parent.setMessage(f'Building route desciption for {route_id} ...')
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-
-        route_dict = {}
-
-        for _, row in self.__routes_file.iterrows():
-            route_desc = row['route_desc']
-            key = route_desc.split('-')[0]
-            route_id = row['route_id']
-
-            if key not in route_dict:
-                route_dict[key] = []
-            route_dict[key].append(route_id)
-
-        f = os.path.join(self.__path_pkl, f"{self.prefix}_route_desc__route_id.pkl")
-
-        with open(f, "wb") as pickle_file:
-            pickle.dump(route_dict, pickle_file)
-
-        return 1
 
     def build_stops_dict(self):
 
@@ -212,10 +169,8 @@ class PKL ():
 
         stop_times = self.__stop_times_file
 
-        route_groups = stop_times.drop_duplicates(subset=['route_id', 'stop_sequence'])[
-            ['stop_id', 'route_id', 'stop_sequence']].groupby('route_id')
-        stops_dict = {id: routes.sort_values(by='stop_sequence')[
-            'stop_id'].to_list() for id, routes in route_groups}
+        route_groups = stop_times.drop_duplicates(subset=['route_id', 'stop_sequence'])[['stop_id', 'route_id', 'stop_sequence']].groupby('route_id')
+        stops_dict = {id: routes.sort_values(by='stop_sequence')['stop_id'].to_list() for id, routes in route_groups}
         
         f = os.path.join(self.__path_pkl, f"{self.prefix}_stops_dict_pkl.pkl")
 
@@ -254,14 +209,12 @@ class PKL ():
             for trip_id, trip_data in group.groupby('trip_id'):
                 trip_data = trip_data.sort_values(
                     'arrival_time', ascending=True)
-                trip_dict[trip_id] = list(
-                    zip(trip_data['stop_id'], trip_data['arrival_time']))
+                trip_dict[trip_id] = list(zip(trip_data['stop_id'], trip_data['arrival_time']))
 
             sorted_trips = sorted(
                 trip_dict.items(), key=lambda x: x[1][0][1], reverse=False)
 
-            result_dict[route_id] = {trip_id: [(stop_id, time_to_seconds(
-                arrival_time)) for stop_id, arrival_time in trip_data] for trip_id, trip_data in sorted_trips}
+            result_dict[route_id] = {trip_id: [(stop_id, time_to_seconds(arrival_time)) for stop_id, arrival_time in trip_data] for trip_id, trip_data in sorted_trips}
 
         f = os.path.join(self.__path_pkl, f"{self.prefix}_stoptimes_dict_pkl.pkl")
         
@@ -313,19 +266,16 @@ class PKL ():
         stoptimes_txt = pd.read_csv(
             f'{self.__path_gtfs}/stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
 
-        stop_times_file = pd.merge(
-            stoptimes_txt, self.__trips_file, on='trip_id')
+        stop_times_file = pd.merge(stoptimes_txt, self.__trips_file, on='trip_id')
 
         pandas_group = stop_times_file.groupby(["route_id", "stop_id"])
-        idx_by_route_stop = {
-            route_stop_pair: details.stop_sequence.iloc[0] for route_stop_pair, details in pandas_group}
+        idx_by_route_stop = {route_stop_pair: details.stop_sequence.iloc[0] for route_stop_pair, details in pandas_group}
 
         f = os.path.join(self.__path_pkl, f"{self.prefix}_idx_by_route_stop.pkl")
         
         with open(f, "wb") as pickle_file:
             pickle.dump(idx_by_route_stop, pickle_file)
         
-
         return 1
 
     def build_routes_by_stop_dict(self):
@@ -414,53 +364,7 @@ class PKL ():
         
         with open(f, "wb") as pickle_file:
             pickle.dump(result_dict, pickle_file)
-        
-
-    # Function to swap stop numbers with the opposite ones within each trip
-
-    """
-    def reverse_stop_sequence(self, group, *args, **kwargs):
-
-        num_stops = len(group)
-        reversed_stop_sequence = range(num_stops, 0, -1)
-        group = group.assign(stop_sequence=reversed_stop_sequence)
-        return group
-
     
-    def build_reverse_stoptimes_file_txt(self):
-
-        if self.IN_QGIS:
-            self.parent.setMessage(f'Building database for to-accessibility...')
-            QApplication.processEvents()
-        if self.verify_break():
-            return 0
-
-        with open(self.__path_gtfs + "/stop_times.txt", "r") as f:
-            allrows = f.readlines()
-        
-        # convert a list of strings to a delimited string and create a DataFrame
-        data_str = '\n'.join(allrows)
-        df = pd.read_csv(StringIO(data_str))
-
-        #df_result = df.groupby('trip_id', group_keys=False).apply(self.reverse_stop_sequence)
-        
-        df_result = df.drop(columns='trip_id').groupby(df['trip_id'], group_keys=False).apply(
-        lambda group: self.reverse_stop_sequence(group).assign(trip_id=group.name))
-
-        # using StringIO again to write a DataFrame to a String
-        output_str = StringIO()
-        df_result.to_csv(output_str, index=False, lineterminator='\n')
-
-        # get a row of data
-        output_data = output_str.getvalue()
-        f = self.__path_gtfs + "/rev_stop_times.txt"
-
-        with open(f, "w") as output_file:
-            output_file.write(output_data)
-
-        return 1
-    """
-
     def build_reverse_stoptimes_file_txt(self):
         if self.IN_QGIS:
             self.parent.setMessage(f'Building database for to-accessibility...')
@@ -486,14 +390,12 @@ class PKL ():
         if self.verify_break():
             return 0
 
-        reverse_stoptimes_txt = pd.read_csv(
-            f'{self.__path_gtfs}/rev_stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
+        reverse_stoptimes_txt = pd.read_csv(f'{self.__path_gtfs}/rev_stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
             return 0
-        rev_stop_times_file = pd.merge(
-            reverse_stoptimes_txt, self.__trips_file, on='trip_id')
+        rev_stop_times_file = pd.merge(reverse_stoptimes_txt, self.__trips_file, on='trip_id')
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
@@ -504,20 +406,17 @@ class PKL ():
             QApplication.processEvents()
         if self.verify_break():
             return 0
-        idx_by_route_stop = {
-            route_stop_pair: details.stop_sequence.iloc[0] for route_stop_pair, details in pandas_group}
+        idx_by_route_stop = {route_stop_pair: details.stop_sequence.iloc[0] for route_stop_pair, details in pandas_group}
         if self.IN_QGIS:
             QApplication.processEvents()
         if self.verify_break():
             return 0
-
         
         f = os.path.join(self.__path_pkl, f"{self.prefix}_rev_idx_by_route_stop.pkl")
         
         with open(f, "wb") as pickle_file:
             pickle.dump(idx_by_route_stop, pickle_file)
         
-
         return 1
 
     def build__route_by_stop(self):
@@ -527,8 +426,7 @@ class PKL ():
         if self.verify_break():
             return 0
 
-        stops_by_route = self.__stop_times_file.drop_duplicates(
-            subset=['route_id', 'stop_id'])[['stop_id', 'route_id']].groupby('stop_id')
+        stops_by_route = self.__stop_times_file.drop_duplicates(subset=['route_id', 'stop_id'])[['stop_id', 'route_id']].groupby('stop_id')
         route_by_stop_dict = {id: list(routes.route_id)
                               for id, routes in stops_by_route}
         # add buildings
@@ -547,6 +445,9 @@ class PKL ():
                 if not self.already_display_break:
                     self.parent.textLog.append(f'<a><b><font color="red">Building database is interrupted by user</font> </b></a>')
                     self.already_display_break = True
+                    if self.to_delete_gtfs:
+                        if os.path.exists(self.__path_gtfs):
+                            shutil.rmtree(self.__path_gtfs)
                 self.parent.progressBar.setValue(0)
                 return True
         return False

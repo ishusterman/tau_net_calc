@@ -1,20 +1,22 @@
 import os
 import math
 from datetime import datetime
-from qgis.PyQt.QtCore import QObject, pyqtSignal, QVariant
+from qgis.PyQt.QtCore import Qt, QObject, pyqtSignal, QVariant
 from qgis.core import (
     QgsVectorLayer, QgsVectorFileWriter, QgsTask, QgsProject,
     QgsFeature, QgsField, QgsSpatialIndex, QgsRectangle,
     QgsPointXY, QgsGeometry
 )
 from qgis import processing
+from PyQt5.QtWidgets import QApplication
+
 from common import (convert_meters_to_degrees, get_unique_path, FIELD_ID)
 
 class TaskSignals(QObject):
     log = pyqtSignal(str)
     progress = pyqtSignal(int)
-    set_message = pyqtSignal(str)
-    save_log = pyqtSignal(bool)
+    set_message = pyqtSignal(str)    
+    save_log = pyqtSignal(bool, str)
     add_layers = pyqtSignal(list) 
     change_button_status = pyqtSignal(bool) 
 
@@ -101,12 +103,16 @@ class cls_clean_visualization(QgsTask):
             self.signals.change_button_status.emit(True)
             return True
         except Exception as e:
-            self.signals.log.emit(f"Error: {str(e)}")
+            self.exception = e
+            QApplication.setOverrideCursor(Qt.ArrowCursor)
+            print (self.exception)
+            self.signals.log.emit(f'<a>Error: {self.exception}</a>')
+            self.signals.set_message.emit(f'<a>Error: {self.exception}</a>')
             return False
 
     def process_voronoi(self, centroids, dist):
         ext = centroids.extent()
-        b = ext.width() * 0.2
+        b = ext.width() * 0.05
         rect = QgsRectangle(ext.xMinimum()-b, ext.yMinimum()-b, ext.xMaximum()+b, ext.yMaximum()+b)
         
         mem = QgsVectorLayer(f"Point?crs={centroids.crs().authid()}", "vor_tmp", "memory")
@@ -166,7 +172,7 @@ class cls_clean_visualization(QgsTask):
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
         self.signals.log.emit(f"Saved to: {self.main_gpkg_path}")
-        self.signals.save_log.emit(True)
+        self.signals.save_log.emit(True, self.main_gpkg_path)
         
         
         for _, name_layer in self.list_layer:    

@@ -40,7 +40,10 @@ from common import (get_qgis_info,
                    insert_layer_ontop,
                    FIELD_ID,
                    check_layer,
-                   transform_log_to_csv_text
+                   transform_log_to_csv_text,
+                   transform_log_to_dataframe,
+                   fast_write_gpkg,
+                   highlight_empty_fields
                     )
 from visualization_clean import cls_clean_visualization
 
@@ -82,8 +85,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.progressBar.setValue(0)
 
-        self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog ())
-
         self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
 
         self.textLog.setOpenLinks(False)
@@ -108,43 +109,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
         self.show_info()
-
-    def open_file_dialog(self):
-        project_path = QgsProject.instance().fileName()
-        initial_dir = os.path.dirname(project_path) if project_path else ""
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Choose a File",
-            initial_dir,
-            "All supported (*.shp *.gpkg);;Shapefile (*.shp);;GeoPackage (*.gpkg)"
-        )
-        if not file_path:
-            return
-
-        added_layers = []
-        if file_path.lower().endswith(".gpkg"):
-            temp_layer = QgsVectorLayer(file_path, "temp_discovery", "ogr")
-            if not temp_layer.isValid():
-                return
-            sublayers = temp_layer.dataProvider().subLayers()
-            for sub_info in sublayers:
-                parts = sub_info.split('!!::!!')
-                if len(parts) >= 2:
-                    layer_name = parts[1]
-                    uri = f"{file_path}|layername={layer_name}"
-                    new_layer = QgsVectorLayer(uri, layer_name, "ogr")
-                    if new_layer.isValid():
-                        QgsProject.instance().addMapLayer(new_layer)
-                        added_layers.append(new_layer)
-        else:
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            layer = QgsVectorLayer(file_path, file_name, "ogr")
-            if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
-                added_layers.append(layer)
-        if added_layers:
-            target_layer = added_layers[-1] 
-            self.cmbLayers.setLayer(target_layer)
     
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(
@@ -172,6 +136,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
+
+        if highlight_empty_fields(self, exclude=[self.textLog, self.txtAddHex]):        
+            self.run_button.setEnabled(True)
+            return 0
 
         if not (self.check_add_hex()):
             self.run_button.setEnabled(True)
@@ -283,16 +251,27 @@ class form_visualization_clean(QDialog, FORM_CLASS):
                 insert_layer_ontop(saved_layer)
 
         QTimer.singleShot(250, self.save_project)        
-        
-    def save_log(self, need_save):
-        if need_save:
-            postfix = getDateTime()
-            filelog_name = f'{self.folder_name}//log_vis_layers_{postfix}.csv'
+    
+    def save_log(self, need_save, log_name) :
+        if need_save:            
+            name, _ = os.path.splitext(log_name)
+            filelog_name = os.path.join(self.folder_name, f"{name}_log.csv")            
+            file_name_gpkg = os.path.join(self.folder_name, f"{log_name}") 
+
+            print (filelog_name)           
+            print (file_name_gpkg)           
+
             text = transform_log_to_csv_text(self.textLog.toPlainText())
             with open(filelog_name, "w") as file:
                 file.write(text)
-          
 
+            text = transform_log_to_dataframe(self.textLog.toPlainText())
+            file_name = os.path.basename(log_name)
+            name, _ = os.path.splitext(file_name)
+            table_name = f"_log_{name}"
+            print (f'table_name {table_name}')
+            fast_write_gpkg(file_name_gpkg, table_name, text)
+    
     def save_project(self):
         QApplication.setOverrideCursor(Qt.ArrowCursor)
         

@@ -58,7 +58,8 @@ def post_processing(DESTINATION,
                     Maximal_travel_time,
                     D_Time,
                     mode_raptor,
-                    MaxExtraTime
+                    MaxExtraTime,
+                    D_TIME_copy = ""
                     ) -> tuple:
 
 
@@ -160,9 +161,10 @@ def post_processing(DESTINATION,
                         append = False
                     
                 if mode_raptor == 2:
-                    if (duration > Maximal_travel_time) or end_time > D_Time: 
+                    if (duration > Maximal_travel_time) or end_time < D_TIME_copy: # exp 
                         append = False
-                
+                    
+                                    
             if  not (journey[-1][0] == 'walking'):
                 append = False
                 
@@ -245,7 +247,8 @@ def post_processingAll(
         timetable_mode,
         Maximal_travel_time,
         MaxExtraTime,
-        mode
+        mode,
+        D_TIME_copy = ""
         ):
     
     Dict_endtime, Dict_duration  = {}, {}
@@ -263,7 +266,8 @@ def post_processingAll(
                                      Maximal_travel_time,
                                      D_TIME,
                                      mode,
-                                     MaxExtraTime,                                     
+                                     MaxExtraTime,
+                                     D_TIME_copy                                      
                                      )
         
 

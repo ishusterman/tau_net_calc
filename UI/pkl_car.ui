@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>991</width>
+    <width>1075</width>
     <height>639</height>
    </rect>
   </property>
@@ -82,9 +82,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-297</y>
-             <width>625</width>
-             <height>694</height>
+             <y>0</y>
+             <width>684</width>
+             <height>634</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -140,13 +140,6 @@
                      <item>
                       <widget class="QgsMapLayerComboBox" name="cmbLayers_buildings"/>
                      </item>
-                     <item>
-                      <widget class="QToolButton" name="toolButtonBuildings">
-                       <property name="text">
-                        <string>...</string>
-                       </property>
-                      </widget>
-                     </item>
                     </layout>
                    </item>
                    <item>
@@ -160,13 +153,6 @@
                     <layout class="QHBoxLayout" name="horizontalLayout_5">
                      <item>
                       <widget class="QgsMapLayerComboBox" name="cbRoads"/>
-                     </item>
-                     <item>
-                      <widget class="QToolButton" name="toolButtonRoads">
-                       <property name="text">
-                        <string>...</string>
-                       </property>
-                      </widget>
                      </item>
                     </layout>
                    </item>
@@ -209,14 +195,14 @@
                      <item>
                       <widget class="QPushButton" name="btnCheckOSM">
                        <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                          <horstretch>0</horstretch>
                          <verstretch>0</verstretch>
                         </sizepolicy>
                        </property>
                        <property name="minimumSize">
                         <size>
-                         <width>180</width>
+                         <width>100</width>
                          <height>0</height>
                         </size>
                        </property>
@@ -230,71 +216,8 @@
                        <property name="text">
                         <string>Status: Pending...</string>
                        </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_row2">
-                     <item>
-                      <widget class="QPushButton" name="test_button">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>180</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <weight>75</weight>
-                         <bold>true</bold>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Test attributes</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="lblOSM">
-                       <property name="text">
-                        <string>Source of the road layer: &lt;b&gt;None&lt;/b&gt;</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_bottom">
-                     <item>
-                      <widget class="QLabel" name="lblCandidates">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="text">
-                        <string>Candidate fields for:</string>
-                       </property>
-                       <property name="textFormat">
-                        <enum>Qt::RichText</enum>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QWidget" name="widget_candidates" native="true">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                        </property>
                       </widget>
                      </item>
@@ -315,17 +238,7 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QComboBox" name="cmbFieldsDirection">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="modelColumn">
-                        <number>0</number>
-                       </property>
-                      </widget>
+                      <widget class="QgsFieldComboBox" name="cmbFieldsDirection"/>
                      </item>
                      <item>
                       <widget class="QLabel" name="lblFieldsSpeed">
@@ -344,57 +257,44 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QComboBox" name="cmbFieldsSpeed">
+                      <widget class="QgsFieldComboBox" name="cmbFieldsSpeed"/>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_row2">
+                     <item>
+                      <widget class="QPushButton" name="test_button">
                        <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                          <horstretch>0</horstretch>
                          <verstretch>0</verstretch>
                         </sizepolicy>
                        </property>
+                       <property name="minimumSize">
+                        <size>
+                         <width>125</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <weight>75</weight>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Test road atributes</string>
+                       </property>
                       </widget>
                      </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="5" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_6">
-                <item>
-                 <widget class="QGroupBox" name="gbOutput">
-                  <property name="styleSheet">
-                   <string notr="true">
-      QGroupBox {
-          border: 1px solid gray;
-          border-radius: 5px;
-          margin-top: 0.5em;
-      }
-      QGroupBox::title {
-          subcontrol-origin: margin;
-          subcontrol-position: top left;
-          left: 10px;
-          padding: 0 3px;
-      }
-     </string>
-                  </property>
-                  <property name="title">
-                   <string>Output</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_Output">
-                   <property name="leftMargin">
-                    <number>10</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>10</number>
-                   </property>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_8">
                      <item>
                       <widget class="QLabel" name="lblDefault">
                        <property name="text">
-                        <string>Default:</string>
+                        <string>Fill missing values by</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                        </property>
                       </widget>
                      </item>
@@ -455,6 +355,40 @@
                      </item>
                     </layout>
                    </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="5" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QGroupBox" name="gbOutput">
+                  <property name="styleSheet">
+                   <string notr="true">
+      QGroupBox {
+          border: 1px solid gray;
+          border-radius: 5px;
+          margin-top: 0.5em;
+      }
+      QGroupBox::title {
+          subcontrol-origin: margin;
+          subcontrol-position: top left;
+          left: 10px;
+          padding: 0 3px;
+      }
+     </string>
+                  </property>
+                  <property name="title">
+                   <string>Output</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_Output">
+                   <property name="leftMargin">
+                    <number>10</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>10</number>
+                   </property>
                    <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_11">
                      <item>
@@ -518,7 +452,7 @@
                 </item>
                </layout>
               </item>
-              <item row="8" column="0" colspan ="2">
+              <item row="8" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_7">
                 <item>
                  <widget class="QGroupBox" name="gbTable">
@@ -656,6 +590,11 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>QgsFieldComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsfieldcombobox.h</header>
+  </customwidget>
+  <customwidget>
    <class>QgsMapLayerComboBox</class>
    <extends>QComboBox</extends>
    <header>qgsmaplayercombobox.h</header>
@@ -665,11 +604,6 @@
   <tabstop>tabWidget</tabstop>
   <tabstop>textInfo</tabstop>
   <tabstop>scrollArea</tabstop>
-  <tabstop>toolButtonBuildings</tabstop>
-  <tabstop>toolButtonRoads</tabstop>
-  <tabstop>test_button</tabstop>
-  <tabstop>cmbFieldsDirection</tabstop>
-  <tabstop>cmbFieldsSpeed</tabstop>
   <tabstop>txtPathToProtocols</tabstop>
   <tabstop>toolButton_protocol</tabstop>
   <tabstop>table1</tabstop>

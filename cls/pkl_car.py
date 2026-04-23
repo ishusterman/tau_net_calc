@@ -9,10 +9,8 @@ from PyQt5.QtWidgets import QApplication
 from qgis.core import (QgsVectorLayer,
                        QgsFeature,
                        QgsWkbTypes,
-                       QgsPointXY,
+                       QgsPointXY                       
                        )
-
-
 
 from qgis.analysis import (
     QgsGraphBuilder,
@@ -32,7 +30,6 @@ class pkl_car ():
     def __init__(self, parent=""):
         self.parent = parent
         self.already_display_break = False
-
         ########### experiment !!!!!!
         #if parent != "":
         #    self.parent.idx_field_speed = 26
@@ -60,8 +57,7 @@ class pkl_car ():
         # experiment
         
         self.parent.setMessage('Converting multilines into lines ...')
-        self.converter = MultiLineStringToLineStringConverter(
-            self.parent, self.parent.layer_road)
+        self.converter = MultiLineStringToLineStringConverter( self.parent, self.parent.layer_road)
         self.layer_roads = self.converter.execute()
         #self.layer_roads = self.parent.layer_road
         ###
@@ -551,8 +547,7 @@ class pkl_car ():
 
             point_coords = [point.x(), point.y()]
             latitude = point.y()
-            distance, nearest_vertex_index = self.graph_vertex_index.query(
-                point_coords, k=1)
+            distance, nearest_vertex_index = self.graph_vertex_index.query(point_coords, k=1)
             if self.crs_grad:
                 distance = convert_distance_to_meters(distance, latitude)
             point_to_vertex_dict[int(id)] = ((nearest_vertex_index, round(distance)))

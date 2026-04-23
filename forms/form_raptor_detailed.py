@@ -3,22 +3,17 @@ import os
 #import pstats
 
 import webbrowser
-import re
 import configparser
-from datetime import datetime, timedelta
+from datetime import datetime
 import math
 import os
-import geopandas as gpd
-import sqlite3
+from pathlib import Path
 
-
-from qgis.core import QgsProject, QgsVectorLayer
 
 from PyQt5.QtCore import Qt
 
 from qgis.core import (QgsProject,
-                       QgsMapLayerProxyModel,
-                       QgsVectorLayer
+                       QgsMapLayerProxyModel
                        )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -31,31 +26,32 @@ from PyQt5.QtCore import (Qt,
                           QRegExp,
                           QDateTime,
                           QEvent,
+                          QVariant
                           )
 from PyQt5.QtGui import QRegExpValidator, QDesktopServices
 from PyQt5 import uic
 
 from query_file import runRaptorWithProtocol, myload_all_dict
+
 from tau_net_calc.cls.common import ( 
-                    get_qgis_info, 
-                    is_valid_folder_name, 
+                    get_qgis_info,                     
                     get_prefix_alias, 
                     seconds_to_time, 
                     time_to_seconds, 
                     check_file_parameters_accessibility,
                     FIELD_ID,
                     check_layer,
-                    transform_log_to_csv_text
+                    transform_log_to_dataframe,
+                    fast_write_gpkg,
+                    getDateTime,
+                    highlight_empty_fields                   
                     )
-from visualization import visualization
-#from stat_destination import DayStat_DestinationID
-#from stat_from_to import StatFromTo
-#from AnalyzerFromTo2 import TripAnalyzer
-from AnalyzerFromTo_incremental import roundtrip_analyzer
-#from TimeMarkGenerator import TimeMarkGenerator
 
+from visualization import visualization
+from AnalyzerFromTo_incremental import roundtrip_analyzer
 from common import (get_initial_directory,
-                    get_name_columns)
+                    get_name_columns,
+                    transform_log_to_csv_text)
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui'))
 
@@ -77,41 +73,32 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.setWindowTitle(title)
 
-        self.txtPathToPKL.setReadOnly(True)
-
-        self.InitialNameWalk1 = "Maximum walk distance to the initial PT stop, m"
-        self.InitialNameWalk2 = "Maximum walk distance at the transfer, m"
-        self.InitialNameWalk3 = "Maximum walk distance from the last PT stop, m"
+        self.InitialNameWalk1 = "Maximum walk distance"        
         self.splitter.setSizes([int(self.width() * 0.75), int(self.width() * 0.25)])
 
-        """
-        if not timetable_mode:
-            self.resize(self.width() - 200, self.height())
-        """
-
         self.fix_size = 15* self.txtMinTransfers.fontMetrics().width('x')
+
+        self.fix_size2 = 5* self.txtMinTransfers.fontMetrics().width('x')
         
         self.fix_size3 = 25 * self.txtMinTransfers.fontMetrics().width('x')
 
-        self.txtMinTransfers.setFixedWidth(self.fix_size)
-        self.txtMaxTransfers.setFixedWidth(self.fix_size)
-        self.txtMaxWalkDist1.setFixedWidth(self.fix_size)
-        self.txtMaxWalkDist2.setFixedWidth(self.fix_size)
-        self.txtMaxWalkDist3.setFixedWidth(self.fix_size)
-        self.fix_size3 = 25 * self.txtMinTransfers.fontMetrics().width('x')
-        self.txtAlias.setFixedWidth(self.fix_size3)
+        self.txtMinTransfers.setFixedWidth(self.fix_size2)
+        self.txtMaxTransfers.setFixedWidth(self.fix_size2)
+        self.txtMaxWalkDist1.setFixedWidth(self.fix_size2)
+        self.txtMaxWalkDist2.setFixedWidth(self.fix_size2)
+        self.txtMaxWalkDist3.setFixedWidth(self.fix_size2)
+        self.txtSpeed.setFixedWidth(self.fix_size2)
+        self.txtMaxWaitTime.setFixedWidth(self.fix_size2)
+        self.txtMaxWaitTimeTransfer.setFixedWidth(self.fix_size2)
+        
+        
         self.fix_size2 = 7 * self.txtTimeInterval.fontMetrics().width('x')
+        self.txtMaxTimeTravel.setFixedWidth(self.fix_size2)
         self.txtMaxExtraTime.setFixedWidth(self.fix_size2)
         
         self.dtStartTime.setFixedWidth(self.fix_size)
         self.dtEndTime.setFixedWidth(self.fix_size)
-        
-        self.txtSpeed.setFixedWidth(self.fix_size)
-        self.txtMaxWaitTime.setFixedWidth(self.fix_size)
-
-        self.txtMaxWaitTimeTransfer.setFixedWidth(self.fix_size)
-        self.txtMaxTimeTravel.setFixedWidth(self.fix_size)
-        
+                
         self.txtTimeInterval.setFixedWidth(self.fix_size2)
 
         self.cmbFields_ch.setFixedWidth(self.fix_size)
@@ -133,22 +120,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
-
-        self.toolButton_PKL.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToPKL))
-        self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
-        
-        self.toolButtonLayer1.clicked.connect(lambda: self.open_file_dialog (layer_type = "layer1"))
-        self.toolButtonLayer2.clicked.connect(lambda: self.open_file_dialog (layer_type = "layer2"))
-        self.toolButtonViz.clicked.connect(lambda: self.open_file_dialog (layer_type = "viz"))
-
-        
+                
         self.cmbLayers.installEventFilter(self)
         self.cmbLayersDest.installEventFilter(self)
-        self.cmbVizLayers.installEventFilter(self)
-
+        
         self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-        self.cmbVizLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer)        
 
         self.dtStartTime.installEventFilter(self)
         self.dtEndTime.installEventFilter(self)
@@ -188,7 +165,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         regex = QRegExp(r"\d*")
         int_validator = QRegExpValidator(regex)
-        self.txtTimeInterval.setValidator(int_validator)
+        #self.txtTimeInterval.setValidator(int_validator)
         self.txtRountrip_timedelta1.setValidator(int_validator)
         self.txtRountrip_timedelta2.setValidator(int_validator)
 
@@ -210,7 +187,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if self.protocol_type == 2:
             self.txtTimeInterval.setVisible(False)
             self.lblTimeInterval.setVisible(False)
-            self.lblTimeInterval2.setVisible(False)
+            self.lblMinutes.setVisible(False)
                         
             self.cmbFields_ch.setVisible(False)
             self.lblFields.setVisible(False)
@@ -222,26 +199,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.ParametrsShow()
         self.show_info()
         self.changeInterface()
-        
-        self.rbFrom.setText("FROM Facility")
-        self.rbTo.setText("TO Facility")
-        self.rbRound.setText("ROUNDTRIP")
- 
-        self.lblMaxWaitTime.setVisible(not self.timetable_mode)
-        self.txtMaxWaitTime.setVisible(not self.timetable_mode)
 
         if self.timetable_mode:
-            # txtMaxWaitTime
-            layout = self.horizontalLayout_13
-            parent = layout.parent()
-            parent.removeItem(layout)
-        
-        if not self.timetable_mode:
-            pass
-            # txtMaxExtraTime
-            #layout = self.horizontalLayout_11
-            #parent = layout.parent()
-            #parent.removeItem(layout)
+            self.lblMaxWaitInitial.setEnabled(False)
+            self.txtMaxWaitTime.setEnabled(False)
         
         if  self.timetable_mode:
             self.lblRoundtrip_TestEvery1.setText("schedule-adjustment gap")
@@ -256,25 +217,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.dtRoundtripStartTime3.timeChanged.connect(lambda: self.update_timedelta(2))
         self.dtRoundtripStartTime4.timeChanged.connect(lambda: self.update_timedelta(2))
         
-        self.lblAlias.setVisible(False)
-        self.txtAlias.setVisible(False)
+        self.wgFileSave.setFilter("GeoPackage (*.gpkg)")
 
+        self.fillComboBoxWithLayerFields()
+        self.cmbLayers.currentIndexChanged.connect(self.fillComboBoxWithLayerFields)
+        self.cmbLayersDest.currentIndexChanged.connect(self.fillComboBoxWithLayerFields)
         
-        self.file_name_gpkg = r"c:\doc\Igor\GIS\temp\output.gpkg"
-        """
-        if os.path.exists(self.file_name_gpkg):
-            os.remove(self.file_name_gpkg)
-        gdf = gpd.GeoDataFrame({"id": []}, geometry=[], crs="EPSG:4326")
-        gdf.to_file(self.file_name_gpkg, layer="__init__", driver="GPKG")
-        conn = sqlite3.connect(self.file_name_gpkg)
-        conn.execute("DELETE FROM gpkg_contents WHERE table_name='__init__'")
-        conn.execute("DROP TABLE IF EXISTS __init__")
-        conn.commit()
-        conn.close()
-        """
-
-
-    
+        
     def update_timedelta(self, pair_index):
         if self.timetable_mode:
             return
@@ -293,48 +242,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         time_delta_min = round(time_delta_sec / 60)
         output_field.setText(str(abs(time_delta_min)))
     
-    def open_file_dialog(self, layer_type):
-        project_path = QgsProject.instance().fileName()
-        initial_dir = os.path.dirname(project_path) if project_path else ""
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Choose a File",
-            initial_dir,
-            "All supported (*.shp *.gpkg);;Shapefile (*.shp);;GeoPackage (*.gpkg)"
-        )
-        if not file_path:
-            return
-
-        added_layers = []
-        if file_path.lower().endswith(".gpkg"):
-            temp_layer = QgsVectorLayer(file_path, "temp_discovery", "ogr")
-            if not temp_layer.isValid():
-                return
-            sublayers = temp_layer.dataProvider().subLayers()
-            for sub_info in sublayers:
-                parts = sub_info.split('!!::!!')
-                if len(parts) >= 2:
-                    layer_name = parts[1]
-                    uri = f"{file_path}|layername={layer_name}"
-                    new_layer = QgsVectorLayer(uri, layer_name, "ogr")
-                    if new_layer.isValid():
-                        QgsProject.instance().addMapLayer(new_layer)
-                        added_layers.append(new_layer)
-        else:
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            layer = QgsVectorLayer(file_path, file_name, "ogr")
-            if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
-                added_layers.append(layer)
-        if added_layers:
-            target_layer = added_layers[-1] 
-            if layer_type == "layer1":
-                self.cmbLayers.setLayer(target_layer)
-            elif layer_type == "layer2":
-                self.cmbLayersDest.setLayer(target_layer)
-            elif layer_type == "viz":
-                self.cmbVizLayers.setLayer(target_layer)
- 
     def on_radio_button_changed(self):
         sender = self.sender()
         if not sender.isChecked():
@@ -351,31 +258,50 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.roundtrip = True
 
         self.changeInterface()
-        
-    def changeInterface (self):
+        self.fillComboBoxWithLayerFields()
 
-        #self.lblLayer1.setText('TO, ROUND - layer of origins; FROM - layer of destinations')
-
-        if self.roundtrip or self.mode == 2:
-            self.lblLayer1.setText('Layer of origins')
-        else:
-            self.lblLayer1.setText('Layer of destinations')
-        
-
-
-        if self.protocol_type == 2:
-            self.lblLayer2.setText('Layer of facilities')
-        else:
-            self.lblLayer2.setText('Layer of opportunities')
+    # for widget with checkbox
+    def fillComboBoxWithLayerFields(self):
+        self.cmbFields_ch.clear()        
 
         if self.mode == 1:
-            self.lblStartTime1.setText("Start from facility at (hh:mm:ss)")
-        if self.mode == 2:
-            self.lblStartTime1.setText("Arrive to facility at (hh:mm:ss)")
-
+            layer = self.cmbLayersDest.currentLayer()
+        else:
+            layer = self.cmbLayers.currentLayer()
         if self.roundtrip:
-            self.lblRoundtripName1.setText("Arrive to facility")
-            self.lblRoundtripName2.setText("Start trip back from facility")
+            layer = self.cmbLayers.currentLayer()
+
+        try:
+            fields = [field for field in layer.fields()]
+        except:            
+            return 0
+
+        for field in fields:
+            field_type = field.type()
+            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
+                self.cmbFields_ch.addItem(field.name())
+
+        if QApplication.keyboardModifiers() & Qt.ShiftModifier:                            
+            if 'Field_ch' not in self.config['Settings']:
+                    self.config['Settings']['Field_ch'] = ''
+
+            for i in range(self.cmbFields_ch.count()):
+                    item_text = self.cmbFields_ch.itemText(i)
+                    
+                    if item_text in self.config['Settings']['Field_ch']:
+                        self.cmbFields_ch.setItemData(
+                            i, Qt.Checked, role=Qt.CheckStateRole)
+                    else:
+                        self.cmbFields_ch.setItemData(
+                            i, Qt.Unchecked, role=Qt.CheckStateRole)
+                            
+    def changeInterface (self):
+
+
+        if self.mode == 1:
+            self.lblStartTime1.setText("Start from the origin at (hh:mm:ss)")
+        if self.mode == 2:
+            self.lblStartTime1.setText("Arrive to destination at (hh:mm:ss)")
         
         if self.timetable_mode and self.mode == 1:
             self.lblStartTime1.setText("The earliest start")
@@ -413,45 +339,15 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.lblStartTime3.setVisible(self.timetable_mode and not self.roundtrip)
         self.lblStartTime4.setVisible(self.timetable_mode and not self.roundtrip)
         self.txtMaxExtraTime.setVisible(self.timetable_mode and not self.roundtrip)
+
+
+        self.default_alias = getDateTime()
         
-        """
-        if self.roundtrip and not self.timetable_mode:
-            self.lblRoundtrip_TestEvery1.setVisible(False)
-            self.txtRountrip_timedelta1.setVisible(False)
-            self.lblRoundtrip5.setVisible(False)
-            self.lblRoundtrip_TestEvery2.setVisible(False)
-            self.txtRountrip_timedelta2.setVisible(False)
-            self.lblRoundtrip10.setVisible(False)
-        """
-
-        self.default_alias = get_prefix_alias(True, 
-                                self.protocol_type, 
-                                self.mode, 
-                                self.timetable_mode,
-                                self.roundtrip 
-                                )
-        self.txtAlias.setText(self.default_alias)
-
-
-        
+        self.wgFileSave.setFilePath(os.path.join(os.path.dirname(self.wgFileSave.filePath()), f"{self.default_alias}.gpkg"))
         self.dtEndTime.setVisible(False)
-        
-                            
+                           
     def handleMaximalWalking(self):
-               
-        latest_log = self.find_latest_log (self.txtPathToPKL.text())
-        result = self.extract_parameters(latest_log)
-        self.UpperBoundMaxWalkDist = result.get("Maximal walking path on road", 0)
-        
-        if self.UpperBoundMaxWalkDist > 0:
-            self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1} (max =  {self.UpperBoundMaxWalkDist})')
-            self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2} (max =  {self.UpperBoundMaxWalkDist})')
-            self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3} (max =  {self.UpperBoundMaxWalkDist})')
-        
-        else:
-            self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1}')
-            self.lbMaxWalkDistanceTransfer.setText(f'{self.InitialNameWalk2}')
-            self.lbMaxWalkDistanceFinish.setText(f'{self.InitialNameWalk3}')
+        self.lbMaxWalkDistanceInitial.setText(f'{self.InitialNameWalk1} (up to 800 m)')
 
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
@@ -464,20 +360,28 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
-        
-        if not (is_valid_folder_name(self.txtAlias.text())):
-            self.setMessage(f"'{self.txtAlias.text()}' is not a valid directory/file name")
+
+
+        if highlight_empty_fields(self, exclude=[self.textLog, self.cmbFields_ch]):        
             self.run_button.setEnabled(True)
             return 0
 
+        
         if not (self.check_folder_and_file()):
             self.run_button.setEnabled(True)
             return 0
         
-        self.layer1 = self.cmbLayers.currentLayer() 
-        self.layer2 = self.cmbLayersDest.currentLayer() 
-        self.layer_visualization = self.cmbVizLayers.currentLayer()
+        if self.mode == 1:
+            self.layer1 = self.cmbLayers.currentLayer() 
+            self.layer2 = self.cmbLayersDest.currentLayer() 
+        else:
+            self.layer2 = self.cmbLayers.currentLayer() 
+            self.layer1 = self.cmbLayersDest.currentLayer()
 
+        if self.roundtrip:
+            self.layer2 = self.cmbLayers.currentLayer() 
+            self.layer1 = self.cmbLayersDest.currentLayer() 
+        
         result, text = check_layer(self.layer1, FIELD_ID = FIELD_ID)
         if not result:
             self.run_button.setEnabled(True)
@@ -489,27 +393,26 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             self.setMessage(text)
             return 0
-        
-        result, text = check_layer(self.layer_visualization, FIELD_ID = FIELD_ID)
-        if not result:
-            self.run_button.setEnabled(True)
-            self.setMessage(text)
-            return 0
-                
+                        
         self.layer_path1 = os.path.normpath(self.layer1.dataProvider().dataSourceUri().split("|")[0])
         self.layer_path2 = os.path.normpath(self.layer2.dataProvider().dataSourceUri().split("|")[0])
         self.count_layer_destinations = self.layer2.featureCount()
-        self.layer_visualization_path = os.path.normpath(self.layer_visualization.dataProvider().dataSourceUri().split("|")[0])
-        self.layer_visualization_name = self.layer_visualization.name()
-        self.layer_vis_field = FIELD_ID
+
+        if self.protocol_type == 1: # cumulative
+            self.layer_visualization = self.layer1
+        else:
+            self.layer_visualization = self.layer2
                 
-        if not (self.check_max_foothpath()):
-            self.run_button.setEnabled(True)
-            return 0
+        self.layer_vis_field = FIELD_ID
+        
+        self.file_name_gpkg = self.wgFileSave.filePath()
 
-        self.folder_name = f'{self.txtPathToProtocols.text()}//{self.txtAlias.text()}'
-        self.alias = self.txtAlias.text()
+        if os.path.exists(self.file_name_gpkg):
+            os.remove(self.file_name_gpkg)
 
+        
+        
+        
         self.saveParameters()
         self.readParameters()
 
@@ -527,28 +430,17 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.textLog.append(f'<a> Mode: {self.title}</a>')
 
         if self.mode == 1:
-            mode_text = "FROM Facility"
+            mode_text = "FROM origins"
         else:
-            mode_text = "TO Facility"
+            mode_text = "TO destinations"
         if self.roundtrip:
             mode_text = "ROUNDTRIP"
         self.textLog.append(f'<a> Accessibility: {mode_text}</a>')
         
-        self.textLog.append("<a style='font-weight:bold;'>[Input]</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Input Layers]</a>")        
         self.textLog.append(f"<a> Transit routing database folder: {self.config['Settings']['pathtopkl']}</a>")
-
-        if self.mode == 1:
-            name1 = "destinations"
-        else:
-            name1 = "origins"
-        
-        if self.protocol_type == 1:
-            name2 = "opportunities"
-        else:
-            name2 = "facility"
-
-        self.textLog.append(f'<a> Layer of {name1}: {self.layer_path1} </a>')
-        self.textLog.append(f'<a> Layer of {name2}: {self.layer_path2} </a>')
+        self.textLog.append(f'<a> Layer of origins: {self.layer_path1} </a>')        
+        self.textLog.append(f'<a> Layer of destinations: {self.layer_path2} </a>')
 
         if self.protocol_type == 1:  # MAP mode
             if self.config['Settings']['field_ch'] != "":
@@ -556,33 +448,65 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             else:
                 print_fields = "NONE"
             self.textLog.append(f"<a> Opportunities' fields: {print_fields}</a>")
+
+        self.textLog.append("<a style='font-weight:bold;'>[Time Settings]</a>")
+
+        if not (self.roundtrip) and not self.timetable_mode:
+            if self.mode == 1:
+                self.textLog.append(f"Start from the origin: {self.config['Settings']['TIME']}")
+            else:
+                self.textLog.append(f"Arrive to destination before: {self.config['Settings']['TIME']}")
+
+        if self.timetable_mode :
+            if self.mode == 1:
+                if not self.roundtrip:
+                    str_from = f'<a>The earliest start: {self.config['Settings']['TIME']} schedule-adjustment gap {self.config['Settings']['MaxExtraTime']} minutes</a>'                
+                    self.textLog.append(str_from)
+
+            if self.mode == 2:
+                if not self.roundtrip:
+                    str_to = f'<a>The earliest arrival: {self.config['Settings']['TIME']} schedule-adjustment gap {self.config['Settings']['MaxExtraTime']} minutes</a>'                
+                    self.textLog.append(str_to)
+
+        if self.roundtrip:
+            self.time_delta_to_min = int(self.config['Settings']['time_delta_to']) 
+            self.time_delta_from_min = int(self.config['Settings']['time_delta_from']) 
+            self.time_delta_to  = self.time_delta_to_min * 60
+            self.time_delta_from  = self.time_delta_from_min * 60
+
+            self.from_time_start = time_to_seconds(self.config['Settings']['from_time_start'])
+            self.from_time_end = time_to_seconds(self.config['Settings']['from_time_end'])
+            self.to_time_start = time_to_seconds(self.config['Settings']['to_time_start'])
+            self.to_time_end = time_to_seconds(self.config['Settings']['to_time_end'])
+
+            if self.timetable_mode:
+                text_add = "schedule-adjustment gap"
+            else:
+                text_add = "test every"
+                        
+            str_from = f'<a>Arrive to destination between: {seconds_to_time(self.to_time_start)} and {seconds_to_time(self.to_time_end)} {text_add} {self.time_delta_to_min} minutes</a>'
+            self.textLog.append(str_from)
+            str_to = f'<a>Start trip back to the origin between: {seconds_to_time(self.from_time_start)} and {seconds_to_time(self.from_time_end)} {text_add} {self.time_delta_from_min} minutes</a>'
+            self.textLog.append(str_to)
         
-        self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")
-        self.textLog.append(f"<a> Output folder: {self.config['Settings']['pathtoprotocols']}</a>")
-        if self.protocol_type == 1:  # MAP mode
-            self.textLog.append(f"<a> Save the accumulated number of opportunities at a time resolution of: {self.config['Settings']['timeinterval']} min</a>")
-        self.textLog.append(f'<a> Output alias: {self.alias}</a>')
-        self.textLog.append(f'<a> Visualization layer: {self.layer_visualization_path}</a>')
-                
+        self.textLog.append(f"<a> Maximum travel time: {self.config['Settings']['maxtimetravel']} min</a>")
+                        
         self.textLog.append("<a style='font-weight:bold;'>[Transit Tolerance Thresholds]</a>")
         self.textLog.append(f"<a> Number of transfers: between {self.config['Settings']['min_transfer']} and {self.config['Settings']['max_transfer']}</a>")
         self.textLog.append(f"<a> Maximum walk distance to the initial PT stop: {self.config['Settings']['maxwalkdist1']} m</a>")
         self.textLog.append(f"<a> Maximum walk distance between at the transfer: {self.config['Settings']['maxwalkdist2']} m</a>")
         self.textLog.append(f"<a> Maximum walk distance from the last PT stop: {self.config['Settings']['maxwalkdist3']} m</a>")
-        self.textLog.append(f"<a> Walking speed: {self.config['Settings']['speed']} km/h</a>")
+        self.textLog.append(f"<a> Average walking speed: {self.config['Settings']['speed']} km/h</a>")
 
         if not self.timetable_mode:
             self.textLog.append(f"<a> Maximum waiting time at the initial stop: {self.config['Settings']['maxwaittime']} min</a>")
         self.textLog.append(f"<a> Maximum waiting time at the transfer stop: {self.config['Settings']['maxwaittimetransfer']} min</a>")
         
-        self.textLog.append(f"<a> Maximum travel time: {self.config['Settings']['maxtimetravel']} min</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")
+        self.textLog.append(f"<a> Output file: {self.config['Settings']['pathtoprotocols']}</a>")
+        if self.protocol_type == 1:  # MAP mode
+            self.textLog.append(f"<a> Save the accumulated number of opportunities at a time resolution of: {self.config['Settings']['timeinterval']} min</a>")
         
-        self.textLog.append("<a style='font-weight:bold;'>[Arrival/Departure times]</a>")
-        if not (self.roundtrip) and not self.timetable_mode:
-            if self.mode == 1:
-                self.textLog.append(f"Start from facility at: {self.config['Settings']['TIME']}")
-            else:
-                self.textLog.append(f"Arrive to facility before: {self.config['Settings']['TIME']}")
         
         self.MaxExtraTime = 0
         if self.timetable_mode :
@@ -593,18 +517,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.MaxExtraTimeTo = int(self.txtRountrip_timedelta1.text())*60
             self.MaxExtraTimeFrom = int(self.txtRountrip_timedelta2.text())*60
             
-        if self.timetable_mode :
-            if self.mode == 1:
-                if not self.roundtrip:
-                    str_from = f'<a>The earliest start {self.config['Settings']['TIME']} schedule-adjustment gap {self.config['Settings']['MaxExtraTime']} minutes</a>'
-                
-                    self.textLog.append(str_from)
-
-            if self.mode == 2:
-                if not self.roundtrip:
-                    str_to = f'<a>The earliest arrival {self.config['Settings']['TIME']} schedule-adjustment gap {self.config['Settings']['MaxExtraTime']} minutes</a>'
-                
-                    self.textLog.append(str_to)
+        
         
         self.prepareRaptor()
         self.close_button.setEnabled(True)
@@ -719,13 +632,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.config.read(f)
 
-        self.config['Settings']['PathToPKL'] = self.txtPathToPKL.text()
-        self.config['Settings']['PathToProtocols'] = self.txtPathToProtocols.text()
+        self.config['Settings']['PathToPKL'] = self.wgPathPKL.filePath()
+        self.config['Settings']['PathToProtocols'] = self.wgFileSave.filePath()
         
         self.config['Settings']['Layer'] = self.cmbLayers.currentLayer().id()
         self.config['Settings']['LayerDest'] = self.cmbLayersDest.currentLayer().id()
-        self.config['Settings']['LayerViz'] = self.cmbVizLayers.currentLayer().id()
-                
+                        
         self.config['Settings']['Min_transfer'] = self.txtMinTransfers.text()
         self.config['Settings']['Max_transfer'] = self.txtMaxTransfers.text()
                 
@@ -735,7 +647,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.config['Settings']['TIME'] = self.dtStartTime.dateTime().toString("HH:mm:ss")
         self.config['Settings']['EndTIME'] = self.dtEndTime.dateTime().toString("HH:mm:ss")
         self.config['Settings']['Speed'] = self.txtSpeed.text()
-        self.config['Settings']['MaxWaitTime'] = self.txtMaxWaitTime.text()
+        if not self.timetable_mode:
+            self.config['Settings']['MaxWaitTime'] = self.txtMaxWaitTime.text()
         self.config['Settings']['MaxWaitTimeTransfer'] = self.txtMaxWaitTimeTransfer.text()
         self.config['Settings']['MaxTimeTravel'] = self.txtMaxTimeTravel.text()
         self.config['Settings']['MaxExtraTime'] = self.txtMaxExtraTime.text()
@@ -759,18 +672,21 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         with open(f, 'w') as configfile:
             self.config.write(configfile)
 
-        self.alias = self.txtAlias.text() if self.txtAlias.text() != "" else self.default_alias
-
-
     def ParametrsShow(self):
 
         self.readParameters()
-        self.txtPathToPKL.setText(os.path.normpath(self.config['Settings']['PathToPKL']))
-        self.txtPathToProtocols.setText(os.path.normpath(self.config['Settings']['PathToProtocols']))
+
+        self.default_alias = getDateTime()
         
-        self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer']))
-        self.cmbLayersDest.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerDest']))
-        self.cmbVizLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerViz']))
+        self.wgFileSave.setFilePath(os.path.join(os.path.dirname(self.config['Settings']['PathToProtocols']), f"{self.default_alias}.gpkg"))
+        self.wgPathPKL.setFilePath(os.path.normpath(self.config['Settings']['PathToPKL']))
+                
+        if QApplication.keyboardModifiers() & Qt.ShiftModifier:
+            self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer']))
+            self.cmbLayersDest.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerDest']))            
+        else:
+            self.cmbLayers.setCurrentIndex(0)
+            self.cmbLayersDest.setCurrentIndex(0)            
         
         self.txtMinTransfers.setText(self.config['Settings']['Min_transfer'])
         self.txtMaxTransfers.setText(self.config['Settings']['Max_transfer'])
@@ -778,16 +694,17 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWalkDist2.setText(self.config['Settings']['MaxWalkDist2'])
         self.txtMaxWalkDist3.setText(self.config['Settings']['MaxWalkDist3'])
 
-        datetime = QDateTime.fromString(
-            self.config['Settings']['TIME'], "HH:mm:ss")
+        datetime = QDateTime.fromString(self.config['Settings']['TIME'], "HH:mm:ss")
         self.dtStartTime.setDateTime(datetime)
 
-        datetime = QDateTime.fromString(
-            self.config['Settings']['EndTIME'], "HH:mm:ss")
+        datetime = QDateTime.fromString(self.config['Settings']['EndTIME'], "HH:mm:ss")
         self.dtEndTime.setDateTime(datetime)
 
         self.txtSpeed.setText(self.config['Settings']['Speed'])
-        self.txtMaxWaitTime.setText(self.config['Settings']['MaxWaitTime'])
+        if not self.timetable_mode:
+            self.txtMaxWaitTime.setText(self.config['Settings']['MaxWaitTime'])
+        else:
+            self.txtMaxWaitTime.setText('0') 
         self.txtMaxWaitTimeTransfer.setText(self.config['Settings']['MaxWaitTimeTransfer'])
         self.txtMaxExtraTime.setText (self.config['Settings']['MaxExtraTime'])
         self.txtMaxTimeTravel.setText(self.config['Settings']['MaxTimeTravel'])
@@ -816,14 +733,22 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.roundtrip = True
             self.rbRound.setChecked(True)
 
-        self.default_alias = get_prefix_alias(True, 
-                                self.protocol_type, 
-                                self.mode, 
-                                self.timetable_mode,
-                                self.roundtrip 
-                                )
-        self.txtAlias.setText(self.default_alias)
+        if QApplication.keyboardModifiers() & Qt.ShiftModifier:                    
+            if self.protocol_type == 1:
+                if 'Field_ch' not in self.config['Settings']:
+                    self.config['Settings']['Field_ch'] = ''
 
+                for i in range(self.cmbFields_ch.count()):
+                    item_text = self.cmbFields_ch.itemText(i)                
+                    if item_text in self.config['Settings']['Field_ch']:
+                        self.cmbFields_ch.setItemData(
+                            i, Qt.Checked, role=Qt.CheckStateRole)
+                    else:
+                        self.cmbFields_ch.setItemData(
+                            i, Qt.Unchecked, role=Qt.CheckStateRole)
+
+        self.txtTimeInterval.setText(self.config['Settings']['TimeInterval'])
+        
         self.handleMaximalWalking()
 
 
@@ -862,9 +787,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
     
     def check_folder_and_file(self):
 
-        os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
-
-        path_to_pkl = self.txtPathToPKL.text().rstrip('\\/') # Убираем слеши в конце, если они есть
+        path_to_pkl = self.wgPathPKL.filePath()
         prefix = os.path.basename(path_to_pkl)
 
         required_files = [  # 'dict_building_vertex.pkl',
@@ -881,7 +804,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             'stoptimes_dict_pkl.pkl',
 
             'stoptimes_dict_reversed_pkl.pkl',
-            'transfers_dict_air.pkl',
             'transfers_dict_projection.pkl',
 
             'graph_projection.pkl',
@@ -901,40 +823,25 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if missing_files:
             limited_files = missing_files[:2]
             missing_files_message = ", ".join(limited_files)
-            self.setMessage(f"Files are missing in the '{self.txtPathToPKL.text()}' folder: {missing_files_message}")
+            self.setMessage(f"Files are missing in the '{path_to_pkl}' folder: {missing_files_message}")
             return False
-        
-        if not os.path.exists(self.txtPathToProtocols.text()):
-            self.setMessage(f"Folder '{self.txtPathToProtocols.text()}' does not exist")
-            return False
-
-        try:
-            tmp_prefix = "write_tester"
-            filename = f'{self.txtPathToProtocols.text()}//{tmp_prefix}'
-            with open(filename, 'w') as f:
-                f.write("test")
-            os.remove(filename)
-        except Exception as e:
-            self.setMessage(f"Access to the '{self.txtPathToProtocols.text()}' folder is denied")
-            return False
-
+                
         return True
 
     def setMessage(self, message):
         self.lblMessages.setText(message)
 
-    def get_feature_from_layer(self):
+    def get_feature_from_layer(self, layer):
         feature_id_field = FIELD_ID
-        layer = self.layer2 
-        ids = []
+        ids = set()
         features = layer.getFeatures()
         i = 0
         for feature in features:
             i = + 1
             if i % 50000 == 0:
                 QApplication.processEvents()
-            id = feature[feature_id_field]
-            ids.append((int(id)))
+            ids.add(int(feature[feature_id_field]))
+            
         return ids
    
     def prepareRaptor(self):
@@ -943,7 +850,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         protocol_type = self.protocol_type
         timetable_mode = self.timetable_mode
-        sources = self.get_feature_from_layer()
+        sources = self.get_feature_from_layer(self.layer1)
+        destinations = self.get_feature_from_layer(self.layer2)
 
         if sources == 0:
             self.run_button.setEnabled(True)
@@ -970,20 +878,18 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if run:
             PathToNetwork = self.config['Settings']['PathToPKL']
+
+            #file_name = Path(self.file_name_gpkg).stem
+
+            file_name = get_prefix_alias(True, 
+                                self.protocol_type, 
+                                self.mode, 
+                                self.timetable_mode,
+                                self.roundtrip 
+                                )
             
-            layer_origin = self.layer2
-            layer_dest = self.layer1
-                        
-            if not os.path.exists(self.folder_name):
-                os.makedirs(self.folder_name)
-            else:
-                self.setMessage(f"Folder '{self.folder_name}' already exists")
-                self.run_button.setEnabled(True)
-                self.close_button.setEnabled(True)
-                self.textLog.clear()
-                self.tabWidget.setCurrentIndex(0)
-                self.progressBar.setValue(0)
-                return 0
+            layer_origin = self.layer1
+            layer_dest = self.layer2
             
             dictionary  = myload_all_dict(self,
                         PathToNetwork,
@@ -996,23 +902,21 @@ class RaptorDetailed(QDialog, FORM_CLASS):
            
             if self.roundtrip:
 
-                self.shift_mode = True
-                                
-                time_delta_to_min = int(self.config['Settings']['time_delta_to']) 
-                time_delta_from_min = int(self.config['Settings']['time_delta_from']) 
-                time_delta_to  = time_delta_to_min * 60
-                time_delta_from  = time_delta_from_min * 60
+                dict_NUMPOINTS = {}
+                first_field = None
+                list_fields_aggregate = self.config['Settings']['Field_ch']
+                if list_fields_aggregate:
+                    fields_to_process = [v.strip() for v in list_fields_aggregate.split(',')]
+                    first_field = fields_to_process[0]
 
-                from_time_start = time_to_seconds(self.config['Settings']['from_time_start'])
-                from_time_end = time_to_seconds(self.config['Settings']['from_time_end'])
-                to_time_start = time_to_seconds(self.config['Settings']['to_time_start'])
-                to_time_end = time_to_seconds(self.config['Settings']['to_time_end'])
-                    
-                str_from = f'<a>Arrive to facility between: {seconds_to_time(to_time_start)} and {seconds_to_time(to_time_end)} schedule-adjustment gap {time_delta_to_min} minutes</a>'
-                self.textLog.append(str_from)
-                str_to = f'<a>Start trip back from facility between: {seconds_to_time(from_time_start)} and {seconds_to_time(from_time_end)} schedule-adjustment gap {time_delta_from_min} minutes</a>'
-                self.textLog.append(str_to)
-                
+                if first_field:
+                    idx_aid = self.layer2.fields().lookupField('aid')
+                    idx_num = self.layer2.fields().lookupField(first_field)
+                    if idx_num != -1:
+                        dict_NUMPOINTS = {int(f[idx_aid]): round(f[idx_num]) for f in self.layer2.getFeatures()}
+               
+
+                self.shift_mode = True
                 
                 self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
                 begin_computation_time = datetime.now()
@@ -1034,31 +938,87 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         raptor_mode,
                         )
                 
-                self.folder_name_copy = self.folder_name
-                self.folder_name_from = os.path.join(self.folder_name_copy, f'{self.alias}_from')
-                os.makedirs(self.folder_name_from, exist_ok=True)
-
                 cols_dict = get_name_columns()
                 cols = cols_dict[(2, protocol_type)]
                 MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60
                 duration_max = MaxTimeTravel * 1.5
-                analyzer = roundtrip_analyzer(
-                                        report_path = self.folder_name_copy, 
-                                        duration_max=duration_max, 
-                                        alias = self.alias,
-                                        field_star = cols["star"],
-                                        field_hash = cols["hash"],
-                                        service_area = (protocol_type == 2)
+                analyzer = roundtrip_analyzer(                                        
+                                        duration_max=duration_max,                                                                                 
+                                        service_area = (protocol_type == 2),
+                                        dict_numpoints = dict_NUMPOINTS
                                         )
-
-                self.folder_name_to = os.path.join(self.folder_name_copy, f'{self.alias}_to')
-                os.makedirs(self.folder_name_to, exist_ok=True)
                 
+                
+                
+                ###########################
+                #  TO
+                # #########################
+
+                #sources = self.get_feature_from_layer(self.layer1)
+                #destinations = self.get_feature_from_layer(self.layer2)
+
+                D_TIME = START_TIME = self.to_time_start
+                Tf = self.to_time_end
+                
+                self.textLog.append(f"<a style='font-weight:bold;'> Calculating to accessibility</a>")
+                
+                self.mode = 2
+                   
+                i = 0
+                while True:
+                    D_TIME_str = seconds_to_time(D_TIME)
+                                           
+                    if self.timetable_mode:
+                       self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
+                    else:   
+                       self.textLog.append(f"<a style='font-weight:bold;'> Arrive before: {D_TIME_str}</a>")
+                                                                                
+                    MaxExtraTime = self.MaxExtraTimeTo
+                    short_result= runRaptorWithProtocol(self,
+                                                        self.file_name_gpkg,
+                                  sources,
+                                  destinations,
+                                  self.mode,
+                                  protocol_type,
+                                  timetable_mode,
+                                  D_TIME,
+                                  dictionary_to,
+                                  self.shift_mode,
+                                  layer_dest,
+                                  layer_origin,
+                                  self.layer_visualization,
+                                  PathToNetwork,
+                                  MaxExtraTime,
+                                  roundtrip_mode = True
+                                  )
+                    
+                    if not(self.break_on):
+                        #begin_analyzer_time = time.perf_counter()
+
+                        data_to = analyzer.get_data_for_analyzer_from_to (short_result)
+                        analyzer.add_to_data(data_to, D_TIME_str)
+
+                        #end_analyzer_time = time.perf_counter()
+                        #analyzer_time += end_analyzer_time - begin_analyzer_time  
+
+                        #print (f'analyzer_time {analyzer_time}')
+
+                        i += 1
+                    if self.break_on:
+                        self.setMessage("Roundtrip accessibility computations are interrupted by user")
+                        self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
+                        self.progressBar.setValue(0)
+                        return 0
+                    
+                    D_TIME = START_TIME + i * self.time_delta_to 
+                    if D_TIME >= Tf: 
+                        break
+                                   
                 ###########################
                 #  From
                 # #########################
-                D_TIME = START_TIME = from_time_start
-                Tf = from_time_end
+                D_TIME = START_TIME = self.from_time_start
+                Tf = self.from_time_end
 
                 self.textLog.append(f"<a style='font-weight:bold;'> Calculating from accessibility</a>")
                 self.mode = 1
@@ -1074,14 +1034,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         self.textLog.append(f"<a style='font-weight:bold;'> Start at: {D_TIME_str}</a>")
                  
                     postfix = i + 1
-                    self.folder_name = os.path.join(self.folder_name_from, str(postfix)) 
-                    os.makedirs(self.folder_name, exist_ok=True)
-
+                    
                     MaxExtraTime = self.MaxExtraTimeFrom
                     
                     short_result = runRaptorWithProtocol(self,
                                                          self.file_name_gpkg,
                                   sources,
+                                  destinations,
                                   self.mode,
                                   protocol_type,
                                   timetable_mode,
@@ -1092,14 +1051,15 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   layer_origin,
                                   self.layer_visualization,
                                   PathToNetwork,
-                                  MaxExtraTime
+                                  MaxExtraTime,
+                                  roundtrip_mode = True
                                   )
                     
                     if not(self.break_on):
                         #begin_analyzer_time = time.perf_counter()
 
                         data_from = analyzer.get_data_for_analyzer_from_to (short_result)
-                        analyzer.add_from_data(data_from)
+                        analyzer.add_from_data(data_from, D_TIME_str)
          
                         #end_analyzer_time = time.perf_counter()
                         #analyzer_time += end_analyzer_time - begin_analyzer_time  
@@ -1113,130 +1073,65 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         return 0
                     i += 1
 
+                    D_TIME = START_TIME + i * self.time_delta_from 
                     if D_TIME >= Tf: 
                         break
-
-                    D_TIME = START_TIME + i * time_delta_from 
-                
-                ###########################
-                #  TO
-                # #########################
-                D_TIME = START_TIME = to_time_start
-                Tf = to_time_end
-                
-                self.textLog.append(f"<a style='font-weight:bold;'> Calculating to accessibility</a>")
-                
-                self.mode = 2
-                   
-                i = 0
-                while True:
-                    D_TIME_str = seconds_to_time(D_TIME)
-                                           
-                    if self.timetable_mode:
-                       self.textLog.append( f"<a style='font-weight:bold;'> Earliest arrival time: {D_TIME_str}</a>")
-                    else:   
-                       self.textLog.append(f"<a style='font-weight:bold;'> Arrive before: {D_TIME_str}</a>")
                     
-                    postfix = i + 1
-                    self.folder_name = os.path.join(self.folder_name_to, str(postfix)) 
-                    os.makedirs(self.folder_name, exist_ok=True)
-                                        
-                    MaxExtraTime = self.MaxExtraTimeTo
-                    short_result= runRaptorWithProtocol(self,
-                                                        self.file_name_gpkg,
-                                  sources,
-                                  self.mode,
-                                  protocol_type,
-                                  timetable_mode,
-                                  D_TIME,
-                                  dictionary_to,
-                                  self.shift_mode,
-                                  layer_dest,
-                                  layer_origin,
-                                  self.layer_visualization,
-                                  PathToNetwork,
-                                  MaxExtraTime
-                                  )
-                    
-                    if not(self.break_on):
-                        #begin_analyzer_time = time.perf_counter()
-
-                        data_to = analyzer.get_data_for_analyzer_from_to (short_result)
-                        analyzer.add_to_data(data_to)
-
-                        #end_analyzer_time = time.perf_counter()
-                        #analyzer_time += end_analyzer_time - begin_analyzer_time  
-
-                        #print (f'analyzer_time {analyzer_time}')
-
-                        i += 1
-                    if self.break_on:
-                        self.setMessage("Roundtrip accessibility computations are interrupted by user")
-                        self.textLog.append(f'<a><b><font color="red">Roundtrip accessibility computations are interrupted by user</font> </b></a>')
-                        self.progressBar.setValue(0)
-                        return 0
-                    
-                    if D_TIME >= Tf: 
-                        break
-
-                    D_TIME = START_TIME + i * time_delta_to 
-                    
-                
-                
                 if not(self.break_on):
-                    
-                    """
-                    processor = StatFromTo(self,
-                                           self.folder_name_from, 
-                                           self.folder_name_to, 
-                                           os.path.dirname(self.folder_name_from), 
-                                           ""
-                                           )
-                    processor.process_files()
-                    
-                    analyzer = TripAnalyzer(self,
-                                    path_from = self.folder_name_from,
-                                    path_to = self.folder_name_to,
-                                    duration_max = 60*60,  # 60 минут
-                                    )
-                    result_path1 = os.path.join(os.path.dirname(self.folder_name_from),"result_bin.csv")
-                    result_path2 = os.path.join(os.path.dirname(self.folder_name_from),"result_round_trip.csv")
-                    result = analyzer.run(result_path1, result_path2, mode = "duration")
-                    """
-
+            
                     #begin_analyzer_time = time.perf_counter()
 
-                    PathToRep = analyzer.run_finalize_all()
+                    df_rows_std, df_rows_strict, header  = analyzer.run_finalize_all()
+                    
+                    
+                    table_name1 = f'{file_name}_stat_all'
+                    df_rows_std.columns = header
+                    fast_write_gpkg(self.file_name_gpkg, table_name1, df_rows_std)
+                    table_name2 = f'{file_name}_stat_strict'
+                    df_rows_strict.columns = header
+                    fast_write_gpkg(self.file_name_gpkg, table_name2, df_rows_strict)
 
                     #end_analyzer_time = time.perf_counter()
                     #analyzer_time += end_analyzer_time - begin_analyzer_time  
 
                     #print (f'analyzer_time {analyzer_time}')
 
-                    self.textLog.append(f'<a href="file:///{os.path.dirname(self.folder_name_from)}" target="_blank" >Statistics in folder</a>')
-
+                    
                     
                     vis = visualization(self, 
                             self.layer_visualization,
                             mode = protocol_type,
                             fieldname_layer=self.layer_vis_field, 
-                            from_to = 2, # to
+                            from_to = 1, # from
+                            roundtrip = True if protocol_type == 2 else False
                             )
-                    vis.add_thematic_map(PathToRep, self.alias, set_min_value=0)   
+                    #vis.add_thematic_map(PathToRep, self.alias, set_min_value=0)   
 
                     after_computation_time = datetime.now()
                     after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
                     self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
-                    self.setMessage('Finished')
+                    
                     duration_computation = after_computation_time - begin_computation_time
                     duration_without_microseconds = str(duration_computation).split('.')[0]
                     self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
+                    self.textLog.append(f'Output in file: <a href="file:///{self.file_name_gpkg}" target="_blank" > {self.file_name_gpkg}</a>')
                     
+                    text = transform_log_to_dataframe(self.textLog.toPlainText())
+                    table_name = f'_log_{file_name}'
+                    fast_write_gpkg(self.file_name_gpkg, table_name, text)
+
+                    folder = os.path.dirname(self.file_name_gpkg)
+                    name, ext = os.path.splitext(os.path.basename(self.file_name_gpkg))
+                    filelog_name = os.path.join(folder, f"{name}_log.csv")
                     text = transform_log_to_csv_text(self.textLog.toPlainText())
-                    filelog_name = f'{self.folder_name_copy}//log_{self.alias}.csv'
-                    
                     with open(filelog_name, "w") as file:
                         file.write(text)
+
+                    vis.add_thematic_map_gpkg(self.file_name_gpkg, table_name1, table_name1)
+                    vis.add_thematic_map_gpkg(self.file_name_gpkg, table_name2, table_name2)
+                    self.setMessage('Finished')
+
+
 
             if not (self.roundtrip):
                 self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
@@ -1249,6 +1144,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 runRaptorWithProtocol(self,
                                   self.file_name_gpkg,    
                                   sources,
+                                  destinations,
                                   self.mode,
                                   protocol_type,
                                   timetable_mode,
@@ -1261,6 +1157,18 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   PathToNetwork,
                                   MaxExtraTime
                                   )
+                
+                if not(self.break_on):
+                    text = transform_log_to_dataframe(self.textLog.toPlainText())
+                    table_name = f'_log_{file_name}'
+                    fast_write_gpkg(self.file_name_gpkg, table_name, text)
+
+                    folder = os.path.dirname(self.file_name_gpkg)
+                    name, ext = os.path.splitext(os.path.basename(self.file_name_gpkg))
+                    filelog_name = os.path.join(folder, f"{name}_log.csv")
+                    text = transform_log_to_csv_text(self.textLog.toPlainText())
+                    with open(filelog_name, "w") as file:
+                        file.write(text)
                 
                 #pr.disable()
                 #s = io.StringIO()
@@ -1308,41 +1216,3 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.textInfo.setOpenLinks(False)          
             self.textInfo.setHtml(html)
             self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString())) 
-    
-    def find_latest_log(self, directory):
-
-        if not os.path.exists(self.txtPathToPKL.text()):
-            return False
-        
-        pattern = re.compile(r'log_pkl_pt_(\d{6}_\d{6})\.txt$')
-        latest_file = None
-        latest_timestamp = None
-    
-        for filename in os.listdir(directory):
-            match = pattern.match(filename)
-            if match:
-                timestamp = match.group(1)
-                if latest_timestamp is None or timestamp > latest_timestamp:
-                    latest_timestamp = timestamp
-                    latest_file = filename
-    
-        return os.path.join(directory, latest_file) if latest_file else None
-
-    def extract_parameters(self, file_path):
-        params = {
-            "Maximal walking path on road": 0,
-            "Maximal walking path on air": 0
-        }
-    
-        if not file_path or not os.path.exists(file_path):
-            return params
-    
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                for key in params.keys():
-                    if line.startswith(key):
-                        try:
-                            params[key] = int(line.split(":", 1)[1].strip())
-                        except ValueError:
-                            pass
-        return params

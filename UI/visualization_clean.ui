@@ -111,13 +111,6 @@
                 <item>
                  <widget class="QgsMapLayerComboBox" name="cmbLayers"/>
                 </item>
-                <item>
-                 <widget class="QToolButton" name="toolButtonBuildings">
-                  <property name="text">
-                   <string>...</string>
-                  </property>
-                 </widget>
-                </item>
                </layout>
               </item>
               <item row="9" column="0">

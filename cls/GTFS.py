@@ -5,9 +5,10 @@ import re
 import geopandas as gpd
 import os
 import datetime
+import shutil
 
 from collections import defaultdict
-from scipy.spatial import cKDTree
+
 from shapely.geometry import Point
 from pyproj import Geod
 
@@ -17,7 +18,7 @@ from PyQt5.QtWidgets import QApplication
 
 from footpath_on_projection import cls_footpath_on_projection
 from converter_layer import MultiLineStringToLineStringConverter
-from common import convert_meters_to_degrees, getDateTime, time_to_seconds, seconds_to_time
+from common import getDateTime, time_to_seconds, seconds_to_time
 
 
 class GTFS ():
@@ -30,14 +31,16 @@ class GTFS ():
                  layer_origins,
                  layer_road,
                  layer_origins_field="",
-                 MaxPathRoad = "400",
-                 
-                 check_date = "20000101"
+                 MaxPathRoad = "400",                 
+                 check_date = "20000101",
+                 to_delete_gtfs = True
                  ):
         self.pkl_path = pkl_path
         self.__path_to_file = path_to_file
         self.__path_to_GTFS = path_to_GTFS
         self.MaxPathRoad = int(MaxPathRoad)
+
+        self.to_delete_gtfs = to_delete_gtfs
         
         self.check_date = int(check_date)
         
@@ -313,28 +316,22 @@ class GTFS ():
     def load_GTFS(self):
 
         self.parent.setMessage(f'Loading data ...')
-
-        QApplication.processEvents()
-        if self.verify_break():
-            return 0
+       
         self.routes_df = pd.read_csv(
             f'{self.__path_to_GTFS}//routes.txt', sep=',')
                         
-        self.trips_df = pd.read_csv(
-
-            f'{self.__path_to_GTFS}//trips.txt', sep=',', dtype={'trip_id': str})
-        QApplication.processEvents()
-        if self.verify_break():
-            return 0
+        self.trips_df = pd.read_csv(f'{self.__path_to_GTFS}//trips.txt', sep=',', dtype={'trip_id': str})
+        
         
         self.stop_times_df = pd.read_csv(
             f'{self.__path_to_GTFS}//stop_times.txt', sep=',', dtype={'stop_id': str, 'trip_id': str})
         
-        QApplication.processEvents()
-        if self.verify_break():
-            return 0
+        stop_ids = self.stop_times_df['stop_id'].unique()
+        
         self.stop_df = pd.read_csv(
             f'{self.__path_to_GTFS}//stops.txt', sep=',', dtype={'stop_id': str})
+        
+        self.stop_df = self.stop_df[self.stop_df['stop_id'].isin(stop_ids)]
                
         path_to_calendar = f'{self.__path_to_GTFS}//calendar.txt'
         calendar_exist = os.path.exists(path_to_calendar)
@@ -639,12 +636,10 @@ class GTFS ():
             QApplication.processEvents()
         if self.verify_break():
             return 0
-        dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(
-            self.pkl_path)
+        dict_osm_vertex = footpath_on_projection.load_dict_osm_vertex(self.pkl_path)
         if self.verify_break():
             return 0
-        dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(
-            self.pkl_path)
+        dict_vertex_osm = footpath_on_projection.load_dict_vertex_osm(self.pkl_path)
         if self.parent is not None:
             self.parent.progressBar.setValue(14)
             QApplication.processEvents()
@@ -913,6 +908,9 @@ class GTFS ():
                 if not self.already_display_break:
                     self.parent.textLog.append(f'<a><b><font color="red">Database construction is interrupted by user</font> </b></a>')
                     self.already_display_break = True
+                if self.to_delete_gtfs:
+                     if os.path.exists(self.__path_to_file):
+                        shutil.rmtree(self.__path_to_file)
                 self.parent.progressBar.setValue(0)
                 return True
         return False
@@ -998,8 +996,7 @@ class GTFS ():
             # Combine and save data
             stop_times_df = pd.concat([stop_times_df, expanded_df], ignore_index=True)
             df_new_trips = pd.DataFrame(new_trips)
-            #df_new_trips.to_csv(r"C:\\Users\\geosimlab\\Documents\\Igor\\gtfs_others\\petersburg\\new_trips.csv", index=False)
-
+            
             trips_df = pd.concat([trips_df, df_new_trips], ignore_index=True)
 
         return stop_times_df, trips_df

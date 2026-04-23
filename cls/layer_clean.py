@@ -27,8 +27,8 @@ from common import (convert_meters_to_degrees,
 class TaskSignals(QObject):
     log = pyqtSignal(str)
     progress = pyqtSignal(int)
-    set_message = pyqtSignal(str)
-    save_log = pyqtSignal(bool)
+    set_message = pyqtSignal(str)    
+    save_log = pyqtSignal(bool, str)
     add_layers = pyqtSignal(list) 
     change_button_status = pyqtSignal(bool) 
     
@@ -369,7 +369,7 @@ class cls_clean_roads(QgsTask):
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
        
-        self.signals.save_log.emit(True)
+        self.signals.save_log.emit(True, self.layer_name)
 
         self.signals.log.emit(f'"{self.layer_name}.gpkg" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
 

@@ -6,6 +6,7 @@ from PyQt5.QtCore import (Qt,
                           QRegExp)
 from qgis.core import QgsProject
 from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtWidgets import QApplication
 
 from .form_raptor_detailed import RaptorDetailed
 
@@ -22,10 +23,9 @@ class RaptorSummary(RaptorDetailed):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.parent = parent
 
-        self.fillComboBoxWithLayerFields2()
-        self.cmbLayersDest.currentIndexChanged.connect(self.fillComboBoxWithLayerFields2)
+        
 
-        regex = QRegExp(r"^(1[0-9]|20|[2-9])$")
+        regex = QRegExp(r"^([1-9]|[1-5][0-9]|60)$")
         int_validator = QRegExpValidator(regex)
         self.txtTimeInterval.setValidator(int_validator)
 
@@ -47,22 +47,7 @@ class RaptorSummary(RaptorDetailed):
         url = f'{url}#{section}'
         webbrowser.open(url)
     
-    # for widget with checkbox
-    def fillComboBoxWithLayerFields2(self):
-        self.cmbFields_ch.clear()
-        layer = self.cmbLayersDest.currentLayer()
-
-        print ("fillComboBoxWithLayerFields2")
-
-        try:
-            fields = [field for field in layer.fields()]
-        except:
-            return 0
-
-        for field in fields:
-            field_type = field.type()
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
-                self.cmbFields_ch.addItem(field.name())
+    
 
     def saveParameters(self):
 
@@ -84,27 +69,7 @@ class RaptorSummary(RaptorDetailed):
 
         with open(f, 'w') as configfile:
             self.config.write(configfile)
-
-    def prepareRaptor(self):
-        result = super().prepareRaptor()
-
-    def ParametrsShow(self):
-
-        super().ParametrsShow()
-
-        if 'Field_ch' not in self.config['Settings']:
-            self.config['Settings']['Field_ch'] = ''
-
-        for i in range(self.cmbFields_ch.count()):
-            item_text = self.cmbFields_ch.itemText(i)
-            if item_text in self.config['Settings']['Field_ch']:
-                self.cmbFields_ch.setItemData(
-                    i, Qt.Checked, role=Qt.CheckStateRole)
-            else:
-                self.cmbFields_ch.setItemData(
-                    i, Qt.Unchecked, role=Qt.CheckStateRole)
-
-        self.txtTimeInterval.setText(self.config['Settings']['TimeInterval'])
+      
 
     def show_info(self):
 

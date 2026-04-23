@@ -1,7 +1,12 @@
 import pandas as pd
 import os
 import shutil
-from PyQt5.QtWidgets import QApplication
+
+try:
+    from PyQt5.QtWidgets import QApplication
+    IN_QGIS = True
+except ImportError:
+    IN_QGIS = False
 
 class GTFSExcludeRoutes:
     def __init__(self, parent, gtfs_path, output_path=None,
@@ -22,6 +27,10 @@ class GTFSExcludeRoutes:
         self.exclude_ids = []
         self.already_display_break = False
 
+        self.IN_QGIS = True
+        if self.parent == None:
+            self.IN_QGIS = False
+
     
     def _load_exclude_ids(self):
     
@@ -39,15 +48,16 @@ class GTFSExcludeRoutes:
             os.makedirs(path)
 
     def verify_break(self):
-        if self.parent is not None:
-            if self.parent.break_on:
-                self.parent.setMessage("Deleting lines from GTFS is interrupted by user")
-                if not self.already_display_break:
-                    self.parent.textLog.append(f'<a><b><font color="red">Deleting lines from GTFS is interrupted by user</font> </b></a>')
-                    self.already_display_break = True
-                self.parent.progressBar.setValue(0)
-                return True
-        return False
+        if self.IN_QGIS:
+            if self.parent is not None:
+                if self.parent.break_on:
+                    self.parent.setMessage("Deleting lines from GTFS is interrupted by user")
+                    if not self.already_display_break:
+                        self.parent.textLog.append(f'<a><b><font color="red">Deleting lines from GTFS is interrupted by user</font> </b></a>')
+                        self.already_display_break = True
+                    self.parent.progressBar.setValue(0)
+                    return True
+            return False
     
     def run(self):
         self._load_exclude_ids()
@@ -68,12 +78,18 @@ class GTFSExcludeRoutes:
             filtered_routes.to_csv(os.path.join(self.output_path, 'routes.txt'), index=False)
             removed_routes.to_csv(os.path.join(self.excluded_data_path, 'routes.txt'), index=False)
 
+            agency_path = os.path.join(self.gtfs_path, 'agency.txt')            
+            if os.path.exists(agency_path):
+                shutil.copy(agency_path, os.path.join(self.output_path, 'agency.txt'))
+                shutil.copy(agency_path, os.path.join(self.excluded_data_path, 'agency.txt'))
+
             # --- TRIPS ---
             if self.verify_break():
                 return 0
-            self.parent.progressBar.setValue(1)
-            self.parent.setMessage("Deleting lines from GTFS ('trips.txt') ...")
-            QApplication.processEvents()
+            if self.IN_QGIS:
+                self.parent.progressBar.setValue(1)
+                self.parent.setMessage("Deleting lines from GTFS ('trips.txt') ...")
+                QApplication.processEvents()
             trips_df = pd.read_csv(os.path.join(self.gtfs_path, 'trips.txt'),
                                    dtype={'route_id': str, 'trip_id': str, 'service_id': str})
 
@@ -88,9 +104,10 @@ class GTFSExcludeRoutes:
             # --- STOP TIMES ---
             if self.verify_break():
                 return 0
-            self.parent.progressBar.setValue(2)
-            self.parent.setMessage("Deleting lines from GTFS ('stop_times.txt') ...")
-            QApplication.processEvents()
+            if self.IN_QGIS:
+                self.parent.progressBar.setValue(2)
+                self.parent.setMessage("Deleting lines from GTFS ('stop_times.txt') ...")
+                QApplication.processEvents()
 
             st_path = os.path.join(self.gtfs_path, 'stop_times.txt')
             st_iter = pd.read_csv(st_path, dtype={'trip_id': str, 'stop_id': str}, chunksize=200000)
@@ -118,16 +135,18 @@ class GTFSExcludeRoutes:
                     e_chunk.to_csv(out_e, index=False, header=first)
 
                     first = False
-                    QApplication.processEvents()
+                    if self.IN_QGIS:
+                        QApplication.processEvents()
 
     
 
             # --- STOPS ---
             if self.verify_break():
                 return 0
-            self.parent.progressBar.setValue(3)
-            self.parent.setMessage("Deleting lines from GTFS ('stops.txt') ...")
-            QApplication.processEvents()
+            if self.IN_QGIS:
+                self.parent.progressBar.setValue(3)
+                self.parent.setMessage("Deleting lines from GTFS ('stops.txt') ...")
+                QApplication.processEvents()
             stops_df = pd.read_csv(os.path.join(self.gtfs_path, 'stops.txt'),
                                    dtype={'stop_id': str})
 
@@ -147,9 +166,10 @@ class GTFSExcludeRoutes:
             # --- CALENDAR ---
             if self.verify_break():
                 return 0
-            self.parent.progressBar.setValue(4)
-            self.parent.setMessage("Deleting lines from GTFS ('calendar.txt') ...")
-            QApplication.processEvents()
+            if self.IN_QGIS:
+                self.parent.progressBar.setValue(4)
+                self.parent.setMessage("Deleting lines from GTFS ('calendar.txt') ...")
+                QApplication.processEvents()
             active_f_services = filtered_trips['service_id'].unique()
             active_e_services = removed_trips['service_id'].unique()
 
@@ -161,8 +181,10 @@ class GTFSExcludeRoutes:
                         os.path.join(self.output_path, file), index=False)
                     c_df[c_df['service_id'].isin(active_e_services)].to_csv(
                         os.path.join(self.excluded_data_path, file), index=False)
-            QApplication.processEvents()  
-            self.parent.progressBar.setValue(5)      
+            
+            if self.IN_QGIS:  
+                QApplication.processEvents()
+                self.parent.progressBar.setValue(5)      
 
         except Exception as e:
             print(f"Error: {e}")
@@ -172,15 +194,19 @@ class GTFSExcludeRoutes:
 
     
 if __name__ == "__main__":
-    src = r"c:\doc\Igor\GIS\temp\ISR_2025"
-    excl = r"c:\doc\Igor\GIS\temp\routes.txt"
-    out = r"c:\doc\Igor\GIS\temp\excluded"
-    out2 = r"c:\doc\Igor\GIS\temp\_deleted_lines"
+   
+    #parent, gtfs_path, output_path=None, excluded_data_path=None, exclude_ids_list=None
+    src = r'c:\doc\Igor\GIS\GTFS\ISR_2025'
+    out = r'c:\doc\Igor\GIS\36_routes\GTFS2025-306'
+    excluded_data_path = r'c:\doc\Igor\GIS\36_routes\GTFS2025-306\exclude'
+    #list = [10276, 10374, 10375, 10965, 13428, 13429, 13760, 13761, 13762, 13763, 14025, 16077, 16304, 16305, 16352, 16353, 16910, 18605, 18632, 18770, 19090, 19091, 19594, 19687, 21188, 21189, 22196, 2240, 2242, 2246, 2248, 2255, 2256, 2259, 2261, 2262, 2263, 2265, 2267, 2268, 2270, 2272, 2273, 2275, 2276, 2277, 2278, 2280, 2287, 2294, 2296, 2299, 2312, 2319, 2320, 2323, 2324, 2326, 2327, 2328, 2332, 23397, 23398, 23399, 23400, 2358, 23595, 23596, 23597, 23598, 23604, 2362, 2369, 2379, 23911, 23916, 23917, 23918, 23919, 23926, 23927, 23991, 23992, 24047, 2415, 2417, 2419, 24224, 2428, 2429, 2444, 2449, 2450, 2454, 2457, 2458, 2460, 2466, 2467, 24798, 24799, 2494, 2495, 2502, 2504, 2508, 2509, 2512, 2513, 2517, 2519, 2524, 2528, 2530, 2535, 2538, 25407, 25408, 2542, 2544, 25628, 25955, 25956, 25957, 25958, 26005, 26007, 26008, 26010, 26615, 26616, 26617, 26618, 26983, 26984, 27069, 27081, 27082, 27083, 27084, 2711, 2712, 27462, 27463, 27901, 27902, 28099, 28100, 2813, 2815, 2816, 2817, 2818, 2819, 2820, 2821, 2822, 2825, 2829, 2830, 2831, 2836, 2837, 28384, 28385, 28386, 28387, 28388, 2840, 2841, 2842, 2843, 2844, 2845, 2846, 2847, 2848, 2849, 2850, 2851, 2853, 2854, 2855, 2856, 2859, 2861, 2862, 2871, 28854, 28855, 28856, 2887, 28877, 2888, 2889, 2890, 2891, 2892, 2893, 2894, 2895, 2896, 2897, 2898, 2899, 2900, 2901, 2902, 2904, 2905, 2906, 2907, 2908, 2909, 2910, 2911, 2912, 2913, 2914, 2915, 29161, 29162, 2917, 2919, 2920, 2921, 2922, 2923, 2926, 2934, 2948, 2949, 2950, 2951, 2959, 2960, 2961, 2963, 30810, 31299, 3147, 3266, 3277, 3397, 35324, 35325, 35326, 36421, 36422, 36425, 36426, 36477, 36478, 36503, 36504, 36593, 36594, 37741, 37742, 39162, 39163, 39164, 39166, 39167, 39168, 39169, 39170, 39171, 39172, 39173, 39174, 39175, 39176, 39177, 39178, 39179, 39180, 39181, 39182, 39183, 39187, 39188, 39189, 39190, 39191, 39193, 39194, 39195, 39196, 39280, 39281, 39282, 39283, 39312, 39313, 39629, 39630, 5230, 975, 9775, 9779, 9780, 9781, 9783, 9785, 9788, 9791, 9792, 9793, 9794, 9802, 9803, 9804, 9805, 9806, 9808, 9809, 9811, 9813, 9821, 9822, 9823, 9824, 9833, 9834, 9835, 9836, 9838, 9842, 9844, 9845, 9847, 9853, 9854, 9855, 9857, 9859, 9860, 9861, 9863, 9864, 9866, 9867, 9872, 9873, 9877, 9880, 991, 993]
+    list = [10276,10965,13762,13763,14025,16076,16077,16910,19090,19091,21188,21189,22196,2240,2242,2246,2248,2255,2256,2259,2261,2262,2263,2265,2267,2268,2270,2272,2273,2275,2276,2277,2278,2280,2287,2293,2294,2296,2299,2312,2319,2320,2323,2324,2326,2327,2328,2332,23397,23398,23399,23400,2358,23595,23596,23597,23598,23603,23604,2369,2379,23911,23918,23919,23926,23927,24047,2415,2417,2419,24224,2444,2449,2450,2454,2457,2458,2460,2466,2467,24798,24799,2494,2495,2502,2504,2508,2509,2510,2511,2512,2513,2517,2519,2524,2528,2530,2535,2538,25407,25408,2542,2544,25955,25956,25957,25958,26005,26007,26008,26010,26615,26616,26617,26618,26983,26984,27069,27081,27082,27083,27084,2711,2712,27462,27463,28099,28100,2813,2815,2816,2817,2818,2819,2820,2821,2822,2825,2829,2830,2831,2836,2837,28384,28385,28386,28387,28388,2840,2841,2842,2843,2844,2845,2846,2847,2848,2849,2850,2851,2853,2854,2855,2856,2859,2861,2862,2871,28854,28855,28856,2887,28877,2888,2889,2890,2891,2892,2893,2894,2895,2896,2897,2898,2899,2900,2901,2902,2904,2905,2906,2907,2908,2909,2910,2911,2912,2913,2914,2915,2917,2919,2920,2921,2922,2923,2926,2934,2948,2949,2959,2960,2961,2963,30810,3147,3277,3397,35324,35325,35326,36421,36422,36425,36426,36477,36478,36503,36504,37657,39161,39162,39163,39164,39165,39166,39169,39170,39171,39172,39173,39174,39175,39176,39177,39178,39179,39182,39183,39187,39188,39189,39190,39191,39195,39196,39280,39281,39629,39630,9775,9776,9779,9780,9781,9783,9785,9788,9791,9792,9793,9794,9802,9803,9806,9807,9808,9809,9811,9813,9821,9822,9823,9824,9833,9834,9835,9836,9838,9842,9843,9853,9854,9855,9857,9859,9860,9861,9863,9864,9866,9867,9872,9873,9877,9880]
     cleaner = GTFSExcludeRoutes(
+        parent = None,
         gtfs_path = src, 
-        exclude_file_path = excl,
         output_path = out,
-        excluded_data_path = out2
+        excluded_data_path = excluded_data_path,
+        exclude_ids_list = list
     )
     run_ok = cleaner.run()
 

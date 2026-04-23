@@ -413,7 +413,7 @@ class cls_footpath_on_projection:
             vertex_osm = pickle.load(f)
         return vertex_osm
     
-
+    """
     def construct_dict_transfers_projections(self,
                                              graph,
                                              dict_osm_vertex,
@@ -473,6 +473,67 @@ class cls_footpath_on_projection:
                     writer.writerow([building_id, to_stop_id, dist])
                     writer.writerow([to_stop_id, building_id, dist])
 
+    """
+    def construct_dict_transfers_projections(self,
+                                         graph,
+                                         dict_osm_vertex,
+                                         dict_vertex_osm,
+                                         layer_buildings,
+                                         layer_buildings_field,
+                                         path_to_file,
+                                         path_to_stops,
+                                         ):
+
+        self.layer_buildings = layer_buildings
+        path_to_file = os.path.join(path_to_file, 'footpath_road_projection.txt')
+        
+        rows = []
+        rows.append(['from_stop_id', 'to_stop_id', 'min_transfer_time'])
+
+        # Обработка остановок
+        self.stops = self.create_stops_gpd(path_to_stops)
+        features_list = list(self.stops.itertuples(index=False))
+        count = len(features_list)
+
+        for i, feature in enumerate(features_list):
+
+            if i % 100 == 0:
+                if self.parent is not None:
+                    self.parent.setMessage(f'Constructing walk routes between stops, stop №{i} of {count}...')
+                    QApplication.processEvents()
+                if self.verify_break():
+                    return 0
+
+            from_osm_id = self.normalize_id(feature.stop_id)
+            dist_list = self.get_nearby_buildings(from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s")
+
+            for to_stop_id, dist in dist_list:
+                rows.append([from_osm_id, to_stop_id, dist])
+
+        # Обработка зданий
+        count = layer_buildings.featureCount()
+        features = layer_buildings.getFeatures()
+
+        for i, feature in enumerate(features):
+
+            if i % 500 == 0:
+                if self.parent is not None:
+                    self.parent.setMessage(f'Constructing walk routes between buildings and stops, building №{i} of {count}...')
+                    QApplication.processEvents()
+                if self.verify_break():
+                    return 0
+
+            building_id = self.normalize_id(feature[layer_buildings_field])
+            dist_list = self.get_nearby_buildings(building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s")
+
+            for to_stop_id, dist in dist_list:
+                rows.append([building_id, to_stop_id, dist])
+                rows.append([to_stop_id, building_id, dist])
+        
+        with open(path_to_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(rows)
+    """
     def get_nearby_buildings(self, building_id, graph, dict_osm_vertex, dict_vertex_osm, mode):
 
         dist = self.MaxPath
@@ -527,9 +588,56 @@ class cls_footpath_on_projection:
                     dist_dict[osm_id] = res_dist
 
         # conversion to a list of tuples
-        dist_list = [(building, d) for building, d in dist_dict.items()]
+        dist_list = [((building), d) for building, d in dist_dict.items()]
 
         return dist_list
+    """
+    def get_nearby_buildings(self, building_id, graph, dict_osm_vertex, dict_vertex_osm, mode):
+        max_dist = self.MaxPath
+
+        search_id = self.normalize_id(building_id)
+        data = dict_osm_vertex.get(search_id)
+        if data is None:
+            return []
+
+        vertex_id, dist_1 = data
+        cutoff = max_dist - dist_1
+        if cutoff <= 0:
+            return []
+
+        # Быстрый Dijkstra
+        lengths = nx.single_source_dijkstra_path_length(
+            graph,
+            vertex_id,
+            cutoff=cutoff,
+            weight='weight'
+        )
+
+        want_type = "b" if mode == "find_b" else "s"
+        dist_dict = {}
+
+        for node, dist_2 in lengths.items():
+            lst = dict_vertex_osm.get(node)
+            if not lst:
+                continue
+
+            for osm_id, dist_3, t in lst:
+                if t != want_type:
+                    continue
+
+                if mode == "find_s" and osm_id == building_id:
+                    continue
+
+                total = round(dist_1 + dist_2 + dist_3)
+                if total > max_dist:
+                    continue
+
+                prev = dist_dict.get(osm_id)
+                if prev is None or total < prev:
+                    dist_dict[osm_id] = total
+
+        return list(dist_dict.items())
+    
 
     def verify_break(self):
         if self.parent is not None:

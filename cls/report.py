@@ -1,15 +1,9 @@
-import os
-import io
-import pandas as pd
 from common import seconds_to_time
-
-import pandas as pd
-
 
 # for type_protokol = 1
 def make_protocol_summary(SOURCE,
-                          dictInput,
-                          f,
+                          destinations,
+                          dictInput,                          
                           grades,
                           attribute_dict,
                           nearby_buildings_from_start,
@@ -19,49 +13,71 @@ def make_protocol_summary(SOURCE,
                           short_result = None
                           ):
 
-    
+    """"
+    example
+    nearby_buildings_from_start [('1049165', 14),
+    list_buildings_from_start {'1049120', '1235069', 
+    set_stops {'8362', '14775', '26149', '34636',
+    destinations {1048576, 1048577, 1048578, 1048579, 1048580, 1048581, 1048582, 1048583, 1048584, 1048585, 104858
+    SOURCE type <'str'>
+    dest type <class 'str'>
+    """
+
+    SOURCE_int = int(SOURCE)
     time_grad = grades
     # [[-1,0], [0,10],[10,20],[20,30],[30,40],[40,50],[50,61] ]
 
-    counts = {x: 1 for x in range(0, len(time_grad))}  # counters for grades
-    agrregates = {x: attribute_dict.get(int(SOURCE), 0) for x in range(0, len(time_grad))}
+    counts = {x: 0 for x in range(0, len(time_grad))}  # counters for grades
+    agrregates = {x: attribute_dict.get(SOURCE_int, 0) for x in range(0, len(time_grad))}
 
     if short_result is not None: 
-        if field == "bldg":
-            short_result[(SOURCE, SOURCE)] = 0
+        if field == "nbldg":
+            short_result[(SOURCE_int, SOURCE_int)] = 0
+    
+    
+        
+    for dest, info in dictInput.items():
 
-    with open(f, 'a') as filetowrite:
-        for dest, info in dictInput.items():
-
-            if str(dest) in set_stops:
+            if dest in set_stops:
                 continue
 
-            if str(dest) in list_buildings_from_start:
+            if dest in list_buildings_from_start:
                 continue
 
-            time_to_dest = round(int(info[1]))
+            dest_int = int (dest)
+
+            if dest_int not in destinations:
+                continue
+
+            #if str(SOURCE) == str(dest):
+            #    continue
+            time_to_dest = int(info[1])
             
             for i in range(0, len(time_grad)):
                 grad = time_grad[i]
 
                 if time_to_dest <= grad[1]*60:
                     counts[i] = counts[i] + 1
-                    # file2.write(f'{str(dest)}\n')
-
-                    if field != "bldg":
+                    
+                    if field != "nbldg":
                         agrregates[i] = agrregates[i] + \
-                            attribute_dict.get(int(dest), 0)
+                            attribute_dict.get(dest_int, 0)
             
             if short_result is not None: 
-                if field == "bldg":
-                    short_result[(SOURCE, dest)] = time_to_dest
+                if field == "nbldg":
+                    short_result[(SOURCE_int, dest_int)] = time_to_dest
 
                         
 
         #counts[0] = counts[0] + 1 # for case time_item = 0 (from source to source)
 
         # add build to build to var counts
-        for build_item, time_item in nearby_buildings_from_start:
+    for build_item, time_item in nearby_buildings_from_start:
+
+            build_item_int = int(build_item)
+
+            if build_item_int not in  destinations:
+                continue
             for i in range(0, len(time_grad)):
                 grad = time_grad[i]
                 
@@ -69,68 +85,84 @@ def make_protocol_summary(SOURCE,
                     if SOURCE != build_item:
                         counts[i] = counts[i] + 1
                     
-                        if field != "bldg":
+                        if field != "nbldg":
                             agrregates[i] = agrregates[i] + \
-                                attribute_dict.get(int(build_item), 0)
+                                attribute_dict.get(build_item_int, 0)
                     
             if short_result is not None: 
                 if SOURCE != build_item:
-                    if field == "bldg":
-                        short_result[(SOURCE, build_item)] = time_item
+                    if field == "nbldg":
+                        short_result[(SOURCE_int, build_item_int)] = time_item
 
-        row = str(SOURCE)
-        if field == "bldg":
+    row = str(SOURCE)
+    if field == "nbldg":
             Total = counts[len(time_grad)-1]
-        if field != "bldg":
+    if field != "nbldg":
             Total = agrregates[len(time_grad)-1]
 
-        for i in range(0, len(time_grad)):
+    for i in range(0, len(time_grad)):
             row = f'{row},{counts[i]}'
-            if field != "bldg":
+            if field != "nbldg":
                 row = f'{row},{agrregates[i]}'
 
-        filetowrite.write(f'{row},{Total}\n')
+    data_body = [row.split(',') + [str(Total)]]
+
+    return data_body
 
 # for type_protokol =2
-def make_protocol_detailed(protocol_header,
-                           prefix, 
-                           raptor_mode,
+def make_protocol_detailed(raptor_mode,
                            D_TIME,
-                           dictInput,
-                           protocol_full_path,
+                           dictInput,                           
                            timetable_mode,
                            nearby_buildings_from_start,
                            list_buildings_from_start,
                            set_stops,
                            SOURCE,
+                           destinations,
                            short_result = None
                            ):
-
+    
+    """"
+    example
+    nearby_buildings_from_start [('1049165', 14),
+    list_buildings_from_start {'1049120', '1235069', 
+    set_stops {'8362', '14775', '26149', '34636',
+    destinations {1048576, 1048577, 1048578, 1048579, 1048580, 1048581, 1048582, 1048583, 1048584, 1048585, 104858
+    SOURCE type <'str'>
+    orig_dest type <class 'str'>
+    """
+    
     sep = ","
     stop_symbol = "s:"
     rows_to_write = []
-    #f = protocol_full_path
-        
-    #with open(f, 'a') as filetowrite:
+    
     if True:
+
+        SOURCE_int = int(SOURCE)
 
         start_time = seconds_to_time(D_TIME)
 
-        
-        if raptor_mode == 1:
+        if SOURCE_int in destinations:
+            if raptor_mode == 1:
+                    
+                        
                     row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}0{sep}0'
-        else:
+            else:
                     row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}0'
 
         
         #filetowrite.write(row + "\n")
-        rows_to_write.append(row)
-        if short_result is not None:
-            short_result[(SOURCE, SOURCE)] = 0
+            rows_to_write.append(row)
+            if short_result is not None:
+                short_result[(SOURCE_int, SOURCE_int)] = 0
         
         for build, dist in nearby_buildings_from_start:
+
+            build_int = int(build)
+            if build_int not in destinations:
+                continue
 
             if raptor_mode == 1:
                         finish_time = seconds_to_time(D_TIME+dist)
@@ -141,11 +173,11 @@ def make_protocol_detailed(protocol_header,
                         row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}{dist}'
 
-            if str(build) != str(SOURCE):
+            if (build) != (SOURCE):
                 #filetowrite.write(row + "\n")
                 rows_to_write.append(row)
                 if short_result is not None:
-                    short_result[(SOURCE, build)] = int(dist)
+                    short_result[(SOURCE_int, build_int)] = (dist)
 
         # dictInput - dict from testRaptor
         # every item dictInput : dest - key, info - value
@@ -265,46 +297,23 @@ def make_protocol_detailed(protocol_header,
 
                 for leg in journey:
 
-                    legs_counter = legs_counter+1
-                    last_leg = leg
-                    #  here counting walk(n)_time if leg[0] == 'walking
-                    #  !!!!! why can walk1_time != "" !!!!!!!!!!!! why verify?
+                    legs_counter = legs_counter + 1
+                    last_leg = leg                    
                     if leg[0] == 'walking':
-
-                        walking_time_sec = round(leg[3], 1)
+                        walking_time_sec = leg[3]
                         if ride_counter == 0:
-                            SOURCE_REV = leg[1]  # for backward algo
-                            if walk1_time == "":
-                                walk1_time = walking_time_sec
-                            else:
-                                walk1_time = walk1_time + walking_time_sec
-
+                            SOURCE_REV = leg[1]  # for backward algo                            
+                            walk1_time = walking_time_sec
                             walk1_arriving_time = leg[4] + leg[3]
-                        elif ride_counter == 1:
-                            if walk2_time == "":
-                                walk2_time = walking_time_sec
-                            else:
-                                walk2_time = walk2_time + walking_time_sec
-
+                        elif ride_counter == 1:                            
+                            walk2_time = walking_time_sec                            
                         elif ride_counter == 2:
-                            if walk3_time == "":
-                                walk3_time = walking_time_sec
-                            else:
-                                walk3_time = walk3_time + walking_time_sec
-
-                            
-
+                            walk3_time = walking_time_sec                            
                         elif ride_counter == 3:
-                            if walk4_time == "":
-                                walk4_time = walking_time_sec
-                            else:
-                                walk4_time = walk4_time + walking_time_sec
-                           
-
+                            walk4_time = walking_time_sec
                         if start_time is None:
                             start_time = leg[4]
 
-                        # here finish counting walk1_time if leg[0] == 'walking
                     else:
                         if not first_bus_leg_found:
                             # in this leg - first leg is bus, saving params for report
@@ -321,20 +330,15 @@ def make_protocol_detailed(protocol_header,
                             first_bus_arrive_stop = leg[2]
                             first_bus_arrival_time = leg[3]
 
-                            ride1_time = round(
-                                (first_bus_arrival_time - first_boarding_time), 1)
+                            ride1_time = first_bus_arrival_time - first_boarding_time
 
                             if last_leg_type == "walking":
-
-                                wait1_time = round((first_boarding_time - walk1_arriving_time), 1)
+                                wait1_time = first_boarding_time - walk1_arriving_time
                             else:
-
                                 if raptor_mode == 1:
-
-                                    wait1_time = round((first_boarding_time - D_TIME), 1)
+                                    wait1_time = first_boarding_time - D_TIME
                                 else:
-
-                                    wait1_time = round((first_boarding_time - start_time), 1)
+                                    wait1_time = first_boarding_time - start_time
 
                             line1_id = leg[4]
 
@@ -345,28 +349,21 @@ def make_protocol_detailed(protocol_header,
                             second_bus_leg_found = True
                             ride_counter = 2
                             second_boarding_time = leg[0]
-                            ssecond_boarding_time = seconds_to_time(
-                                second_boarding_time)
+                            ssecond_boarding_time = seconds_to_time(second_boarding_time)
                             second_boarding_stop = leg[1]
 
                             second_bus_arrive_stop = leg[2]
                             second_bus_arrival_time = leg[3]
-                            ssecond_bus_arrival_time = seconds_to_time(
-                                second_bus_arrival_time)
+                            ssecond_bus_arrival_time = seconds_to_time(second_bus_arrival_time)
 
                             if last_leg_type == "walking":
-
-                                wait2_time = round(
-                                    (second_boarding_time - first_bus_arrival_time - walk2_time), 1)
+                                wait2_time = second_boarding_time - first_bus_arrival_time - walk2_time
                             else:
-
-                                wait2_time = round(
-                                    (second_boarding_time - first_bus_arrival_time), 1)
+                                wait2_time = second_boarding_time - first_bus_arrival_time
 
                             line2_id = leg[4]
 
-                            ride2_time = round(
-                                (second_bus_arrival_time - second_boarding_time), 1)
+                            ride2_time = second_bus_arrival_time - second_boarding_time
 
                         else:  # 3-rd bus found
                             third_bus_leg_found = True
@@ -375,24 +372,20 @@ def make_protocol_detailed(protocol_header,
                                 start_time = leg[0]
                             ride_counter = 3
                             third_boarding_time = leg[0]
-                            sthird_boarding_time = seconds_to_time(
-                                third_boarding_time)
+                            sthird_boarding_time = seconds_to_time(third_boarding_time)
                             third_boarding_stop = leg[1]
                             third_bus_arrive_stop = leg[2]
                             third_bus_arrival_time = leg[3]
-                            sthird_bus_arrival_time = seconds_to_time(
-                                third_bus_arrival_time)
+                            sthird_bus_arrival_time = seconds_to_time(third_bus_arrival_time)
 
                             if last_leg_type == "walking":
-
-                                wait3_time = round((third_boarding_time - second_bus_arrival_time - walk3_time), 1)
+                                wait3_time = third_boarding_time - second_bus_arrival_time - walk3_time
                             else:
-
-                                wait3_time = round((third_boarding_time - second_bus_arrival_time), 1)
+                                wait3_time = third_boarding_time - second_bus_arrival_time
 
                             line3_id = leg[4]
 
-                            ride3_time = round((third_bus_arrival_time - third_boarding_time), 1)
+                            ride3_time = third_bus_arrival_time - third_boarding_time
 
                         last_bus_leg = leg
 
@@ -429,75 +422,67 @@ def make_protocol_detailed(protocol_header,
                 sthird_arrive_stop = ""
                 
                 # last_bus_leg - last leg of current jorney
-                if not last_bus_leg is None:  # work forever?
-                    first_boarding_stop_orig = first_boarding_stop
-                    first_bus_arrive_stop_orig = first_bus_arrive_stop
-                    sfirst_boarding_stop = f'{stop_symbol}{first_boarding_stop_orig}'
-                    sfirst_arrive_stop = f'{stop_symbol}{first_bus_arrive_stop_orig}'
+                if not last_bus_leg is None:                    
+                    sfirst_boarding_stop = f'{stop_symbol}{first_boarding_stop}'
+                    sfirst_arrive_stop = f'{stop_symbol}{first_bus_arrive_stop}'
 
                     sfirst_boarding_time = seconds_to_time(first_boarding_time)
-                    sfirst_arrive_time = seconds_to_time(
-                        first_bus_arrival_time)
+                    sfirst_arrive_time = seconds_to_time(first_bus_arrival_time)
 
-                    if second_bus_leg_found:
-                        second_boarding_stop_orig = second_boarding_stop
-                        second_bus_arrive_stop_orig = second_bus_arrive_stop
-                        ssecond_boarding_stop = f'{stop_symbol}{second_boarding_stop_orig}'
-                        ssecond_arrive_stop = f'{stop_symbol}{second_bus_arrive_stop_orig}'
+                    if second_bus_leg_found:                        
+                        ssecond_boarding_stop = f'{stop_symbol}{second_boarding_stop}'
+                        ssecond_arrive_stop = f'{stop_symbol}{second_bus_arrive_stop}'
 
-                    if third_bus_leg_found:
-                        third_boarding_stop_orig = third_boarding_stop
-                        third_bus_arrive_stop_orig = third_bus_arrive_stop
-                        sthird_boarding_stop = f'{stop_symbol}{third_boarding_stop_orig}'
-                        sthird_arrive_stop = f'{stop_symbol}{third_bus_arrive_stop_orig}'
+                    if third_bus_leg_found:                        
+                        sthird_boarding_stop = f'{stop_symbol}{third_boarding_stop}'
+                        sthird_arrive_stop = f'{stop_symbol}{third_bus_arrive_stop}'
 
                 # Define what was mode of the last leg:
                 # here leg is the last leg that was in previous cycle
                 Destination = leg[2]
 
-                if last_leg[0] == 'walking':
-
-                    arrival_time = last_leg[4] + last_leg[3]
-                else:
-
-                    arrival_time = last_leg[3]
-
-                sarrival_time = seconds_to_time(arrival_time)
-
                 orig_dest = Destination
 
                 if walk1_time == "":
                     walk1_time = 0
-
                 if walk2_time == "" and ssecond_boarding_stop != "":
                     walk2_time = 0
-
                 if walk3_time == "" and sthird_boarding_stop != "":
                     walk3_time = 0
-
                 if dest_walk_time == "":
                     dest_walk_time = 0
-
                 
                 if timetable_mode and raptor_mode == 1:
                     D_TIME = journey[0][4]
 
-                if raptor_mode == 2:
-                    if len(journey) > 1:
-                        sarrival_time = seconds_to_time(
-                            journey[-1][3] + journey[-1][4])
-                    else:
-
-                        if journey[0][0] == "walking":
-                            sarrival_time = seconds_to_time(
-                                journey[0][3] + journey[0][4])
-                        else:
-                            sarrival_time = seconds_to_time(journey[0][3])
-                
                 if raptor_mode == 1:
-                    if orig_dest in list_buildings_from_start:
+                    arrival_time = last_leg[4] + last_leg[3]
+                    sarrival_time = seconds_to_time(arrival_time)
+
+                if raptor_mode == 2:
+                    if not timetable_mode:
+                        if len(journey) > 1:
+                            sarrival_time = seconds_to_time(journey[-2][3]+journey[-1][3])
+                        else:
+                            sarrival_time = seconds_to_time(D_TIME)
+                    else:
+                        if len(journey) > 1:
+                            sarrival_time = seconds_to_time(journey[-1][3] + journey[-1][4])
+                        else:
+                            sarrival_time = seconds_to_time(D_TIME)
+                      
+                if raptor_mode == 1:
+      
+                    if (orig_dest) in set_stops:
                         continue
-                    if str(orig_dest) in set_stops:
+
+                    orig_dest_int = int(orig_dest)
+
+                    if (orig_dest) in list_buildings_from_start:
+                        continue
+                    
+
+                    if orig_dest_int not in destinations:
                         continue
 
                     row = f'{SOURCE}{sep}{seconds_to_time(D_TIME)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
@@ -507,14 +492,20 @@ def make_protocol_detailed(protocol_header,
 {sep}{dest_walk_time}{sep}{orig_dest}{sep}{sarrival_time}{sep}{legs}{sep}{duration}'
                                         
                     if short_result is not None:
-                        short_result[(SOURCE, orig_dest)] = int(duration)
+                        short_result[(SOURCE_int, orig_dest_int)] = int(duration)
 
                 else:
 
-                    if SOURCE_REV in list_buildings_from_start:
+                    if (SOURCE_REV) in set_stops:
                         continue
-                    if str(SOURCE_REV) in set_stops:
+
+                    SOURCE_REV_int = int(SOURCE_REV)
+                    if (SOURCE_REV) in list_buildings_from_start:
                         continue
+                    
+                    if SOURCE_REV_int not in destinations:
+                        continue
+
                     row = f'{SOURCE_REV}{sep}{seconds_to_time(start_time)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
 {sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
@@ -522,102 +513,9 @@ def make_protocol_detailed(protocol_header,
 {sep}{dest_walk_time}{sep}{SOURCE}{sep}{sarrival_time}{sep}{seconds_to_time(D_TIME)}{sep}{legs}{sep}{duration}'
                     
                     if short_result is not None:
-                        short_result[(SOURCE, SOURCE_REV)] = int(duration)
-
-                #filetowrite.write(row + "\n")
+                        short_result[(SOURCE_int, SOURCE_REV_int)] = int(duration)
                 rows_to_write.append(row)
     
-    with open(protocol_full_path, 'a') as f:
-        f.write('\n'.join(rows_to_write) + '\n')
-
-    #### experiment
-    """
-    full_csv_content = protocol_header + '\n'.join(rows_to_write)
-    df_final = pd.read_csv(io.StringIO(full_csv_content))
-    sheet_name = f"{prefix}_{SOURCE}"[:31]
-    if os.path.exists(file_name_xlsx):
-        mode = 'a'
-        if_exists = 'replace'
-    else:
-        mode = 'w'
-        if_exists = None
-    with pd.ExcelWriter(file_name_xlsx, engine='openpyxl', mode=mode, if_sheet_exists=if_exists) as writer:
-        df_final.to_excel(writer, sheet_name=sheet_name, index=False)
-    """
-    
-    header_list = protocol_header.split(',')
     data_body = [row.split(',') for row in rows_to_write]
-    df_final = pd.DataFrame(data_body, columns=header_list)
-    sheet_name = f"{prefix}_{SOURCE}"[:31]
-
-    return  df_final, sheet_name
-
-
-def make_service_area_report(file_path, alias, col_star, col_hash):
-
-    dtype_dict = {
-        col_hash: 'int',
-        'Duration': 'int'      
-    }
-
-    df = pd.read_csv(file_path, dtype=dtype_dict)
-
-    result = df.loc[df.groupby(col_hash)['Duration'].idxmin()]
-    folder_name = os.path.dirname(file_path)
-    filename = os.path.join(folder_name, f"{alias}_service_area.csv")
-
-    short_result = {
-        (int(row[col_star]), int(row[col_hash])): int(row['Duration']) 
-        for _, row in result.iterrows()
-    }
-
-    result.to_csv(filename, index=False)
-    return filename, short_result
-
-
-def make_service_area_report_xlsx(file_name_xlsx, prefix, col_star, col_hash):
-    
-    print ("1")
-    all_sheets = pd.read_excel(file_name_xlsx, sheet_name=None)
-
-    # 2. Собираем только те листы, которые начинаются с префикса
-    df_list = []
-    for sheet_name, df_sheet in all_sheets.items():
-        if sheet_name.startswith(prefix):
-            if not df_sheet.empty:
-                df_list.append(df_sheet)
-
-    if not df_list:
-        print(f"No sheets found with prefix: {prefix}")
-        return None, {}
-
-    print ("2")
-    df = pd.concat(df_list, ignore_index=True)
-    # Приведение типов для корректной группировки
-    df[col_hash] = pd.to_numeric(df[col_hash], errors='coerce').fillna(0).astype(int)
-    df['Duration'] = pd.to_numeric(df['Duration'], errors='coerce').fillna(0).astype(int)
-
-    # Оставляем только строки с минимальной длительностью
-    result = df.loc[df.groupby(col_hash)['Duration'].idxmin()]
-    print ("3")
-    # 4. Формируем словарь short_result
-    short_result = {
-        (int(row[col_star]), int(row[col_hash])): int(row['Duration']) 
-        for _, row in result.iterrows()
-    }
-
-    # 5. Сохранение результата как новый лист в Excel
-    """
-    result_sheet_name = f"sa_{prefix}"[:31] # Имя листа для результата
-    print ("4")
-    # Используем ExcelWriter для добавления листа в существующий файл
-    with pd.ExcelWriter(file_name_xlsx, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-        result.to_excel(writer, sheet_name=result_sheet_name, index=False)
-        
-        wb = writer.book
-        idx = wb.sheetnames.index(result_sheet_name)
-        wb._sheets.insert(0, wb._sheets.pop(idx))
-    """
-
-    return  short_result
-
+  
+    return  data_body

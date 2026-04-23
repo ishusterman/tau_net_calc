@@ -5,7 +5,8 @@ import configparser
 
 from qgis.core import (QgsProject,
                        QgsVectorLayer,
-                       QgsMapLayerProxyModel
+                       QgsMapLayerProxyModel,
+                       QgsFieldProxyModel
                        )
 
 from PyQt5.QtWidgets import (QDialogButtonBox,
@@ -30,7 +31,8 @@ from pkl_car import pkl_car
 from common import (get_qgis_info, 
                     check_file_parameters_accessibility,
                     FIELD_ID,
-                    check_layer
+                    check_layer,
+                    highlight_empty_fields
                     )
 
 from road_layer_processor import RoadLayerProcessor
@@ -76,9 +78,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.cbDirection.addItems(["T", "F", "B"])
         self.cbDirection.setCurrentIndex(self.cbDirection.findText("B"))
         
-        self.toolButtonRoads.clicked.connect(lambda: self.open_file_dialog (type = "roads"))
-        self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog (type = "buildings"))
-
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
@@ -118,8 +117,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.onLayerRoadChanged()
         self.cbRoads.currentIndexChanged.connect(self.onLayerRoadChanged)
 
-        self.textInfo.anchorClicked.connect(self.open_file)
-        
         self.table1.setEditTriggers(self.table1.NoEditTriggers)
         self.table1.setColumnCount(2) 
         self.table1.setHorizontalHeaderLabels(['Link Type', 'Speed km/h'])
@@ -137,17 +134,35 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.setEnabledAll(False)
 
         self.lblOSMInfo.setText("")
-        self.lblOSM.setText("")
+       
 
+        self.cmbFieldsDirection.setFilters(QgsFieldProxyModel.String)
+        self.cmbFieldsSpeed.setFilters(QgsFieldProxyModel.Numeric)
+        self.cmbFieldsDirection.fieldChanged.connect(self.on_field_changed)
+        self.cmbFieldsSpeed.fieldChanged.connect(self.on_field_changed)
 
+        self.progressBar.setMaximum(2)
+
+        self.run_completed = False
+
+    def on_field_changed (self):
+        if self.cmbFieldsSpeed.count() > 0 and self.cmbFieldsDirection.count() > 0:
+            self.test_button.setEnabled(True)
+            self.test_button.setText("Test road atributes")
+            self.test_button.setEnabled(True)
+            self.test_button.setStyleSheet("")
+        
+        self.txtSpeed.setEnabled(False)
+        self.txtPathToProtocols.setEnabled(False)       
+        
+                
     def setEnabledAll (self, status):
         widgets_to_hide = [
-                self.widget_candidates,
+                
                 self.lblDefault,
-                self.lblDirection, self.cbDirection,
+                self.lblDirection, 
                 self.lblSpeed, self.txtSpeed,
 
-                self.lblCandidates, 
                 self.lblFieldsDirection, self.cmbFieldsDirection,
                 self.lblFieldsSpeed, self.cmbFieldsSpeed,
                 
@@ -165,29 +180,6 @@ class form_pkl_car(QDialog, FORM_CLASS):
     def toggle_tables_visibility(self, checked):
         self.groupBox_tables.setVisible(checked)
     
-    def open_file_dialog(self, type):
-
-        project_path = QgsProject.instance().fileName()
-        initial_dir = os.path.dirname(project_path) if project_path else ""
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Choose a File",
-            initial_dir,
-            "Shapefile (*.shp);"
-        )
-        
-        if file_path:
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            layer = QgsVectorLayer(file_path, file_name, "ogr")
-            if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
-                self.cmbLayers.setLayer(layer)
-                if type == "roads":
-                    self.cbRoads.setLayer(layer)
-                else:
-                    self.cmbLayers_buildings.setLayer(layer)
-                    
-
     def show_stage_testing (self, message, progress):
         self.setMessage (message)    
         self.progressBar.setValue(progress)
@@ -198,17 +190,34 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.run_button.setEnabled(False)
         
         self.layer_road = self.cbRoads.currentLayer() 
-        self.layer_road_name = self.layer_road.name()
+        
+        field_name_direction = self.cmbFieldsDirection.currentField()
+        field_name_maxspeed = self.cmbFieldsSpeed.currentField()
               
-
         self.processor_road = RoadLayerProcessor(self,
                                                  self.layer_road, 
-                                                 self.layer_road_name, 
-                                                 self.checkOSM_result)
+                                                 field_name_direction,
+                                                 field_name_maxspeed
+                                                 )
         
-        result, self.text_for_log = self.processor_road.run()
+        result, oneway_pct, maxspeed_pct = self.processor_road.run()        
+        #self.lblDirection_prc.setText(f'direction: {str(round(oneway_pct))}% correct')
+        self.str_info1 = f'direction: {str(round(oneway_pct))}% correct'
+        #self.lblMaxspeed_prc.setText(f'speed: {str(round(maxspeed_pct))}% correct')
+        self.str_info2 = f'speed: {str(round(maxspeed_pct))}% correct'
         if result:
+            self.test_button.setText("Test road atributes-passed")
+            self.test_button.setStyleSheet("background-color: #d9534f; color: white;")
             self.setEnabledAll(True)
+            if self.checkOSM_result:
+                self.cmbFieldsDirection.setEnabled(False)
+                self.cmbFieldsSpeed.setEnabled(False)
+        else:
+            self.test_button.setText(f"Test road atributes - no passed ({100 - min(oneway_pct,maxspeed_pct)}%)")
+            self.test_button.setStyleSheet("background-color: #d9534f; color: white;")
+
+        
+        self.test_button.setEnabled(False)
         self.run_button.setEnabled(result)
 
     
@@ -219,17 +228,18 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.btnCheckOSM.setEnabled(True)
         self.cmbFieldsDirection.clear()
         self.cmbFieldsSpeed.clear()
-        self.lblOSMInfo.setText("")
-        self.lblOSM.setText("")
+        self.lblOSMInfo.setText("")        
         self.setEnabledAll(False)
 
-    def open_file(self, url):
-        file_path = url.toLocalFile()
-        if os.path.isfile(file_path):
-            os.startfile(file_path)
-        self.read_road_speed_default()
-        self.read_factor_speed_by_hour()
-        self.show_info()
+        self.cmbFieldsSpeed.setLayer(None)
+        self.cmbFieldsDirection.setLayer(None)
+        #self.lblDirection_prc.setText("")
+        #self.lblMaxspeed_prc.setText("")
+
+        self.btnCheckOSM.setText("Check if road layer is OSM")
+        self.test_button.setText("Test road atributes")        
+        self.test_button.setStyleSheet("")
+        self.btnCheckOSM.setStyleSheet("")
     
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
@@ -239,41 +249,78 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.close_button.setEnabled(True)
         
     def on_btnCheckOSM_click(self):
-        
-        self.lblOSM.setText("")
+                
         self.lblOSMInfo.setVisible(False)
-        self.layer_road = self.cbRoads.currentLayer() 
+        self.layer_road = self.cbRoads.currentLayer()
+        self.cmbFieldsDirection.setLayer(self.layer_road)
+        self.cmbFieldsSpeed.setLayer(self.layer_road)
         if self.layer_road:
-            self.checkOSM_result = self.checkOSM(self.layer_road)
+            self.checkOSM_result, self.name_fclass = self.checkOSM(self.layer_road)
             
             if self.checkOSM_result:
-                self.progressBar.setMaximum(2)
-                self.lblOSMInfo.setVisible(True)
-                self.lblOSMInfo.setText("OSM (FCLASS, Direction, and MAXSPEED fields found)")
-                                
-            else:
-                self.progressBar.setMaximum(2)
-                self.lblOSMInfo.setVisible(True)
-                self.lblOSMInfo.setText("Local GIS")
                 
+                self.lblOSMInfo.setVisible(True)
+                self.lblOSMInfo.setText("FCLASS field is found,")
+
+                self.btnCheckOSM.setText("Road layer sorce is OSM")
+                
+                                                
+            else:
+                
+                self.lblOSMInfo.setVisible(True)
+                self.lblOSMInfo.setText("Local GIS, Choose attributes for")
+                self.btnCheckOSM.setText("Road layer sorce is NO OSM")
+                self.cmbFieldsDirection.setEnabled(True)
+                self.cmbFieldsSpeed.setEnabled(True)
+
+                self.lblFieldsDirection.setEnabled(True)
+                self.lblFieldsSpeed.setEnabled(True)
+
+
+            self.set_field_case_insensitive(self.cmbFieldsSpeed, "maxspeed")
+            self.set_field_case_insensitive(self.cmbFieldsDirection, "oneway")
+
+            
+        self.btnCheckOSM.setStyleSheet("background-color: #d9534f; color: white;")
+
+        if self.cmbFieldsSpeed.count() > 0 and self.cmbFieldsDirection.count():
+            self.test_button.setEnabled(True)
+
         self.btnCheckOSM.setEnabled(False)
-        self.test_button.setEnabled(True)
+        
+
+    def set_field_case_insensitive(self, combo_widget, field_name):
+        idx = self.layer_road.fields().lookupField(field_name)
+        if idx != -1:
+            real_name = self.layer_road.fields().at(idx).name()
+            combo_widget.setField(real_name)
+        
         
     def checkOSM(self, layer):
         required_fields = {'fclass', 'oneway', 'maxspeed'}
                 
         layer_field_names = {field.name().lower() for field in layer.fields()}
-        
+
+        name_fclass = ""
+        for field in layer.fields():
+            if field.name().lower() == "fclass":
+                name_fclass = field.name()
+                break
+
         # Проверяем, являются ли все искомые поля подмножеством полей слоя
         if required_fields.issubset(layer_field_names):
-            return True
+            return True, name_fclass
         else:
-            return False
+            return False, name_fclass
     
     def on_run_button_clicked(self):
             
         self.run_button.setEnabled(False)
         self.break_on = False
+
+        if highlight_empty_fields(self, exclude=[self.textLog]):        
+            self.run_button.setEnabled(True)
+            return 0
         
         self.layer_road = self.cbRoads.currentLayer() 
         self.layer_buildings = self.cmbLayers_buildings.currentLayer() 
@@ -320,16 +367,24 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.textLog.append(f"<a> Layer of roads: {self.layer_roads_path}</a>")
 
         self.textLog.append("<a style='font-weight:bold;'>[Verify road data]</a>")
-        self.textLog.append(f"<a> Check if road layer is OSM: {self.lblOSMInfo.text()} </a>")
-        self.textLog.append(f"<a> Test attributes: {self.lblOSM.text()} </a>")
-        self.message_for_log = f"Direction: <b>{self.cmbFieldsDirection.currentText()}</b>, Speed: <b>{self.cmbFieldsSpeed.currentText()}</b>"
+        
         if self.checkOSM_result:
-            self.message_for_log=f'{self.message_for_log}, FClass: <b>FClass</b>' 
-        self.textLog.append(self.message_for_log)        
+            self.textLog.append(f"<a> Type of layer road: OSM</a>")
+        else:
+            self.textLog.append(f"<a> Type of layer road: Local GIS</a>")
 
-        self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")
+        self.textLog.append(f"<a> Direction: {self.cmbFieldsDirection.currentText()}</a>") 
+        self.textLog.append(f"<a> Speed: {self.cmbFieldsSpeed.currentText()}</a>")
+        if self.checkOSM_result:
+            self.textLog.append(f"<a> FCLASS: {self.name_fclass}</a>")
+        
+        self.textLog.append(f"<a> {self.str_info1} </a>")
+        self.textLog.append(f"<a> {self.str_info2} </a>")
         self.textLog.append(f"<a> Default direction: {self.default_direction} </a>")
         self.textLog.append(f"<a> Default speed: {self.config['Settings']['speed_car_pkl']} km/h</a>")
+        
+        self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")
+        
         self.textLog.append(f"<a> Folder to store car routing database: {self.config['Settings']['pathtoprotocols_car_pkl']}</a>")
 
         self.textLog.append("<a style='font-weight:bold;'>[Processing]</a>")
@@ -337,10 +392,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
         pkl_car_calc = pkl_car(self)
         pkl_car_calc.create_files()
 
-        #self.textLog.append('---------------')
-        #self.textLog.append(self.text_for_log)
-
         self.close_button.setEnabled(True)
+        self.run_completed = True
 
     def on_close_button_clicked(self):
         self.reject()
@@ -511,18 +564,19 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
     def save_var(self):
         self.path_to_protocol = self.config['Settings']['pathtoprotocols_car_pkl']
-        self.idx_field_direction = self.layer_road.fields().indexFromName(self.cmbFieldsDirection.currentData())
+       
 
-        self.idx_field_speed = self.layer_road.fields().indexFromName(self.cmbFieldsSpeed.currentData())
-        self.speed_fieldname = self.cmbFieldsSpeed.currentData()
+        self.idx_field_direction = self.layer_road.fields().indexFromName(self.cmbFieldsDirection.currentField())
+
+        self.idx_field_speed = self.layer_road.fields().indexFromName(self.cmbFieldsSpeed.currentField())
+        self.speed_fieldname = self.cmbFieldsSpeed.currentField()
 
         #self.layer_road_type_road = self.config['Settings']['LayerRoad_type_road_car_pkl']
         if self.checkOSM_result:
-            idx = self.layer_road.fields().indexOf("fclass")
-            self.layer_road_type_road = self.layer_road.fields()[idx].name()
+            self.layer_road_type_road = self.name_fclass
         else:
             self.layer_road_type_road = ""
-
+        
         self.layer_road_direction = self.config['Settings']['FieldDirection_car_pkl']
         self.layer_buildings_field = FIELD_ID
         self.speed = float(self.config['Settings']['Speed_CAR_pkl'].replace(',', '.'))

@@ -10,6 +10,8 @@ from zipfile import ZipFile
 from datetime import datetime
 import shutil
 import csv
+import sqlite3
+import geopandas as gpd
 
 from pathlib import Path
 
@@ -37,6 +39,43 @@ try:
 except ImportError:
     IN_QGIS = False
 
+import pandas as pd
+import io
+
+def transform_log_to_dataframe(raw_text):
+    """
+    Преобразует текстовый лог напрямую в Pandas DataFrame.
+    """
+    # Если текста нет, возвращаем пустой DF с нужными колонками
+    columns = ["Parameter", "Value"]
+    if not raw_text:
+        return pd.DataFrame(columns=columns)
+
+    lines = raw_text.strip().split('\n')
+    data = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        if ":" in line:
+            # Разделяем по первому двоеточию
+            key, value = line.split(":", 1)
+            data.append({
+                "Parameter": key.strip(),
+                "Value": value.strip()
+            })
+        else:
+            # Если двоеточия нет, записываем только в первую колонку
+            data.append({
+                "Parameter": line,
+                "Value": ""
+            })
+            
+    # Создаем DataFrame из списка словарей
+    return pd.DataFrame(data, columns=columns)
+
 def transform_log_to_csv_text(raw_text):
     """
     Преобразует текстовый лог в строку формата CSV с заголовками.
@@ -56,15 +95,15 @@ def transform_log_to_csv_text(raw_text):
         #if not line or (line.startswith('[') and line.endswith(']')):
         #    continue
        
-        # Разделяем по ПЕРВОМУ двоеточию
+        
         if ":" in line:
             key, value = line.split(":", 1)
-            # Экранируем кавычки (если вдруг они есть в тексте) и оборачиваем в кавычки
+            
             safe_key = key.strip().replace('"', '""')
             safe_value = value.strip().replace('"', '""')
             csv_rows.append(f'"{safe_key}","{safe_value}"')
         else:
-            # Если двоеточия нет, кладем всё в первую колонку
+            
             safe_line = line.replace('"', '""')
             csv_rows.append(f'"{safe_line}",""')
             
@@ -133,30 +172,23 @@ def get_name_columns():
         # ({from-to}, protokol) ....
         return {
             (1, 2): {
-                "star": "Facility_aid", "hash": "Destination_aid",
-                1: "Facility_aid", 2: "Destination_aid",
-                "star_short": "Facility", "hash_short": "Destinations",
+                "star": "Origin_aid", "hash": "Destination_aid",
+                1: "Origin_aid", 2: "Destination_aid",                
             },
             (2, 2): {
-                "star": "Facility_aid", "hash": "Origin_aid",
-                1: "Origin_aid", 2: "Facility_aid",
-                "star_short": "Facility", "hash_short": "Origins",
+                 "star": "Destination_aid", "hash": "Origin_aid",
+                1: "Origin_aid", 2: "Destination_aid",                
             },
             (1, 1): {
-                "star": "Origin_aid", "hash": "Destination_aid",
-                1: "Origin_aid", 2: "Destination_aid",
-                "star_short": "Origins", "hash_short": "Destinations",
+                 "star": "Origin_aid", "hash": "Destination_aid",
+                1: "Origin_aid", 2: "Destination_aid",                
             },
             (2, 1): {
-                "star": "Destination_aid", "hash": "Origin_aid",
-                1: "Destination_aid", 2: "Origin_aid",
-                "star_short": "Destinations", "hash_short": "Origins",
+                 "star": "Destination_aid", "hash": "Origin_aid",
+                1: "Origin_aid", 2: "Destination_aid",
+                
             }
-        }    
-
-    
-
-
+        }  
 
 def getDateTime():
     current_datetime = datetime.now()
@@ -215,16 +247,15 @@ def get_prefix_alias(PT, protocol, mode, timetable = None, roundtrip = False):
     Fixed/Scheduled - X/S  (false,true)
     """
     """
-    P/C (Public/Car), F/T/R (From/To/Roundtrip), X/S (Fixed/Scheduled time), A/O (Service Area/accumulated Opportunities).
-    """
-    date_time = getDateTime()
-    prefix = "P" if PT else "C"
-    protocol_char = "C" if protocol == 1 else "A"
+    p/c (public/car), F/T/R (From/To/Roundtrip), x/s (fixed/scheduled time), A/O (Service Area/accumulated Opportunities).
+    """    
+    prefix = "p" if PT else "c"
+    protocol_char = "O" if protocol == 1 else "A"
     mode_char = "F" if mode == 1 else "T"
     if roundtrip:
-        mode_char = "R"
-    timetable_char = "" if timetable is None else ("S" if timetable else "X")
-    result = f"{date_time}_{prefix}{mode_char}{timetable_char}{protocol_char}"
+        mode_char = "R"    
+    timetable_char = "x" if timetable is None else ("s" if timetable else "x")
+    result = f"{prefix}{mode_char}{timetable_char}{protocol_char}"
         
     return result
 
@@ -345,7 +376,7 @@ def insert_field_first(layer, new_field):
     old_fields = layer.fields()
     new_fields = QgsFields()
     
-    # Гарантируем, что тип поля позволит хранить большие числа
+    
     if new_field.type() == QVariant.Int:
         new_field = QgsField(new_field.name(), QVariant.LongLong)
         
@@ -475,47 +506,96 @@ def get_existing_path(folder_path, filename):
             return path_with_prefix
         return path_without_prefix
 
-import sqlite3
-import geopandas as gpd
+def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative = False):
 
-def fast_write_gpkg(file_name_gpkg, sheets_to_add):
-    conn = sqlite3.connect(file_name_gpkg)
-    try:
-        for name, df in sheets_to_add:
-            if isinstance(df, gpd.GeoDataFrame):
-                df.to_file(file_name_gpkg, layer=name, driver="GPKG")
-            else:
-                df.to_sql(name, conn, if_exists="replace", index=False)
-    finally:
-        conn.commit()
-        conn.close()
-
-
+    if not os.path.exists(file_name_gpkg):
+        create_empty_gpkg(file_name_gpkg)
     
-"""
-def fast_add_sheets(file_name_xlsx, sheets_to_add):
-    
+    if not mode_relative:
+        last_col_name = df_current.columns[-1]
+        if last_col_name != "Value":
+            df_current[last_col_name] = pd.to_numeric(df_current[last_col_name], errors='coerce')
+    with sqlite3.connect(file_name_gpkg) as conn:
+        df_current.to_sql(table_name, conn, if_exists='replace', index=False)
 
-    # 1. Читаем старый файл в read_only (очень быстро)
-    wb_old = load_workbook(file_name_xlsx, read_only=True, data_only=True)
 
-    # 2. Создаём новый файл в write_only (очень быстро)
-    wb_new = Workbook(write_only=True)
 
-    # 3. Копируем все старые листы
-    for name in wb_old.sheetnames:
-        ws_old = wb_old[name]
-        ws_new = wb_new.create_sheet(name)
+def create_empty_gpkg(path):
+    gdf = gpd.GeoDataFrame({"id": []}, geometry=[], crs="EPSG:4326")
+    gdf.to_file(path, layer="__init__", driver="GPKG")
+    conn = sqlite3.connect(path)
+    conn.execute("DELETE FROM gpkg_contents WHERE table_name='__init__'")
+    conn.execute("DROP TABLE IF EXISTS __init__")
+    conn.commit()
+    conn.close()
 
-        for row in ws_old.values:
-            ws_new.append(row)
+def make_service_area_report_gpkg(all_frames, col_star, col_hash):
+    df_total = pd.concat(all_frames, ignore_index=True)
+    df_total['Duration'] = pd.to_numeric(df_total['Duration'], errors='coerce')
+    df_total[col_star] = pd.to_numeric(df_total[col_star], errors='coerce')
+    df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors='coerce')
+    df_min = df_total.loc[df_total.groupby(col_hash)['Duration'].idxmin()]
+    short_result = {
+        (int(row._asdict()[col_star]), int(row._asdict()[col_hash])): int(row.Duration)
+        for row in df_min.itertuples(index=False)
+    }
+    return df_min, short_result
 
-    # 4. Добавляем новые листы
-    for sheet_name, df in sheets_to_add:
-        ws_new = wb_new.create_sheet(sheet_name)
-        for row in df.itertuples(index=False, name=None):
-            ws_new.append(row)
+from PyQt5.QtWidgets import (
+    QLineEdit,
+    QTextEdit,
+    QPlainTextEdit,
+    QComboBox,
+    QWidget
+)
 
-    # 5. Сохраняем файл один раз
-    wb_new.save(file_name_xlsx)
-"""
+# импорт QGIS-контрола
+from qgis.gui import QgsCheckableComboBox
+
+def is_child_of(child, parent):
+    while child is not None:
+        if child is parent:
+            return True
+        child = child.parentWidget()   # ← ключевое исправление
+    return False
+
+
+def highlight_empty_fields(widget, exclude=None) -> bool:
+    if exclude is None:
+        exclude = []
+
+    found_empty = False
+
+    for child in widget.findChildren((QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QgsCheckableComboBox)):
+        
+        if any(is_child_of(child, ex) for ex in exclude):
+            continue
+
+        if not child.isVisible():
+            continue
+
+        is_empty = False
+
+        if isinstance(child, QLineEdit):
+            is_empty = not child.text().strip()
+
+        elif isinstance(child, QTextEdit):
+            is_empty = not child.toPlainText().strip()
+
+        elif isinstance(child, QPlainTextEdit):
+            is_empty = not child.toPlainText().strip()
+
+        elif isinstance(child, QComboBox):
+            is_empty = child.currentIndex() < 0 or not child.currentText().strip()
+
+        elif isinstance(child, QgsCheckableComboBox):
+            is_empty = len(child.checkedItems()) == 0
+
+        if is_empty:            
+            child.setStyleSheet("background-color: #ffcccc;")
+            found_empty = True
+        else:
+            child.setStyleSheet("")
+
+    return found_empty
+

@@ -342,7 +342,7 @@ def process_walking_stage(max_time,
             
             # если это остановка
             if check_only_buildings:
-                if (not(p_dash.isdigit()) or int(p_dash) < 110000):
+                if (not(p_dash.isdigit()) or int(p_dash) < 1000000):
                     continue
 
             label[k][p_dash] = new_p_dash_time

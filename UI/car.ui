@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>884</width>
-    <height>715</height>
+    <height>623</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -83,8 +83,8 @@
             <rect>
              <x>0</x>
              <y>-221</y>
-             <width>654</width>
-             <height>748</height>
+             <width>656</width>
+             <height>695</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -149,7 +149,7 @@
                    <item>
                     <widget class="QRadioButton" name="rbTo">
                      <property name="text">
-                      <string>To</string>
+                      <string>TO destinations</string>
                      </property>
                      <property name="checked">
                       <bool>true</bool>
@@ -159,7 +159,7 @@
                    <item>
                     <widget class="QRadioButton" name="rbFrom">
                      <property name="text">
-                      <string>From</string>
+                      <string>FROM origins</string>
                      </property>
                      <property name="checked">
                       <bool>false</bool>
@@ -169,7 +169,7 @@
                    <item>
                     <widget class="QRadioButton" name="rbRound">
                      <property name="text">
-                      <string>Round</string>
+                      <string>ROUNDTRIP</string>
                      </property>
                     </widget>
                    </item>
@@ -198,7 +198,7 @@ QGroupBox::title {
                     </string>
                   </property>
                   <property name="title">
-                   <string>Input</string>
+                   <string>Input Layers</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_input_car">
                    <item>
@@ -211,12 +211,9 @@ QGroupBox::title {
                    <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_5">
                      <item>
-                      <widget class="QLineEdit" name="txtPathToPKL"/>
-                     </item>
-                     <item>
-                      <widget class="QToolButton" name="toolButtonPKL">
-                       <property name="text">
-                        <string>...</string>
+                      <widget class="QgsFileWidget" name="wgPathPKL">
+                       <property name="storageMode">
+                        <enum>QgsFileWidget::GetDirectory</enum>
                        </property>
                       </widget>
                      </item>
@@ -225,19 +222,16 @@ QGroupBox::title {
                    <item>
                     <widget class="QLabel" name="lblLayer1">
                      <property name="text">
-                      <string>TO, ROUND - layer of origins; FROM - layer of destinations</string>
+                      <string>Layer of origins</string>
                      </property>
                     </widget>
                    </item>
                    <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_4">
                      <item>
-                      <widget class="QgsMapLayerComboBox" name="cmbLayers"/>
-                     </item>
-                     <item>
-                      <widget class="QToolButton" name="toolButtonLayer1">
-                       <property name="text">
-                        <string>...</string>
+                      <widget class="QgsMapLayerComboBox" name="cmbLayers">
+                       <property name="allowEmptyLayer">
+                        <bool>true</bool>
                        </property>
                       </widget>
                      </item>
@@ -260,12 +254,8 @@ QGroupBox::title {
                          <verstretch>0</verstretch>
                         </sizepolicy>
                        </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QToolButton" name="toolButtonLayer2">
-                       <property name="text">
-                        <string>...</string>
+                       <property name="allowEmptyLayer">
+                        <bool>true</bool>
                        </property>
                       </widget>
                      </item>
@@ -302,149 +292,6 @@ QGroupBox::title {
                 </item>
                </layout>
               </item>
-              <item row="4" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_16">
-                <item>
-                 <widget class="QGroupBox" name="gbOutput">
-                  <property name="styleSheet">
-                   <string notr="true">
-QGroupBox {
-    border: 1px solid gray;
-    border-radius: 5px;
-    margin-top: 0.5em;
-}
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    left: 10px;
-    padding: 0 3px;
-}
-                    </string>
-                  </property>
-                  <property name="title">
-                   <string>Output</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_output">
-                   <item>
-                    <widget class="QLabel" name="label_13">
-                     <property name="text">
-                      <string>Save output as…</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_3">
-                     <item>
-                      <widget class="QLineEdit" name="txtPathToProtocols">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="baseSize">
-                        <size>
-                         <width>16</width>
-                         <height>0</height>
-                        </size>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QToolButton" name="toolButton_protocol">
-                       <property name="text">
-                        <string>...</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="lblAlias">
-                       <property name="text">
-                        <string>Alias</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="txtAlias">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_7">
-                     <item>
-                      <widget class="QLabel" name="lblTimeInterval">
-                       <property name="text">
-                        <string>Save the accumulated number of opportunities at a time resolution of</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="txtTimeInterval">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="text">
-                        <string/>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="lblTimeInterval2">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="text">
-                        <string>minutes</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="lblVusual">
-                     <property name="text">
-                      <string>Visualization layer</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_6">
-                     <item>
-                      <widget class="QgsMapLayerComboBox" name="cmbVizLayers"/>
-                     </item>
-                     <item>
-                      <widget class="QToolButton" name="toolButtonViz">
-                       <property name="text">
-                        <string>...</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item row="5" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_17">
                 <item>
@@ -465,7 +312,7 @@ QGroupBox::title {
                     </string>
                   </property>
                   <property name="title">
-                   <string>Parking Access and Egress, Maximum travel time</string>
+                   <string>Parking Access and Egress</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_params">
                    <item>
@@ -509,7 +356,7 @@ QGroupBox::title {
                      <item>
                       <widget class="QLabel" name="label_10">
                        <property name="text">
-                        <string>Walking speed, km/h</string>
+                        <string>Average walking speed, km/h</string>
                        </property>
                       </widget>
                      </item>
@@ -522,36 +369,18 @@ QGroupBox::title {
                      </item>
                     </layout>
                    </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_8">
-                     <item>
-                      <widget class="QLabel" name="label_3">
-                       <property name="text">
-                        <string>Maximal time travel, min</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="txtMaxTimeTravel">
-                       <property name="text">
-                        <string/>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignRight</set>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
                   </layout>
                  </widget>
                 </item>
                </layout>
               </item>
+              <item row="7" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_18"/>
+              </item>
               <item row="6" column="0" colspan="2">
-               <layout class="QHBoxLayout" name="horizontalLayout_18">
+               <layout class="QHBoxLayout" name="horizontalLayout_16">
                 <item>
-                 <widget class="QGroupBox" name="gbTimes">
+                 <widget class="QGroupBox" name="gbOutput">
                   <property name="styleSheet">
                    <string notr="true">
 QGroupBox {
@@ -568,9 +397,98 @@ QGroupBox::title {
                     </string>
                   </property>
                   <property name="title">
-                   <string>Arrival/Departure times</string>
+                   <string>Output</string>
                   </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_times">
+                  <layout class="QVBoxLayout" name="verticalLayout_output">
+                   <item>
+                    <widget class="QLabel" name="label_13">
+                     <property name="text">
+                      <string>Save output as…</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_3">
+                     <item>
+                      <widget class="QgsFileWidget" name="wgFileSave">
+                       <property name="storageMode">
+                        <enum>QgsFileWidget::SaveFile</enum>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_7">
+                     <item>
+                      <widget class="QLabel" name="lblTimeInterval">
+                       <property name="text">
+                        <string>save accumulated number of opportunities every</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtTimeInterval">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string/>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="lblTimeInterval2">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>minutes</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QGroupBox" name="gbTimeSettings">
+                  <property name="styleSheet">
+                   <string notr="true">
+QGroupBox {
+    border: 1px solid gray;
+    border-radius: 5px;
+    margin-top: 0.5em;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 0 3px;
+}
+     </string>
+                  </property>
+                  <property name="title">
+                   <string>Time Settings</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_time">
                    <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_12">
                      <item>
@@ -599,7 +517,7 @@ QGroupBox::title {
                        <item>
                         <widget class="QLabel" name="lblRoundtrip1">
                          <property name="text">
-                          <string>Arrive to facility</string>
+                          <string>Arrive to destination</string>
                          </property>
                         </widget>
                        </item>
@@ -677,7 +595,7 @@ QGroupBox::title {
                        <item>
                         <widget class="QLabel" name="lblRoundtrip6">
                          <property name="text">
-                          <string>Start trip back from facility</string>
+                          <string>Start trip back to the origin</string>
                          </property>
                         </widget>
                        </item>
@@ -745,6 +663,27 @@ QGroupBox::title {
                         </widget>
                        </item>
                       </layout>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_8">
+                     <item>
+                      <widget class="QLabel" name="label_3">
+                       <property name="text">
+                        <string>Maximum travel time, min</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtMaxTimeTravel">
+                       <property name="text">
+                        <string/>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight</set>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </item>
@@ -830,6 +769,11 @@ QGroupBox::title {
    <class>QgsCheckableComboBox</class>
    <extends>QComboBox</extends>
    <header>qgscheckablecombobox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsFileWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsfilewidget.h</header>
   </customwidget>
   <customwidget>
    <class>QgsMapLayerComboBox</class>

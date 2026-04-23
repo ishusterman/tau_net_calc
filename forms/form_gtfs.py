@@ -117,10 +117,10 @@ class form_gtfs(QDialog, FORM_CLASS):
             parent_layout = self.horizontalLayout_11.parent()
             parent_layout.removeItem(self.horizontalLayout_11)
 
-            self.lblNumbers.setText('Enter route short names to delete (comma separated)')
+            self.lblNumbers.setText('Enter the route short names to delete (comma separated)')
         
         else:
-            self.lblNumbers.setText('Enter route short names to add (comma separated)')
+            self.lblNumbers.setText('Enter the route short names to add (comma separated)')
 
         self.progressBar.setMaximum(5)
 
@@ -348,7 +348,6 @@ class form_gtfs(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
-
 
         if not (self.CheckGtfsDirectory(self.txtPathToGTFS.text())):
             self.run_button.setEnabled(True)

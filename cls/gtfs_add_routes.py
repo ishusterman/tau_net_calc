@@ -23,24 +23,25 @@ class GTFSAddRoutes:
         self.routes_to_add = set(routes_to_add)
         self.start_date = start_date
         self.end_date = end_date
-
-        self.files_to_merge = [
-            'routes.txt', 'trips.txt', 'stop_times.txt',
-            'stops.txt', 'calendar.txt', 'calendar_dates.txt'
-        ]
-
         self.already_display_break = False
-    
-    def _read_file(self, path, filename):
-        file_path = os.path.join(path, filename)
-        if not os.path.exists(file_path):
-            return None
-        string_cols = ['route_id', 'trip_id', 'stop_id', 'service_id']
-            
-        header = pd.read_csv(file_path, nrows=0).columns
-        dtype_dict = {col: str for col in string_cols if col in header}
-        
-        return pd.read_csv(file_path, dtype=dtype_dict)
+
+    def fix_ids(self, df):
+        if df is None:
+            return df
+
+        id_cols = [
+            'agency_id', 'stop_code', 'zone_id', 'direction_id', 'shape_id', 'wheelchair_accessible']
+
+        for col in id_cols:
+            if col in df.columns:
+                df[col] = (
+                    df[col]
+                    .astype(str)
+                    .str.replace('.0', '', regex=False)
+                    .str.strip()
+                )
+
+        return df
     
 
     def _read_file(self, path, filename):
@@ -59,9 +60,6 @@ class GTFSAddRoutes:
                     df[col] = df[col].str.strip()
                     
         return df
-
-  
-    
 
     def verify_break(self):
         if self.parent is not None:
@@ -85,7 +83,7 @@ class GTFSAddRoutes:
         
         self.files_to_merge = [
             'routes.txt', 'trips.txt', 'stop_times.txt', 
-            'stops.txt', 'calendar.txt', 'calendar_dates.txt'
+            'stops.txt', 'calendar.txt', 'calendar_dates.txt', 'agency.txt'
         ]
 
         self.parent.setMessage("Loading GTFS files...")
@@ -103,12 +101,14 @@ class GTFSAddRoutes:
         for filename in self.files_to_merge:
             if self.verify_break(): return 0
             cache1[filename] = self._read_file(self.gtfs_path1, filename)
+        
+        self.parent.progressBar.setMaximum(len(self.files_to_merge))
 
         for i, filename in enumerate(self.files_to_merge):
             if self.verify_break(): return 0
 
             self.parent.setMessage(f"Processing '{filename}'...")
-            self.parent.progressBar.setValue(int((i / len(self.files_to_merge)) * 100))
+            self.parent.progressBar.setValue(i)
             QApplication.processEvents()
 
             df1 = cache1.get(filename)
@@ -124,6 +124,7 @@ class GTFSAddRoutes:
 
 
                 for chunk in pd.read_csv(os.path.join(self.gtfs_path2, filename), chunksize=200000, dtype=str):
+                    chunk = self.fix_ids(chunk)
                     chunk = chunk[chunk["trip_id"].isin(trips_to_add)]
                     if chunk.empty: continue
 
@@ -166,6 +167,7 @@ class GTFSAddRoutes:
             frames = [df for df in (df1, df2) if df is not None]
             if frames:
                 res_df = pd.concat(frames, ignore_index=True)
+                res_df = self.fix_ids(res_df)
 
                 if filename in ['stops.txt', 'routes.txt', 'calendar.txt']:
                     id_col = filename.replace('.txt', '_id')
@@ -174,7 +176,7 @@ class GTFSAddRoutes:
                 
                 res_df.to_csv(out_path, index=False, encoding='utf-8')
 
-        self.parent.progressBar.setValue(100)
+        self.parent.progressBar.setValue(len(self.files_to_merge))
         return 1
 
 

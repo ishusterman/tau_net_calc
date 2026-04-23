@@ -35,7 +35,8 @@ from common import (get_qgis_info,
                     get_gtfs_date_range,
                     FIELD_ID,
                     check_layer,
-                    transform_log_to_csv_text)
+                    transform_log_to_csv_text,
+                    highlight_empty_fields)
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl.ui')
@@ -76,9 +77,6 @@ class form_pkl(QDialog, FORM_CLASS):
         self.title = title
         self.progressBar.setValue(0)
         
-        self.toolButtonRoads.clicked.connect(lambda: self.open_file_dialog (type = "roads"))
-        self.toolButtonBuildings.clicked.connect(lambda: self.open_file_dialog (type = "buildings"))
-
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
 
@@ -123,29 +121,6 @@ class form_pkl(QDialog, FORM_CLASS):
         self.label_9.setEnabled(result)
         self.calendar.setEnabled(result)
 
-    def open_file_dialog(self, type):
-
-        project_path = QgsProject.instance().fileName()
-        initial_dir = os.path.dirname(project_path) if project_path else ""
-        
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Choose a File",
-            initial_dir,
-            "Shapefile (*.shp);"
-        )
-
-        if file_path:
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            layer = QgsVectorLayer(file_path, file_name, "ogr")
-            if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
-                self.cmbLayers.setLayer(layer)
-                if type == "roads":
-                    self.cbRoads.setLayer(layer)
-                else:
-                    self.cmbLayers.setLayer(layer)    
-
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
 
@@ -154,8 +129,17 @@ class form_pkl(QDialog, FORM_CLASS):
         self.close_button.setEnabled(True)
 
     def on_run_button_clicked(self):
+        
+        self.to_delete_gtfs = True
+        if QApplication.keyboardModifiers() & Qt.ShiftModifier:
+            self.to_delete_gtfs = False
+
 
         self.run_button.setEnabled(False)
+
+        if highlight_empty_fields(self, exclude=[self.textLog]):        
+            self.run_button.setEnabled(True)
+            return 0
 
         self.break_on = False
         self.layer_road = self.cbRoads.currentLayer() 
@@ -388,9 +372,9 @@ class form_pkl(QDialog, FORM_CLASS):
                                  self.layer_building,
                                  self.layer_road,
                                  layer_origins_field,
-                                 MaxPathRoad,
-        
-                                 check_date
+                                 MaxPathRoad,        
+                                 check_date,
+                                 to_delete_gtfs = self.to_delete_gtfs
                                  )
             run_ok = calc_GTFS.correcting_files()
                 
@@ -401,11 +385,13 @@ class form_pkl(QDialog, FORM_CLASS):
                                    path_to_pkl = path_to_PKL,
                                    path_to_GTFS = path_to_GTFS,
                                    layer_buildings = self.layer_building,
-                                   building_id_field = layer_origins_field
+                                   building_id_field = layer_origins_field,
+                                   to_delete_gtfs = self.to_delete_gtfs
                                    )
             run_ok = calc_PKL.create_files()
 
-            zip_directory(path_to_file)
+            if not self.to_delete_gtfs: 
+                zip_directory(path_to_file)
 
             QApplication.processEvents()
             if self.break_on:

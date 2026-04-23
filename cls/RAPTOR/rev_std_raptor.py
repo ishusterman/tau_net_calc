@@ -3,6 +3,15 @@ from PyQt5.QtWidgets import QApplication
 from RAPTOR.raptor_functions import *
 import numpy as np
 
+filename = r"c:\doc\Igor\GIS\prg\log20260412.csv"
+
+def seconds_to_time(total_seconds):
+        
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
 
 def rev_raptor(SOURCE,
                D_TIME,
@@ -23,7 +32,8 @@ def rev_raptor(SOURCE,
                MaxWaitTimeTransfer,
                timetable_mode,
                MaxExtraTime,
-               first_step = None
+               first_step = None,
+               D_TIME_copy = ""
                ) -> list:
 
     list_stops = set()
@@ -41,6 +51,7 @@ def rev_raptor(SOURCE,
     change_time_save = change_time
 
     # change for new version timetable mode backward
+    
     if timetable_mode:
         D_TIME = D_TIME + MaxExtraTime
      
@@ -82,6 +93,10 @@ def rev_raptor(SOURCE,
                                        to_pdash_time,
                                        new_p_dash_time
                                        )
+                    # experiment
+                    #with open(filename, 'a', encoding='utf-8') as f:
+                    #    if is_valid_p_dash(p_dash):
+                    #        f.write(f'walk,leg_0,{SOURCE},{seconds_to_time(new_p_dash_time+to_pdash_time)},{p_dash},{seconds_to_time(new_p_dash_time)}\n')
                     list_stops.add(p_dash)
 
                     if marked_stop_dict[p_dash] == 0:
@@ -171,6 +186,12 @@ def rev_raptor(SOURCE,
                         if pi_label[k][p_i][3] > arr_by_t_at_pi:
                             to_process = False
 
+                    #
+                    # experiment
+                    #if  k == 1 and tid != "100029_1_4096":
+                    #    to_process = False
+                    #
+
                     # and boarding_time >= arr_by_t_at_pi :
                     if to_process and boarding_point != p_i:
 
@@ -180,6 +201,18 @@ def rev_raptor(SOURCE,
                                             p_i,
                                             arr_by_t_at_pi,
                                             tid)
+                        """
+                        if p_i == '29318':
+                            print (f'trip boarding_point {boarding_point} p_i {p_i} arr_by_t_at_pi {arr_by_t_at_pi} tid {tid} {k}')
+                        
+                        if  p_i == '100726':
+                            print (f'trip boarding_point {boarding_point} p_i {p_i} arr_by_t_at_pi {arr_by_t_at_pi} tid {tid} {k}')
+                        """
+                        # experiment:
+                        #with open(filename, 'a', encoding='utf-8') as f:
+                            
+                        #    f.write(f'trip,leg_{k},{boarding_point},{seconds_to_time(boarding_time)},{p_i},{seconds_to_time(arr_by_t_at_pi)},{tid}\n')
+                                               
                       
                         list_stops.add(p_i)
 
@@ -263,19 +296,20 @@ def rev_raptor(SOURCE,
         if marked_stop == deque([]):
             break
 
-    journeys_endtime, journeys_duration = post_processingAll(
-        SOURCE,
-        D_TIME,
-        list_stops,
-        pi_label,
-        MIN_TRANSFER,
-        MaxWalkDist2,
-        MaxWalkDist1,
-        timetable_mode,
-        Maximal_travel_time,
-        MaxExtraTime,
-        mode=2
-        )
+        journeys_endtime, journeys_duration = post_processingAll(
+            SOURCE,
+            D_TIME,
+            list_stops,
+            pi_label,
+            MIN_TRANSFER,
+            MaxWalkDist2,
+            MaxWalkDist1,
+            timetable_mode,
+            Maximal_travel_time,
+            MaxExtraTime,
+            mode=2,
+            D_TIME_copy = D_TIME_copy)
+            
 
     return journeys_endtime, journeys_duration
 
@@ -338,10 +372,30 @@ def process_walking_stage(min_time,
 
             pi_label[k][p_dash] = ('walking', p, p_dash,
                                    to_pdash_time, new_p_dash_time)
-            
-                        
+            #if p_dash == '13178':
+            #    print (f'walk p_dash = {p_dash}  p = {p} k={k} to_pdash_time {to_pdash_time} new_p_dash_time {new_p_dash_time}')
+                       
+
+            # experiment:
+            #with open(filename, 'a', encoding='utf-8') as f:
+            #    if is_valid_p_dash(p_dash):
+            #        f.write(f'walk,leg_{k},{p},{seconds_to_time(new_p_dash_time+to_pdash_time)},{p_dash},{seconds_to_time(new_p_dash_time)}\n')
+                    
             list_stops.add(p_dash)
             
             if save_marked_stop:
                 marked_stop.append(p_dash)
                 marked_stop_dict[p_dash] = 1
+
+def is_valid_p_dash(val):
+        val_str = str(val).lower()
+        if 'stop' in val_str:
+            return True
+        num = int(val)
+        if num == 1074338:
+            return True
+        if num < 1000000:
+            return True
+        if num > 1000000:
+            return False
+        

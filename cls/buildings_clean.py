@@ -20,7 +20,7 @@ class TaskSignals(QObject):
     log = pyqtSignal(str)
     progress = pyqtSignal(int)
     set_message = pyqtSignal(str)
-    save_log = pyqtSignal(bool)
+    save_log = pyqtSignal(bool, str)
     add_layers = pyqtSignal(list) 
     change_button_status = pyqtSignal(bool) 
 
@@ -149,7 +149,8 @@ class cls_clean_buildings(QgsTask):
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
-        self.signals.save_log.emit(True)
+        
+        self.signals.save_log.emit(True, self.layer_name_single_part)
         self.signals.log.emit(f'"{self.layer_name_single_part}.gpkg" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
         self.signals.add_layers.emit(self.list_layer)
         

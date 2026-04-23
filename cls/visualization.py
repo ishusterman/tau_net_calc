@@ -1,6 +1,5 @@
 import os
 import math
-import numpy as np
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QColor
@@ -12,15 +11,11 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerJoinInfo,
     QgsGraduatedSymbolRenderer,
-    QgsRendererRange,
-    QgsLayerTreeLayer,
-    QgsClassificationEqualInterval,
-    QgsFeatureRequest
+    QgsRendererRange,    
+    QgsClassificationEqualInterval    
     )
 
 from common import insert_layer_ontop, get_name_columns
-
-from qgis.utils import iface
 
 class visualization:
     def __init__(self,
@@ -31,11 +26,13 @@ class visualization:
                  mode_compare = False,
                  schedule_mode = False,
                  from_to = "",
+                 roundtrip = False,
                  ):
 
         self.mode = mode
         self.schedule_mode = schedule_mode
         self.mode_compare = mode_compare
+        self.roundtrip = roundtrip
                 
         cols_dict = get_name_columns()
         cols = cols_dict[(from_to, self.mode)]
@@ -112,7 +109,80 @@ class visualization:
 
         return gradient
 
+    def add_thematic_map_gpkg (self, path_gpkg, table_name, aliase, type_compare=''):
 
+        self.type_compare = type_compare
+        path_gpkg = os.path.normpath(path_gpkg).replace("\\", "/")
+        self.path_protokol = path_gpkg
+        self.file_name = table_name  # В данном контексте имя таблицы выступает как имя файла
+
+        uri = f"{path_gpkg}|layername={table_name}"
+
+        # Создаем слой через провайдер 'ogr' (используется для GPKG, Shapefile и др.)
+        self.protocol_layer = QgsVectorLayer(uri, aliase, "ogr")
+        
+        fields = self.protocol_layer.fields()
+        
+        self.targetField_base = fields[-1].name()
+        if self.roundtrip:
+            self.targetField_base = "Duration_ave"
+
+        if self.mode_compare:
+            self.add_name_field1 = fields[-3].name()
+            self.add_name_field2 = fields[-2].name()
+
+        if self.protocol_layer.featureCount() == 0:
+            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} is empty. Visualization skipped.</font> </b></a>')
+            return
+
+        if self.protocol_layer.featureCount() == 1:
+            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} contains 1 record only. Visualization skipped.</font> </b></a>')
+            return
+
+        if self.protocol_layer.featureCount() > 0:
+            QgsProject.instance().addMapLayer(self.protocol_layer, False)
+           
+            insert_layer_ontop (self.protocol_layer)
+         
+            self.max_value = 0
+            self.max_abs_value = 0
+            data_provider = self.protocol_layer.dataProvider()
+
+            for feature in data_provider.getFeatures():
+                value = feature[self.targetField_base]
+                
+                if value is not None:
+                    if self.max_value == 0 or value > self.max_value:
+                        self.max_value = value
+
+                    abs_value = abs(value)  # Вычисляем абсолютное значение
+                    if abs_value > self.max_abs_value:
+                        self.max_abs_value = abs_value  # Обновляем максимальное абсолютное значение
+                    
+        # make clone
+        self.layer_clone = self.layer_buildings.clone()
+        self.layer_clone.setName(aliase)
+
+        QgsProject.instance().addMapLayer(self.layer_clone, False)
+        insert_layer_ontop (self.layer_clone)
+        
+        self.parent.setMessage(f'Joining...')
+        QApplication.processEvents()
+        self.targetField = self.make_join()
+
+        self.parent.setMessage(f'Establishing symbology...')
+        QApplication.processEvents()
+
+        if self.type_compare != "":
+            self.slyle_compare()
+        else:
+            if self.mode == 2:
+                self.style_ServiceArea()
+            
+            if self.mode == 1:
+                self.slyle_Region()
+
+    """
     def add_thematic_map(self, path_protokol, aliase, set_min_value=float('inf'), type_compare = ''):
                       
         self.type_compare = type_compare
@@ -127,6 +197,8 @@ class visualization:
         fields = self.protocol_layer.fields()
         
         self.targetField_base = fields[-1].name()
+        if self.roundtrip:
+            self.targetField_base = "Duration_ave"
 
         if self.mode_compare:
             self.add_name_field1 = fields[-3].name()
@@ -182,7 +254,7 @@ class visualization:
             
             if self.mode == 1:
                 self.slyle_Region()
-    
+    """
     def slyle_compare(self):
         
         if self.type_compare == "CompareFirstOnly":
@@ -213,6 +285,27 @@ class visualization:
         renderer = layer.renderer()
         renderer.setClassAttribute(self.targetField_base)
         layer.triggerRepaint()
+
+        if self.type_compare in ("CompareFirstOnly", "CompareSecondOnly"):
+            old_ranges = renderer.ranges()
+            new_ranges = []
+            for r in old_ranges:
+                sym = r.symbol().clone()
+                label = r.label()
+                new_range = QgsRendererRange(
+                    0,                      
+                    self.max_value,         
+                    sym,
+                    label
+                )
+                new_ranges.append(new_range)
+            new_renderer = QgsGraduatedSymbolRenderer(
+                self.targetField_base,
+                new_ranges
+            )
+            #new_renderer.setMode(renderer.mode())
+            layer.setRenderer(new_renderer)
+            layer.triggerRepaint()
 
 
     def get_render_DifferenceRegion(self):
@@ -253,7 +346,8 @@ class visualization:
             new_ranges.append(QgsRendererRange(lower_value, upper_value, symbol, label))
 
         new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
-        new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
+        #new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
+        new_renderer.setClassificationMethod(QgsClassificationEqualInterval())
         new_renderer.setClassAttribute(self.targetField)
     
         return new_renderer
@@ -294,7 +388,8 @@ class visualization:
 
         # Создаём новый рендерер
         new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
-        new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
+        #new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
+        new_renderer.setClassificationMethod(QgsClassificationEqualInterval())
         new_renderer.setClassAttribute(self.targetField)
         
         layer.setRenderer(new_renderer)

@@ -1,11 +1,9 @@
 import os
 import csv
 from datetime import datetime
-import zipfile
-import tempfile
 import pandas as pd
-import glob
-import configparser
+from pathlib import Path
+from collections import defaultdict
 
 from qgis.utils import iface
 
@@ -25,7 +23,9 @@ from qgis.analysis import QgsGraphBuilder
 from visualization import visualization
 from common import (get_existing_path, 
                     get_name_columns,
-                    transform_log_to_csv_text)
+                    make_service_area_report_gpkg,
+                    fast_write_gpkg,
+                    get_prefix_alias)
 
 
 class car_accessibility:
@@ -76,6 +76,14 @@ class car_accessibility:
         cols_dict = get_name_columns()
         self.cols = cols_dict[(self.parent.mode, self.parent.protocol_type)]
         self.short_result = {}
+
+        self.df_all = []
+        self.table_name_list = []
+
+        self.header_dict = defaultdict(list)
+        self.df_all_dict = defaultdict(list)
+
+        self.fields_ok = []
 
         
 
@@ -322,11 +330,7 @@ class car_accessibility:
 
         return graph
 
-
-
-
     def find_car_accessibility(self):
-        
         graph = self.graph
 
         self.f_list = []
@@ -372,67 +376,30 @@ class car_accessibility:
 
 
             if self.parent.protocol_type == 2:
-                self.makeProtocolArea()
+                data_body = self.makeProtocolArea()
+                df_current = pd.DataFrame(data_body, columns=self.table_header_list)
+                self.df_all.append(df_current)
+
+                ######!!!
+                if self.parent.mode == 1:
+                    name = 'origin'
+                else:
+                    name = 'destination' 
+                table_name = f'{self.file_name}_fastest_trip_{name}_{source}'
+                fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_current)
+                
+                if len(self.parent.points) == 1:
+                    self.table_name_list.append(table_name)
+
             else:
 
                 if len(self.fields_ok) > 0:
                     for field in self.fields_ok:
-                        self.makeProtocolMap(
-                            self.f[field],
-                            self.aggregate_dict_all[field],
-                            field
-                        )
+                        data_body = self.makeProtocolMap(self.aggregate_dict_all[field],field)
+                        df_current = pd.DataFrame(data_body, columns=self.header_dict[field])
+                        self.df_all_dict[field].append(df_current)
 
             self.parent.progressBar.setValue(i + 1)
-
-        
-
-    def find_car_accessibility_onAIR(self):
-
-        self.f_list = []
-        count = len(self.parent.points)
-        self.parent.progressBar.setMaximum(count) 
-        self.parent.progressBar.setValue(1)
-
-        self.calc_min_cost_onAir()
-        
-        if self.parent.protocol_type == 2:
-            self.makeProtocolArea()
-            
-        else:
-            if len(self.fields_ok) > 0:
-                for field in self.fields_ok:
-                    self.makeProtocolMap(
-                            self.f[field],
-                            self.aggregate_dict_all[field],
-                            field
-                            )
-   
-
-        if self.verify_break():
-            return 0    
-
-    def make_service_area_report(self, folder_name, alias):
-
-        all_data = pd.DataFrame()
-
-        # add a mask for searching CSV files
-        file_pattern = rf"{folder_name}\*.csv"
-        for file in glob.glob(file_pattern):
-            df = pd.read_csv(file)
-            all_data = pd.concat([all_data, df], ignore_index=True)
-
-        result = all_data.loc[all_data.groupby(self.cols["hash"])[
-            'Duration'].idxmin()]
-        filename = f'{folder_name}//{alias}_service_area.csv'
-        result.to_csv(filename, index=False)
-
-        short_result = {
-        (int(row[self.parent.col_star]), int(row[self.parent.col_hash])): int(row['Duration']) 
-        for _, row in result.iterrows()
-    }
-        
-        return filename, short_result
 
     def calc_min_cost(self):
 
@@ -516,18 +483,23 @@ class car_accessibility:
                     self.min_costs[pair] = (cost_res, veh_legs)    
 
     def makeProtocolArea(self):
-               
-        with open(self.f, 'a') as filetowrite:
-            for (source, building), (min_cost, veh_legs) in self.min_costs.items():
-                if self.parent.mode == 1:
-                    filetowrite.write(f'{source},{building},{veh_legs},{min_cost}\n')
-                else:
-                    filetowrite.write(f'{building},{source},{veh_legs},{min_cost}\n')
 
-                self.short_result[(source, building)] = min_cost
+        rows = []
+        for (source, building), (min_cost, veh_legs) in self.min_costs.items():
+            if self.parent.mode == 1:
+                row = f'{source},{building},{veh_legs},{min_cost}\n'
+            else:
+                row = f'{building},{source},{veh_legs},{min_cost}\n'
+            
+            
+            rows.append (row)
+            self.short_result[(source, building)] = min_cost
+        
 
-    def makeProtocolMap(self,
-                        f,
+        data_body = [row.split(',') for row in rows]
+        return data_body
+        
+    def makeProtocolMap(self,                       
                         aggregate_dict,
                         field):
 
@@ -546,29 +518,31 @@ class car_accessibility:
                         if cost <= grad[1]:
                             counts[i] += 1
 
-                            if field != "bldg":
+                            if field != "nbldg":
                                 aggregates[i] = aggregates[i] + \
                                     aggregate_dict.get(int(building), 0)
 
             row = source
 
-            if field == "bldg":
+            if field == "nbldg":
                 Total = counts[len(self.grades) - 1]
-            if field != "bldg":
+            if field != "nbldg":
                 Total = aggregates[len(self.grades) - 1]
 
-            with open(f, 'a') as filetowrite:
-                for i in range(0, len(self.grades)):
-                    row = f'{row},{counts[i]}'
-                    if field != "bldg":
-                        row = f'{row},{aggregates[i]}'
-                filetowrite.write(f'{row},{Total}\n')
+            
+            for i in range(0, len(self.grades)):
+                row = f'{row},{counts[i]}'
+                if field != "nbldg":
+                    row = f'{row},{aggregates[i]}'
+            
+            data_body = [row.split(',') + [str(Total)]]
+
+            return data_body
 
     def create_head_files(self):
 
         if self.parent.protocol_type == 1:  # MAP
             
-            self.fields_ok = []
             self.aggregate_dict_all = {}
             self.aggregate_this_fields = {}
             self.f = {}
@@ -592,21 +566,19 @@ class car_accessibility:
                 self.grades.append([low_bound_min*60, top_bound_add*60])
                 protocol_header += f',{top_bound_add}m'
 
-            protocol_header += ',bldg_total\n'
-            field = "bldg"
-           
-            self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_bldg.csv'
-            self.fields_ok.extend([field])
+            protocol_header += ',nbldg_total\n'
+            field = "nbldg"
+
+            self.header_dict[field] = protocol_header.strip().split(',')
+                       
+            self.fields_ok.append(field)
             self.aggregate_this_fields[field] = False
             self.aggregate_dict_all[field] = {}
-            with open(self.f[field], 'w') as filetowrite:
-                filetowrite.write(protocol_header)
-
+            
             if self.list_fields_aggregate != "":
 
                 field_name_id = self.layerdest_field
-                fields_aggregate = [
-                    value.strip() for value in self.list_fields_aggregate.split(',')]
+                fields_aggregate = [value.strip() for value in self.list_fields_aggregate.split(',')]
 
                 for field in fields_aggregate:
 
@@ -620,10 +592,9 @@ class car_accessibility:
                                         
 
                     for feature in features_dest:
-                        attribute_dict[int(feature[field_name_id])] = int(
-                            feature[field])
+                        attribute_dict[int(feature[field_name_id])] = int(feature[field])
 
-                    self.fields_ok.extend([field])
+                    self.fields_ok.append(field)
                     self.aggregate_dict_all[field] = attribute_dict
 
                     """Prepare header and time grades  
@@ -648,12 +619,9 @@ class car_accessibility:
                         protocol_header += f',sum({field}[{top_bound_add}m])'
 
                     protocol_header += f',{field}_total\n'
-                    
-                    self.f[field] = f'{self.parent.folder_name}//{self.parent.file_name}_{field}.csv'
 
-                    with open(self.f[field], 'w') as filetowrite:
-                        filetowrite.write(protocol_header)
-
+                    self.header_dict[field] = protocol_header.strip().split(',')
+                   
     def run(self, begin_computation_time, hour, graph, write_info):
 
         self.begin_computation_time = begin_computation_time
@@ -671,19 +639,39 @@ class car_accessibility:
         else:
             table_header = f'{self.cols["hash"]},{self.cols["star"]},Veh_legs,Duration\n'
         
-        if self.parent.protocol_type == 2:
-            self.f = f'{self.parent.folder_name}//{self.parent.file_name}.csv'
-            with open(self.f, 'w') as self.filetowrite:
-                self.filetowrite.write(table_header) 
+        self.table_header_list = table_header.strip().split(',')
+               
       
+        
+        #file_name = Path(self.parent.file_name_gpkg).stem
+        self.file_name = get_prefix_alias(False, 
+                                self.parent.protocol_type, 
+                                self.parent.mode,                                
+                                self.parent.roundtrip 
+                                )
         self.find_car_accessibility()
-        if self.parent.protocol_type == 2 and len(self.parent.points) > 1:
-            self.f, self.short_result = self.make_service_area_report(self.parent.folder_name, self.parent.file_name)    
+        if self.parent.protocol_type == 2 and not self.parent.roundtrip and len(self.parent.points) > 1:
+
+            if self.parent.mode == 1:
+                name = 'origin'
+            else:
+                name = 'destination'
+            table_name = f'{self.file_name}_fastest_trip_{name}_all'
+            self.table_name_list.append(table_name)
+            df_min_duration, self.short_result = make_service_area_report_gpkg(self.df_all, self.cols["star"], self.cols["hash"])    
+            fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_min_duration)
+
+        
+        if self.parent.protocol_type == 1 and not self.parent.roundtrip:
+    
+            for field, list_of_dfs in self.df_all_dict.items():
+                if list_of_dfs:  
+                    df_final = pd.concat(list_of_dfs, ignore_index=True)
+                    table_name = f'{self.file_name}_stat_{field}_fastest_trip'
+                    self.table_name_list.append(table_name)
+                    fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_final)
+
         QApplication.processEvents()
-        text = transform_log_to_csv_text(self.parent.textLog.toPlainText())
-        filelog_name = f'{self.parent.folder_name}//log_{self.parent.alias}.csv'
-        with open(filelog_name, "w") as file:
-            file.write(text)
 
         if  write_info:
             self.write_info()
@@ -695,8 +683,7 @@ class car_accessibility:
             self.parent.setMessage("Car accessibility computations are interrupted by user")
             if not self.already_display_break:
                 self.parent.textLog.append(f'<a><b><font color="red">Car accessibility computations are interrupted by user</font> </b></a>')
-                if self.parent.folder_name != "":
-                    self.write_info()
+                #self.write_info()
                 self.already_display_break = True
 
             self.parent.progressBar.setValue(0)
@@ -712,19 +699,19 @@ class car_accessibility:
                             from_to = self.parent.mode
                             )
         
-        self.parent.textLog.append(f'<a>Output:</a>')
+        #self.parent.textLog.append(f'<a>Output:</a>')
         if self.parent.protocol_type == 1:
             if len(self.fields_ok) > 0:
-                for field in self.fields_ok:
-                    alias = os.path.splitext(
-                        os.path.basename(self.f[field]))[0]
-                    vis.add_thematic_map(self.f[field], alias, set_min_value=0)
-                    self.parent.textLog.append(f'<a>{os.path.normpath(self.f[field])}</a>')
+                for item in  self.table_name_list:
+                    vis.add_thematic_map_gpkg(self.parent.file_name_gpkg, item, item )
+                    #self.parent.textLog.append(f'<a>{item}</a>')
 
         if self.parent.protocol_type == 2:
-            alias = os.path.splitext(os.path.basename(self.f))[0]
-            vis.add_thematic_map(self.f, alias, set_min_value=0)
-            self.parent.textLog.append(f'<a>{os.path.normpath(self.f)}</a>')
+            
+            for item in self.table_name_list:
+                
+                vis.add_thematic_map_gpkg(self.parent.file_name_gpkg, item, item )
+            #self.parent.textLog.append(f'<a>{item}</a>')
 
         after_computation_time = datetime.now()
         after_computation_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -734,7 +721,7 @@ class car_accessibility:
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.parent.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
-        self.parent.textLog.append(f'<a href="file:///{self.parent.folder_name}" target="_blank" >Output in folder</a>')
+        self.parent.textLog.append(f'Output in file: <a href="file:///{self.parent.file_name_gpkg}" target="_blank" > {self.parent.file_name_gpkg}</a>')
         self.parent.setMessage(f'Finished')
 
         
