@@ -136,8 +136,10 @@ class form_pkl(QDialog, FORM_CLASS):
 
 
         self.run_button.setEnabled(False)
+        self.setMessage("")                
 
-        if highlight_empty_fields(self, exclude=[self.textLog]):        
+        if highlight_empty_fields(self, exclude=[self.textLog]):    
+            self.setMessage("All required fields must be filled in")                    
             self.run_button.setEnabled(True)
             return 0
 

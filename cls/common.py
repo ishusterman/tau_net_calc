@@ -15,6 +15,7 @@ import geopandas as gpd
 
 from pathlib import Path
 
+
 #from openpyxl import load_workbook, Workbook
 
 try:
@@ -34,6 +35,16 @@ try:
     from PyQt5.QtCore import QDate
 
     from qgis.utils import iface
+
+    from PyQt5.QtWidgets import (
+    QLineEdit,
+    QTextEdit,
+    QPlainTextEdit,
+    QComboBox,
+    QWidget
+    )
+
+    from qgis.gui import QgsCheckableComboBox
 
     IN_QGIS = True
 except ImportError:
@@ -188,7 +199,8 @@ def get_name_columns():
                 1: "Origin_aid", 2: "Destination_aid",
                 
             }
-        }  
+        } 
+ 
 
 def getDateTime():
     current_datetime = datetime.now()
@@ -541,16 +553,21 @@ def make_service_area_report_gpkg(all_frames, col_star, col_hash):
     }
     return df_min, short_result
 
-from PyQt5.QtWidgets import (
-    QLineEdit,
-    QTextEdit,
-    QPlainTextEdit,
-    QComboBox,
-    QWidget
-)
+def make_pivot_gpkg(all_frames, col_star, col_hash):
+    df_total = pd.concat(all_frames, ignore_index=True)
 
-# импорт QGIS-контрола
-from qgis.gui import QgsCheckableComboBox
+    df_total['Duration'] = pd.to_numeric(df_total['Duration'], errors='coerce')
+    df_total[col_star] = pd.to_numeric(df_total[col_star], errors='coerce')
+    df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors='coerce')
+
+    pivot = df_total.pivot(
+        index=col_hash,
+        columns=col_star,
+        values='Duration'
+    ).reset_index()  # ← теперь col_hash снова колонка
+
+    return pivot
+
 
 def is_child_of(child, parent):
     while child is not None:
@@ -591,8 +608,8 @@ def highlight_empty_fields(widget, exclude=None) -> bool:
         elif isinstance(child, QgsCheckableComboBox):
             is_empty = len(child.checkedItems()) == 0
 
-        if is_empty:            
-            child.setStyleSheet("background-color: #ffcccc;")
+        if is_empty:                        
+            child.setStyleSheet("background-color: #fff7cc;")
             found_empty = True
         else:
             child.setStyleSheet("")

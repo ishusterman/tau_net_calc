@@ -22,12 +22,11 @@ def raptor(SOURCE,
            MaxWaitTime,
            MaxWaitTimeTransfer,
            timetable_mode,
-           MaxExtraTime,
-           first_step = None
+           MaxExtraTime,           
+           first_step = None,
+           steps_to_buildings = None
            ) -> list:
     
-    
-
     list_stops = set()
 
     (marked_stop,
@@ -81,6 +80,7 @@ def raptor(SOURCE,
                                        )
                     
                     list_stops.add(p_dash)
+
                     if marked_stop_dict[p_dash] == 0:
                         marked_stop.append(p_dash)
                         marked_stop_dict[p_dash] = 1
@@ -102,9 +102,17 @@ def raptor(SOURCE,
                 if marked_stop_dict[stop_id] == 0:
                         marked_stop.append(stop_id)
                         marked_stop_dict[stop_id] = 1
+    
+    if steps_to_buildings:
+                
+                for (building_id, dist) in steps_to_buildings:
+                    time_departure = D_TIME + dist                    
+                    bid = str(building_id)
+                    if SOURCE != bid:
+                        label[0][bid] = time_departure
+                        pi_label[0][bid] = ('walking', SOURCE, bid, dist, time_departure)
+                    
 
-    
-    
     for k in range(1, roundsCount + 1):
         QApplication.processEvents()
         
@@ -115,7 +123,6 @@ def raptor(SOURCE,
             MaxWaitCurr = MaxWaitTimeTransfer
     
         Q.clear()
-
 
         while marked_stop:
             p = marked_stop.pop()
@@ -270,11 +277,9 @@ def raptor(SOURCE,
         MaxWalkDist3,
         timetable_mode,
         Maximal_travel_time,
-        MaxExtraTime,
+        MaxExtraTime,        
         mode = 1       
     )
-
-    
 
     return journeys_endtime, journeys_duration
 

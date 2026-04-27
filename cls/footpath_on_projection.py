@@ -94,7 +94,7 @@ class cls_footpath_on_projection:
         for i, feature in enumerate(self.layer_roads.getFeatures()):
             if i % 10000 == 0:
                 if self.parent is not None:
-                    self.parent.setMessage(f'Making a copy of the layer of roads № {i} of {count}...')
+                    self.parent.setMessage(f'Making a copy of the layer of roads {i} of {count}...')
                     QApplication.processEvents()
 
                 if self.verify_break():
@@ -154,7 +154,7 @@ class cls_footpath_on_projection:
         for i, feature in enumerate(features_list):
             if i % 5000 == 0:
                 if self.parent is not None:
-                    self.parent.setMessage(f'Projecting stops on links №{i} off {count}...')
+                    self.parent.setMessage(f'Projecting stops on links {i} of {count}...')
                     QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -168,7 +168,7 @@ class cls_footpath_on_projection:
         for i, polygon_feat in enumerate(self.layer_buildings.getFeatures()):
             if i % 1000 == 0:
                 if self.parent is not None:
-                    self.parent.setMessage(f'Projecting buildings on links №{i} of {count}...')
+                    self.parent.setMessage(f'Projecting buildings on links {i} of {count}...')
                     QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -289,7 +289,7 @@ class cls_footpath_on_projection:
         for i, feature in enumerate(roads.getFeatures()):
             if i % 50000 == 0:
                 if self.parent is not None:
-                    self.parent.setMessage(f'Constructing road network graph №{i} of {count}...')
+                    self.parent.setMessage(f'Constructing road network graph link {i} of {count}...')
                     QApplication.processEvents()
 
                 if self.verify_break():
@@ -413,67 +413,7 @@ class cls_footpath_on_projection:
             vertex_osm = pickle.load(f)
         return vertex_osm
     
-    """
-    def construct_dict_transfers_projections(self,
-                                             graph,
-                                             dict_osm_vertex,
-                                             dict_vertex_osm,
-                                             layer_buildings,
-                                             layer_buildings_field,
-                                             path_to_file,
-                                             path_to_stops,
-                                             ):
-
-        self.layer_buildings = layer_buildings
-        path_to_file = os.path.join(path_to_file, 'footpath_road_projection.txt')
-        with open(path_to_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            # column headers
-            writer.writerow(
-                ['from_stop_id', 'to_stop_id', 'min_transfer_time'])
-            self.stops = self.create_stops_gpd(path_to_stops)
-            features = self.stops.itertuples(index=False)
-            features_list = list(features)
-            count = len(features_list)
-            for i, feature in enumerate(features_list):
-                
-                if i % 100 == 0:
-                    if self.parent is not None:
-                        self.parent.setMessage(f'Constructing walk routes between stops, stop №{i} of {count}...')
-                        QApplication.processEvents()
-                    if self.verify_break():
-                        return 0
-
-                from_osm_id = self.normalize_id(feature.stop_id)
-                dist_list = self.get_nearby_buildings(from_osm_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s") 
-
-                # write building_id, building, and dist to the file
-                for to_stop_id, dist in dist_list:
-                    writer.writerow([from_osm_id, to_stop_id, dist])
-
-            count = layer_buildings.featureCount()
-            features = layer_buildings.getFeatures()
-
-            for i, feature in enumerate(features):
-            
-                if i % 500 == 0:
-                    if self.parent is not None:
-                        self.parent.setMessage(f'Constructing walk routes between buildings and stops, building №{i} of {count}...')
-                        QApplication.processEvents()
-                    if self.verify_break():
-                        return 0
-
-                building_id = self.normalize_id(feature[layer_buildings_field])
-
-                dist_list = self.get_nearby_buildings(building_id, graph, dict_osm_vertex, dict_vertex_osm, mode="find_s")
-                
-
-                # write building_id, building, and dist to the file
-                for to_stop_id, dist in dist_list:
-                    writer.writerow([building_id, to_stop_id, dist])
-                    writer.writerow([to_stop_id, building_id, dist])
-
-    """
+    
     def construct_dict_transfers_projections(self,
                                          graph,
                                          dict_osm_vertex,
@@ -499,7 +439,7 @@ class cls_footpath_on_projection:
 
             if i % 100 == 0:
                 if self.parent is not None:
-                    self.parent.setMessage(f'Constructing walk routes between stops, stop №{i} of {count}...')
+                    self.parent.setMessage(f'Constructing walk routes between stops, stop {i} of {count}...')
                     QApplication.processEvents()
                 if self.verify_break():
                     return 0
@@ -518,7 +458,7 @@ class cls_footpath_on_projection:
 
             if i % 500 == 0:
                 if self.parent is not None:
-                    self.parent.setMessage(f'Constructing walk routes between buildings and stops, building №{i} of {count}...')
+                    self.parent.setMessage(f'Constructing walk routes between buildings and stops, building {i} of {count}...')
                     QApplication.processEvents()
                 if self.verify_break():
                     return 0

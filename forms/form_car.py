@@ -153,7 +153,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.lblTimeInterval2.setVisible(False)
 
             self.cmbFields_ch.setVisible(False)
-            self.label.setVisible(False)
+            self.lblFields.setVisible(False)
             
         
         self.show_info()
@@ -191,6 +191,20 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.dtRoundtripStartTime4.timeChanged.connect(lambda: self.update_timedelta(2))
 
         self.wgFileSave.setFilter("GeoPackage (*.gpkg)")
+
+    def move_fields_combo_to_origin(self, to_origin_layout: bool):
+        # 1. Удаляем cmbFields_ch из текущего layout
+        parent_layout = self.cmbFields_ch.parentWidget().layout()
+        parent_layout.removeWidget(self.cmbFields_ch)
+        parent_layout.removeWidget(self.lblFields)        
+
+        # 2. Добавляем в нужный layout
+        if to_origin_layout:
+            self.horizontalLayout_25.addWidget(self.lblFields)
+            self.horizontalLayout_25.addWidget(self.cmbFields_ch)             
+        else:
+            self.horizontalLayout_26.addWidget(self.lblFields)
+            self.horizontalLayout_26.addWidget(self.cmbFields_ch)
 
     def update_timedelta(self, pair_index):
         
@@ -256,6 +270,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.default_alias = getDateTime()
                 
         self.wgFileSave.setFilePath(os.path.join(os.path.dirname(self.wgFileSave.filePath()), f"{self.default_alias}.gpkg"))
+        to_origin = (self.mode == 2) or self.roundtrip
+        self.move_fields_combo_to_origin(to_origin)
                 
     def onLayerDestChanged(self):
         self.cmbFields_ch.clear()
@@ -304,12 +320,22 @@ class CarAccessibility(QDialog, FORM_CLASS):
     def on_run_button_clicked(self):
         self.run_button.setEnabled(False)
         self.break_on = False
+        self.setMessage("")                
 
-        if highlight_empty_fields(self, exclude=[self.textLog, self.cmbFields_ch]):        
+        if highlight_empty_fields(self, exclude=[self.textLog, self.cmbFields_ch]):
+            self.setMessage("All required fields must be filled in")                        
             self.run_button.setEnabled(True)
             return 0
 
-        self.file_name_gpkg = self.wgFileSave.filePath()
+        file_path = self.wgFileSave.filePath()
+        base, ext = os.path.splitext(file_path)
+        if ext.lower() != ".gpkg":
+            file_path = base + ".gpkg"
+        self.file_name_gpkg = file_path
+
+        folder = os.path.dirname(self.file_name_gpkg)
+        if folder and not os.path.exists(folder):
+            os.makedirs(folder, exist_ok=True)
 
         if os.path.exists(self.file_name_gpkg):
             os.remove(self.file_name_gpkg)
@@ -409,16 +435,18 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.textLog.append(f"<a> Maximum travel time: {self.config['Settings']['maxtimetravel_car']} min</a>")           
 
-        self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")        
-        if self.protocol_type == 1:  # MAP mode
-            self.textLog.append(f"<a> save accumulated number of opportunities every: {self.config['Settings']['timeinterval']} min</a>")
-        self.textLog.append(f"<a> Output file: {self.config['Settings']['pathtoprotocols_car']}</a>")
-        
         self.textLog.append("<a style='font-weight:bold;'>[Parking Access and Egress]</a>")
 
         self.textLog.append(f"<a> Average walking distance from the origin building to the parking place: {self.config['Settings']['Walk_to_car_car']} m</a>")
         self.textLog.append(f"<a> Average walking distance from the parking place to the destination building: {self.config['Settings']['Walk_to_destination_car']} m</a>")
         self.textLog.append(f"<a> Average walking speed: {self.config['Settings']['Walking_speed_car']} km/h</a>")
+        
+
+        self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")                
+        self.textLog.append(f"<a> Output file: {self.config['Settings']['pathtoprotocols_car']}</a>")
+        if self.protocol_type == 1:  # MAP mode
+            self.textLog.append(f"<a> Save time bin: {self.config['Settings']['timeinterval']} min</a>")
+        
         
         self.prepare()
         self.close_button.setEnabled(True)
@@ -718,6 +746,9 @@ class CarAccessibility(QDialog, FORM_CLASS):
         layer_vis = self.layer_visualization
 
         max_time_minutes = int(self.config['Settings']['MaxTimeTravel_car'])
+        if self.roundtrip: 
+            max_time_minutes = round(max_time_minutes * 2/3)
+
         time_step_minutes = int(self.config['Settings']['TimeInterval_car'])
         
         layer_vis_field = layerdest_field = self.layerorig_field = FIELD_ID
@@ -782,7 +813,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
                     )
             
             text = transform_log_to_dataframe(self.textLog.toPlainText())
-            table_name = f'_log_{file_name}'
+            table_name = f'_{file_name}_log'
             fast_write_gpkg(self.file_name_gpkg, table_name, text)
 
             folder = os.path.dirname(self.file_name_gpkg)
@@ -815,7 +846,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.textLog.append(f"<a style='font-weight:bold;'> Calculating roundtrip accessibility</a>")
 
 
-            duration_max = max_time_minutes * 60 * 1.5
+            #duration_max = max_time_minutes * 60 * 1.5
+            duration_max = int(self.config['Settings']['MaxTimeTravel_car']) * 60
             cols_dict = get_name_columns()
             cols = cols_dict[(2, self.protocol_type)]
             analyzer = roundtrip_analyzer(                                        

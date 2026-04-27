@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>883</width>
-    <height>664</height>
+    <height>694</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -197,6 +197,12 @@ QGroupBox::title {
                      </property>
                      <item>
                       <widget class="QgsMapLayerComboBox" name="cmbLayers">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
                        <property name="allowEmptyLayer">
                         <bool>true</bool>
                        </property>
@@ -497,7 +503,7 @@ QGroupBox::title {
                      <item>
                       <widget class="QLabel" name="lblTimeInterval">
                        <property name="text">
-                        <string>Time interval</string>
+                        <string>Save time bin</string>
                        </property>
                       </widget>
                      </item>
@@ -512,7 +518,11 @@ QGroupBox::title {
                       </widget>
                      </item>
                      <item>
-                      <widget class="QLineEdit" name="txtTimeInterval"/>
+                      <widget class="QLineEdit" name="txtTimeInterval">
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
                      </item>
                      <item>
                       <widget class="QLabel" name="lblMinutes">
@@ -591,7 +601,11 @@ QGroupBox::title {
                         </widget>
                        </item>
                        <item>
-                        <widget class="QLineEdit" name="txtMaxExtraTime"/>
+                        <widget class="QLineEdit" name="txtMaxExtraTime">
+                         <property name="alignment">
+                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                         </property>
+                        </widget>
                        </item>
                        <item>
                         <widget class="QLabel" name="lblStartTime4">

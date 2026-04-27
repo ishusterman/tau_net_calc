@@ -25,7 +25,8 @@ from common import (get_existing_path,
                     get_name_columns,
                     make_service_area_report_gpkg,
                     fast_write_gpkg,
-                    get_prefix_alias)
+                    get_prefix_alias,
+                    make_pivot_gpkg)
 
 
 class car_accessibility:
@@ -385,11 +386,12 @@ class car_accessibility:
                     name = 'origin'
                 else:
                     name = 'destination' 
-                table_name = f'{self.file_name}_fastest_trip_{name}_{source}'
-                fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_current)
+                
                 
                 if len(self.parent.points) == 1:
+                    table_name = f'{self.file_name}_fastest_trip_{name}_{source}'                
                     self.table_name_list.append(table_name)
+                    fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_current)
 
             else:
 
@@ -656,10 +658,15 @@ class car_accessibility:
                 name = 'origin'
             else:
                 name = 'destination'
-            table_name = f'{self.file_name}_fastest_trip_{name}_all'
+            table_name = f'{self.file_name}_fastest_trip_{name}'
             self.table_name_list.append(table_name)
             df_min_duration, self.short_result = make_service_area_report_gpkg(self.df_all, self.cols["star"], self.cols["hash"])    
             fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_min_duration)
+
+
+            df_pivot = make_pivot_gpkg (self.df_all, self.cols["star"], self.cols["hash"])
+            table_name = f'{self.file_name}_fastest_by_{name}s'
+            fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_pivot)
 
         
         if self.parent.protocol_type == 1 and not self.parent.roundtrip:

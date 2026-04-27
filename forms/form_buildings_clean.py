@@ -115,8 +115,10 @@ class form_buildings_clean(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
+        self.setMessage("")        
         
-        if highlight_empty_fields(self, exclude=[self.textLog]):        
+        if highlight_empty_fields(self, exclude=[self.textLog]):
+            self.setMessage("All required fields must be filled in")                
             self.run_button.setEnabled(True)
             return 0
         
@@ -203,7 +205,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
                 file.write(text)
 
             text = transform_log_to_dataframe(self.textLog.toPlainText())
-            table_name = f'_log_{log_name}'                        
+            table_name = f'_{log_name}_log'                        
             fast_write_gpkg(file_name_gpkg, table_name, text)
 
  

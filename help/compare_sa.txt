@@ -3,7 +3,4 @@
 The system evaluates the outputs of two different scenarios for a valid comparison.<br />
 •	For <b>Service Areas</b>, the comparison proceeds if both maps are indeed service area maps and the spatial overlap between them is not empty. If both tests pass, the algorithm compares the spatially overlapping regions of the outputs, while any non-overlapping parts are generated as two supplementary layers.
 
-
-
-
 <span>

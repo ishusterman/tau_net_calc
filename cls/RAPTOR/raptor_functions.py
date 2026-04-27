@@ -18,7 +18,7 @@ def initialize_raptor(routes_by_stop_dict,
              for x in range(0, roundsCount + 1)}
 
     marked_stop = deque()
-    marked_stop_dict = {(stop): 0 for stop in routes_by_stop_dict.keys()}
+    marked_stop_dict = {(stop): 0 for stop in routes_by_stop_dict.keys()}    
     marked_stop.append(SOURCE)
     marked_stop_dict[SOURCE] = 1
 
@@ -153,27 +153,35 @@ def post_processing(DESTINATION,
                               journey[0][3],
                               journey[1][0])
                                     
-                    duration, start_time, end_time = get_duration(
-                        journey, mode_raptor)
+                    duration, start_time, end_time = get_duration(journey, mode_raptor)
                
                 if mode_raptor == 1:
-                    if (duration > Maximal_travel_time) or start_time > D_Time + MaxExtraTime:
+                    if (duration > Maximal_travel_time - MaxExtraTime) or start_time > D_Time + MaxExtraTime:
                         append = False
                     
-                if mode_raptor == 2:
-                    if (duration > Maximal_travel_time) or end_time < D_TIME_copy: # exp 
+                if mode_raptor == 2:                    
+                    if (duration > Maximal_travel_time - MaxExtraTime) or end_time < D_TIME_copy: # exp 
                         append = False
                     
-                                    
+            
             if  not (journey[-1][0] == 'walking'):
                 append = False
-                
+            """    
             if  len(journey) == 1 and  journey[-1][0] == 'walking':
-                append = False
+                append = False                       
+            """
+            #if DESTINATION == '1157308':
+            #    print (f'DESTINATION == "1157308" {journey} append {append}')
+            
+            
                 
             if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist3) and (transfer_needed >= MIN_TRANSFER):
                 if append:
                     pareto_set.append((transfer_needed, duration, end_time, journey))
+            
+            
+
+    
 
                     
                 
@@ -215,8 +223,12 @@ def get_duration(journey, mode_raptor):
 
         if len(journey) == 1 and journey[0][0] == "walking":
             duration = journey[0][3]
-            start_time = journey[0][4] + journey[0][3]
-            end_time = journey[0][4]
+            #start_time = journey[0][4] + journey[0][3] 
+            #end_time = journey[0][4]
+
+            start_time = journey[0][4] 
+            end_time = journey[0][4] + journey[0][3] 
+
             return duration, start_time, end_time
 
         if len(journey) > 1:

@@ -48,7 +48,9 @@ class cls_clean_buildings(QgsTask):
         input_layer_path = uri.split("|")[0] if "|" in uri else uri
         file_name = os.path.basename(input_layer_path)
         self.name, self.ext = os.path.splitext(file_name)
-        input_layer = QgsVectorLayer(input_layer_path, "Layer Name", "ogr")
+        #input_layer = QgsVectorLayer(input_layer_path, "Layer Name", "ogr")
+
+        input_layer = self.layer
 
         ################################
         self.signals.set_message.emit('Deleting holes ...')

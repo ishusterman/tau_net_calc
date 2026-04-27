@@ -35,7 +35,7 @@ class MultiLineStringToLineStringConverter:
         for feature in self.layer.getFeatures():
             i += 1
             if i % 10000 == 0:
-                self.parent.setMessage(f'Splitting multiline into lines №{i} of {len}...')
+                self.parent.setMessage(f'Splitting multiline into lines {i} of {len}...')
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0

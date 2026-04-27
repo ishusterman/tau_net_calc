@@ -38,7 +38,8 @@ from common import (get_qgis_info,
                     check_file_parameters_accessibility, 
                     get_documents_path,
                     get_gtfs_date_range,
-                    transform_log_to_csv_text
+                    transform_log_to_csv_text,
+                    highlight_empty_fields
                     )
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -348,6 +349,11 @@ class form_gtfs(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
+
+        if highlight_empty_fields(self, exclude=[self.textLog, self.txtSearch]):
+            self.setMessage("All required fields must be filled in")        
+            self.run_button.setEnabled(True)
+            return 0
 
         if not (self.CheckGtfsDirectory(self.txtPathToGTFS.text())):
             self.run_button.setEnabled(True)

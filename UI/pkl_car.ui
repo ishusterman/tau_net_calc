@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1075</width>
+    <width>1039</width>
     <height>639</height>
    </rect>
   </property>
@@ -83,8 +83,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>684</width>
-             <height>634</height>
+             <width>659</width>
+             <height>628</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -193,19 +193,7 @@
                    <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_row1">
                      <item>
-                      <widget class="QPushButton" name="btnCheckOSM">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>100</width>
-                         <height>0</height>
-                        </size>
-                       </property>
+                      <widget class="QToolButton" name="btnCheckOSM">
                        <property name="text">
                         <string>Check if road layer is OSM</string>
                        </property>
@@ -264,27 +252,12 @@
                    <item>
                     <layout class="QHBoxLayout" name="horizontalLayout_row2">
                      <item>
-                      <widget class="QPushButton" name="test_button">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>125</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <weight>75</weight>
-                         <bold>true</bold>
-                        </font>
-                       </property>
+                      <widget class="QToolButton" name="test_button">
                        <property name="text">
                         <string>Test road atributes</string>
+                       </property>
+                       <property name="toolButtonStyle">
+                        <enum>Qt::ToolButtonIconOnly</enum>
                        </property>
                       </widget>
                      </item>

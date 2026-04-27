@@ -376,7 +376,7 @@ class pkl_car ():
             if count % 50000 == 0:
                 if self.verify_break():
                     return 0
-                self.parent.setMessage(f'Modifying {comment}road links (link №{count}) ... ')
+                self.parent.setMessage(f'Modifying {comment}road links (link {count}) ... ')
                 QApplication.processEvents()
             new_feature = QgsFeature(feature)
 
@@ -481,7 +481,7 @@ class pkl_car ():
                 if self.verify_break():
                     return 0
                 QApplication.processEvents()
-                self.parent.setMessage(f'Constructing database №{c} of {self.count_item}...')
+                self.parent.setMessage(f'Constructing database {c} of {self.count_item}...')
             building_id = id
             # create a circle with a radius of 250 meters around the building
             point_coords = [point.x(), point.y()]
@@ -520,7 +520,7 @@ class pkl_car ():
                 if self.verify_break():
                     return 0
                 QApplication.processEvents()
-                self.parent.setMessage(f'Retrieving building features item №{c} of {self.count_item}...')
+                self.parent.setMessage(f'Retrieving building features item {c} of {self.count_item}...')
 
             geom = feature.geometry()
 
@@ -542,7 +542,7 @@ class pkl_car ():
             if c % 50000 == 0:
                 if self.verify_break():
                     return 0
-                self.parent.setMessage(f'Constructing database №{c} of {self.count_item}...')
+                self.parent.setMessage(f'Constructing database {c} of {self.count_item}...')
                 QApplication.processEvents()
 
             point_coords = [point.x(), point.y()]

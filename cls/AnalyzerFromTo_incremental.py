@@ -14,7 +14,8 @@ class roundtrip_analyzer:
                  dict_numpoints: dict = None):
         
         self.duration_max = duration_max
-        self.limit = (2 / 3) * duration_max        
+        #self.limit = (2 / 3) * duration_max        
+        #self.limit = duration_max        
         self.field_star = field_star
         self.field_hash = field_hash
         self.service_area = service_area
@@ -27,7 +28,8 @@ class roundtrip_analyzer:
         self.all_from_labels = set()
 
     def get_data_for_analyzer_from_to(self, dict_data):
-        return {k: v for k, v in dict_data.items() if v <= self.limit}    
+        #return {k: v for k, v in dict_data.items() if v <= self.limit}    
+        return {k: v for k, v in dict_data.items()}    
 
     def _init_empty_state(self):
         return {
@@ -58,14 +60,14 @@ class roundtrip_analyzer:
 
     def add_to_data(self, to_data, time_label: str):
         for pair, duration in to_data.items():
-            if duration > self.limit: continue
+            #if duration > self.limit: continue
             key = self._get_key(pair)
             if key not in self.states: self.states[key] = self._init_empty_state()
             self._add_to_state(self.states[key], duration, "to", time_label)
 
     def add_from_data(self, from_data, time_label: str):
         for pair, duration in from_data.items():
-            if duration > self.limit: continue
+            #if duration > self.limit: continue
             key = self._get_key(pair)
             if key not in self.states: self.states[key] = self._init_empty_state()
             self._add_to_state(self.states[key], duration, "from", time_label)
@@ -112,6 +114,9 @@ class roundtrip_analyzer:
 
             o_id = self.first_origin if self.service_area else key[0]
             d_id = key if self.service_area else key[1]
+
+            if mean > self.duration_max:
+                continue
             
             # Сохраняем "сырые" данные для CSV и последующей обработки
             row_entry = {

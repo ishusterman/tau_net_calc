@@ -33,7 +33,8 @@ def rev_raptor(SOURCE,
                timetable_mode,
                MaxExtraTime,
                first_step = None,
-               D_TIME_copy = ""
+               D_TIME_copy = "",
+               steps_to_buildings = None
                ) -> list:
 
     list_stops = set()
@@ -118,6 +119,19 @@ def rev_raptor(SOURCE,
                 if marked_stop_dict[stop_id] == 0:
                         marked_stop.append(stop_id)
                         marked_stop_dict[stop_id] = 1
+    
+    if steps_to_buildings:
+                
+                for (building_id, dist) in steps_to_buildings:
+                    if D_TIME_copy:
+                        time_departure = D_TIME_copy - dist                     
+                    else:
+                        time_departure = D_TIME - dist          
+                    bid = str(building_id)
+                    if SOURCE != bid:
+                        label[0][bid] = time_departure
+                        pi_label[0][bid] = ('walking', SOURCE, bid, dist, time_departure)
+                        #print (pi_label[0][bid])
             
         
 
@@ -296,7 +310,7 @@ def rev_raptor(SOURCE,
         if marked_stop == deque([]):
             break
 
-        journeys_endtime, journeys_duration = post_processingAll(
+    journeys_endtime, journeys_duration = post_processingAll(
             SOURCE,
             D_TIME,
             list_stops,

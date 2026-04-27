@@ -93,6 +93,7 @@ class form_relative(QDialog, FORM_CLASS):
 
         self.ParametrsShow()
         self.show_info()
+        self.log_array = []
       except Exception:
         traceback.print_exc()
 
@@ -121,7 +122,7 @@ class form_relative(QDialog, FORM_CLASS):
         for i in range(ds.GetLayerCount()):
             layer = ds.GetLayerByIndex(i)
             name = layer.GetName()
-            if not name.startswith("_"):
+            if not name.startswith("_") and "_by_" not in name:
                 # Проверяем, что слой без геометрии
                 if layer.GetGeomType() == ogr.wkbNone:
                     combo.addItem(name)
@@ -137,8 +138,10 @@ class form_relative(QDialog, FORM_CLASS):
         self.progressBar.setMaximum(6)
         self.progressBar.setValue(0)
         self.run_button.setEnabled(False)
+        self.setMessage("")                
 
-        if highlight_empty_fields(self, exclude=[self.textLog]):        
+        if highlight_empty_fields(self, exclude=[self.textLog]):   
+            self.setMessage("All required fields must be filled in")                     
             self.run_button.setEnabled(True)
             return 0
 
@@ -168,7 +171,19 @@ class form_relative(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             return 0
         
-        self.file_name_gpkg = self.wgFileSave.filePath()
+        file_path = self.wgFileSave.filePath()
+        base, ext = os.path.splitext(file_path)
+        if ext.lower() != ".gpkg":
+            file_path = base + ".gpkg"
+        self.file_name_gpkg = file_path
+
+        folder = os.path.dirname(self.file_name_gpkg)
+        if folder and not os.path.exists(folder):
+            os.makedirs(folder, exist_ok=True)
+
+        if os.path.exists(self.file_name_gpkg):
+            os.remove(self.file_name_gpkg)    
+        
         self.file_name_gpkg_short = Path(self.file_name_gpkg).stem
         self.file1 = self.widget_result1.filePath()
         self.file1_short = Path(self.file1).stem
@@ -182,6 +197,8 @@ class form_relative(QDialog, FORM_CLASS):
        
         mode_first, self.mode_roundtrip_first, self.MAP_first, AccessibilityText_first = self.check_log_gpkg(self.file1)
 
+        
+
         self.from_to_first = 1 if mode_first else 2
         protocol = 1 if self.MAP_first else 2
         if self.mode_roundtrip_first:
@@ -190,8 +207,23 @@ class form_relative(QDialog, FORM_CLASS):
         self.first_col_star = cols["star"]
         self.first_col_hash = cols["hash"]
 
+        self.first_col_star_name = cols[1]
+        self.first_col_hash_name = cols[2]
+
 
         mode_second, self.mode_roundtrip_second, self.MAP_second, AccessibilityText_second = self.check_log_gpkg(self.file2)
+
+        if AccessibilityText_first == "error":
+            self.setMessage('Select the correct file "Result_1"')
+            self.run_button.setEnabled(True)
+            return 0
+        
+        if AccessibilityText_second == "error":
+            self.setMessage('Select the correct file "Result_2"')
+            self.run_button.setEnabled(True)
+            return 0
+
+        
         
         self.from_to_second = 1 if mode_second else 2
         protocol = 1 if self.MAP_second else 2
@@ -200,6 +232,9 @@ class form_relative(QDialog, FORM_CLASS):
         cols = cols_dict[(self.from_to_second, protocol)]
         self.second_col_star = cols["star"]
         self.second_col_hash = cols["hash"]
+
+        self.second_col_star_name = cols[1]
+        self.second_col_hash_name = cols[2]
 
         
         if self.mode_roundtrip_first or self.mode_roundtrip_second:
@@ -254,20 +289,38 @@ class form_relative(QDialog, FORM_CLASS):
         LayerVis = self.cbVisLayers.currentLayer()
         self.layer_vis_path = LayerVis.dataProvider().dataSourceUri().split("|")[0]
         
-        self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
-        
-        self.textLog.append(f"<a>Results_1 file: {self.file1}</a>")
-        self.textLog.append(f"<a>Results_1 table: {self.table1}")
-        self.textLog.append(f"<a>Results_2 file: {self.file2}</a>")
-        self.textLog.append(f"<a>Results_2 table: {self.table2}</a>")
+        self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")        
+        self.textLog.append(f"<a>Results_1 file: {self.file1}</a>")        
+        self.textLog.append(f"<a>Results_1 table: {self.table1}")        
+        self.textLog.append(f"<a>Results_2 file: {self.file2}</a>")        
+        self.textLog.append(f"<a>Results_2 table: {self.table2}</a>")        
 
-        self.textLog.append(f'<a> Output file: {self.file_name_gpkg}</a>')
-        self.textLog.append(f"<a>Visualization layer: {os.path.normpath(self.layer_vis_path)}</a>")
-                
-        self.textLog.append(f"<a>Calculate ratio: {self.config['Settings']['calc_ratio_relative']}</a>")
-        self.textLog.append(f"<a>Calculate difference: {self.config['Settings']['calc_difference_relative']}</a>")
+        self.textLog.append(f'<a> Output file: {self.file_name_gpkg}</a>')        
+        self.textLog.append(f"<a>Visualization layer: {os.path.normpath(self.layer_vis_path)}</a>")                
+        self.textLog.append(f"<a>Calculate ratio: {self.config['Settings']['calc_ratio_relative']}</a>")        
+        self.textLog.append(f"<a>Calculate difference: {self.config['Settings']['calc_difference_relative']}</a>")        
         self.textLog.append(f"<a>Calculate relative difference: {self.config['Settings']['calc_relative_difference_relative']}</a>")
-       
+        
+        self.log_array.append({"parameter": "[System]"})
+        for key, value in qgis_info.items():
+            self.log_array.append({
+                "parameter": key,
+                "value1": value
+            })
+        self.log_array.append({"parameter": "[Mode]"})
+        self.log_array.append({"parameter": "Mode", "value1": self.title})
+        self.log_array.append({"parameter": "[Settings]"})
+        self.log_array.append({"parameter": "Results_1 file", "value1": self.file1})
+        self.log_array.append({"parameter": "Results_1 table", "value1": self.table1})
+        self.log_array.append({"parameter": "Results_2 file", "value1": self.file2})
+        self.log_array.append({"parameter": "Results_2 table", "value1": self.table2})
+        self.log_array.append({"parameter": "Output file", "value1": self.file_name_gpkg})
+        self.log_array.append({"parameter": "Visualization layer", "value1": self.layer_vis_path})
+        self.log_array.append({"parameter": "Calculate ratio", "value1": str(self.cb_ratio.isChecked())})
+        self.log_array.append({"parameter": "Calculate difference", "value1": str(self.cb_difference.isChecked())})
+        self.log_array.append({"parameter": "Calculate relative difference", "value1": str(self.cb_relative_difference.isChecked())})
+        self.log_array.append({"parameter": "Comparison of scenarios"})
+               
         fieldname_layer = FIELD_ID
 
         if self.MAP_first:
@@ -275,7 +328,7 @@ class form_relative(QDialog, FORM_CLASS):
         else:
             mode_visualization = 2
        
-        result = self.make_log_compare_gpkg()
+        result, comparison_array = self.make_log_compare_gpkg()
 
         if not result:
             self.progressBar.setValue(0)
@@ -283,16 +336,28 @@ class form_relative(QDialog, FORM_CLASS):
             self.setMessage("")
             return
         
+        
+        df_comparison = pd.DataFrame(comparison_array)                
+        for _, row in df_comparison.iterrows():
+            self.log_array.append(row.to_dict())
+
+
+        self.roundtrip_compare = False
+        if self.roundtrip:
+            self.roundtrip_compare = True
         vis = visualization(self,
                             LayerVis,
                             mode=mode_visualization,
                             fieldname_layer=fieldname_layer,
                             mode_compare=True,
-                            from_to = self.from_to_first
+                            from_to = self.from_to_first,
+                            roundtrip_compare = self.roundtrip_compare
                             )
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
+
+        self.log_array.append({"parameter": "Started", "value1": begin_computation_str})
         
 
         self.progressBar.setValue(1)
@@ -342,6 +407,11 @@ class form_relative(QDialog, FORM_CLASS):
         else:
             field_name1 = self.first_col_hash
             field_name2 = self.second_col_hash
+
+        if self.roundtrip_compare:            
+            if self.MAP_first:
+                field_name1 = "Origin_aid"
+                field_name2 = "Origin_aid"
 
         roundtrip_mode = True if (self.mode_roundtrip_first and not self.MAP_first) else False
 
@@ -396,22 +466,24 @@ class form_relative(QDialog, FORM_CLASS):
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
         self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
+        self.log_array.append({"parameter": "[Processing]"})
+        self.log_array.append({"parameter": "Finished", "value1": after_computation_str})
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
-        
+        self.log_array.append({"parameter": "Processing time", "value1": duration_without_microseconds})
         self.textLog.append(f'Output in file: <a href="file:///{self.file_name_gpkg}" target="_blank" > {self.file_name_gpkg}</a>')
+        self.log_array.append({"parameter": "Output in file", "value1": self.file_name_gpkg})
+                
+        self.log_array_df = pd.DataFrame(self.log_array)
 
-        df_comparison = self.textlog_to_dataframe()
-        fast_write_gpkg(self.file_name_gpkg, f"_log_{self.file_name_gpkg_short}", df_comparison, mode_relative = True)        
-
-        text = self.textLog.toHtml()
         folder = os.path.dirname(self.file_name_gpkg)
         name, _ = os.path.splitext(os.path.basename(self.file_name_gpkg))
-        filelog_name = os.path.join(folder, f"{name}_log.html")
-        with open(filelog_name, "w") as file:
-            file.write(text)
+        filelog_name = os.path.join(folder, f"{name}_log.csv")
+        self.log_array_df.to_csv(filelog_name, sep=",", index=False, encoding="utf-8")
         
+        fast_write_gpkg(self.file_name_gpkg, f"_{self.file_name_gpkg_short}_log", self.log_array_df, mode_relative = True)        
+
         self.setMessage("Finished")
         self.progressBar.setValue(6)
 
@@ -508,11 +580,11 @@ class form_relative(QDialog, FORM_CLASS):
     def check_log_gpkg(self, gpkg_path):
 
         if not os.path.isfile(gpkg_path):
-            return (False, False, False, "")
+            return (False, False, False, "error")
 
         ds = ogr.Open(gpkg_path)
         if ds is None:
-            return (False, False, False, "")
+            return (False, False, False, "error")
 
         layer = next(
                 (ds.GetLayerByIndex(i) for i in range(ds.GetLayerCount())
@@ -520,7 +592,11 @@ class form_relative(QDialog, FORM_CLASS):
                 None
             )
         if layer is None:
-            return (False, False, False, "")
+            return (False, False, False, "error")
+        
+        defn = layer.GetLayerDefn()
+        if defn.GetFieldIndex("Parameter") < 0 or defn.GetFieldIndex("Value") < 0:
+            return (False, False, False, "error")
         
         data = {}
         for feature in layer:
@@ -581,18 +657,21 @@ class form_relative(QDialog, FORM_CLASS):
             column_name1 = column_name2 = "Duration_ave"
 
        
-        postfix1 = self.table1
-        postfix2 = self.table2
+        postfix1 = "1" #self.table1
+        postfix2 = "2" #self.table2
 
         df1_renamed = df1.rename(columns={col: col + "_" + postfix1 for col in df1.columns if col != self.first_col_star})
         df2_renamed = df2.rename(columns={col: col  + "_" +  postfix2 for col in df2.columns if col != self.second_col_star})
-
-
-        merged_df = pd.merge(df1_renamed, df2_renamed, left_on=self.first_col_star, right_on=self.second_col_star )
-
+        
         result_df = pd.DataFrame()
-        result_df[self.first_col_star] = merged_df[self.first_col_star]
 
+        if not self.mode_roundtrip_second:
+            merged_df = pd.merge(df1_renamed, df2_renamed, left_on=self.first_col_star, right_on=self.second_col_star )
+            result_df[self.first_col_star] = merged_df[self.first_col_star]
+        else:
+            merged_df = pd.merge(df1_renamed, df2_renamed, left_on=f'Origin_aid_1', right_on=f'Origin_aid_2')
+            result_df[f'Origin_aid_1'] = merged_df[f'Origin_aid_1']
+        
         col1 = f'{column_name1}_{postfix1}'
         col2 = f'{column_name2}_{postfix2}'
 
@@ -622,8 +701,7 @@ class form_relative(QDialog, FORM_CLASS):
         column_name2 = df2.columns[-1]
 
         postfix1 = ""
-        postfix2 = ""
-        
+        postfix2 = ""        
 
         if self.mode_roundtrip_second:
             column_name1 = "Duration_ave"    
@@ -636,22 +714,37 @@ class form_relative(QDialog, FORM_CLASS):
         df1_filtered = df1
         df2_filtered = df2
         result_df = pd.DataFrame()
-        
+
         df1_filtered[self.first_col_hash] = pd.to_numeric(df1_filtered[self.first_col_hash].astype(str).str.strip(), errors="coerce")
         df2_filtered[self.second_col_hash] = pd.to_numeric(df2_filtered[self.second_col_hash].astype(str).str.strip(), errors="coerce")
         
         # joining by Destination_ID
-        merged_df = pd.merge(
-                            df1_filtered[[self.first_col_star, self.first_col_hash, column_name1]],
+        
+        if self.mode_roundtrip_second:
+            merged_df = pd.merge(
+                            df1_filtered[[self.first_col_star, self.first_col_hash,column_name1]],
                             df2_filtered[[self.second_col_star, self.second_col_hash, column_name2]],
-                            left_on=self.first_col_hash,
-                            right_on=self.second_col_hash,
+                            left_on=self.first_col_star,
+                            right_on=self.second_col_star,
                             suffixes=(postfix1, postfix2)
                         )
+        else:
+            merged_df = pd.merge(
+                                df1_filtered[[self.first_col_star, self.first_col_hash, column_name1]],
+                                df2_filtered[[self.second_col_star, self.second_col_hash, column_name2]],
+                                left_on=self.first_col_hash,
+                                right_on=self.second_col_hash,
+                                suffixes=(postfix1, postfix2)
+                            )
         
-        result_df = merged_df[[self.first_col_hash]].copy()
-        result_df[f'Duration_{self.table1}'] = merged_df[f'{column_name1}{postfix1}']
-        result_df[f'Duration_{self.table2}'] = merged_df[f'{column_name2}{postfix2}']
+        result_df[f'{self.first_col_star}_1'] = merged_df[self.first_col_star]
+        result_df[f'{self.first_col_hash}_1'] = merged_df[self.first_col_hash]
+        result_df[f'{self.second_col_star_name}_2'] = merged_df[self.second_col_star]
+        result_df[f'{self.second_col_hash_name}_2'] = merged_df[self.second_col_hash]
+
+        result_df[self.first_col_hash] = merged_df[self.first_col_hash]     
+        result_df['Duration_1'] = merged_df[f'{column_name1}{postfix1}']
+        result_df['Duration_2'] = merged_df[f'{column_name2}{postfix2}']
 
         # calculating the ratio of Duration from the first file to Duration from the second file
         if self.mode_calc == "ratio":
@@ -674,8 +767,9 @@ class form_relative(QDialog, FORM_CLASS):
             )
 
         fast_write_gpkg(self.file_name_gpkg, self.table_name, result_df)
+        self.result_merge = result_df        
+       
 
-        self.result_merge = result_df
 
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
@@ -712,7 +806,7 @@ class form_relative(QDialog, FORM_CLASS):
 
         if not params_file1 or not params_file2:
             self.textLog.append("<b style='color:red;'>[Error]: Log tables not found in GPKG files.</b>")
-            return False
+            return False, []
 
         # Собираем все уникальные ключи параметров из обоих файлов
         all_keys = list(params_file1.keys())
@@ -728,8 +822,8 @@ class form_relative(QDialog, FORM_CLASS):
         
         comparison_array.append({
             'parameter': 'Accessibility computation options',
-            'value_file1': mode_v1,
-            'value_file2': mode_v2
+            'value1': mode_v1,
+            'value2': mode_v2
         })
 
         # Добавляем остальные параметры
@@ -737,15 +831,15 @@ class form_relative(QDialog, FORM_CLASS):
             if param == 'Mode': continue # Уже добавили выше
             comparison_array.append({
                 'parameter': param,
-                'value_file1': params_file1.get(param, '---'),
-                'value_file2': params_file2.get(param, '---')
+                'value1': params_file1.get(param, '---'),
+                'value2': params_file2.get(param, '---')
             })
 
         # Генерируем HTML и выводим
         html_table = self.generate_html_table(comparison_array)
         self.textLog.append("<br><b style='font-size:14px;'>Comparison of scenarios:</b>")
         self.textLog.append(html_table)
-        return True
+        return True, comparison_array
 
     def generate_html_table(self, comparison_array):
         
@@ -753,90 +847,11 @@ class form_relative(QDialog, FORM_CLASS):
         html += "<tr bgcolor='#f2f2f2'><th>Settings</th><th>File1</th><th>File2</th></tr>"
         for entry in comparison_array:
             p = entry.get('parameter', '')
-            v1 = entry.get('value_file1', '---')
-            v2 = entry.get('value_file2', '---')
+            v1 = entry.get('value1', '---')
+            v2 = entry.get('value2', '---')
             html += f"<tr><td><b>{p}</b></td><td>{v1}</td><td>{v2}</td></tr>"
         html += "</table>"
         return html
-
-    def textlog_to_dataframe(self):
-        
-        html = self.textLog.toHtml()
-        # --- 1. Ищем таблицы ---
-        tables = re.findall(r"<table.*?>.*?</table>", html, flags=re.DOTALL)
-        dfs = []
-        # --- 2. Парсим таблицы вручную ---
-        for tbl in tables:
-            # Находим строки таблицы
-            rows = re.findall(r"<tr.*?>(.*?)</tr>", tbl, flags=re.DOTALL)
-            parsed_rows = []
-            max_cols = 0
-            for row in rows:
-                # Ищем ячейки <td> или <th>
-                cells = re.findall(r"<t[dh].*?>(.*?)</t[dh]>", row, flags=re.DOTALL)
-                # Чистим HTML внутри ячеек
-                clean_cells = []
-                for c in cells:
-                    c = re.sub(r"<.*?>", "", c)
-                    clean_cells.append(c.strip())
-                parsed_rows.append(clean_cells)
-                max_cols = max(max_cols, len(clean_cells))
-            # --- 2.1. Выравниваем строки до max_cols ---
-            normalized = []
-            for row in parsed_rows:
-                if len(row) < max_cols:
-                    row = row + [""] * (max_cols - len(row))
-                normalized.append(row)
-            # --- 2.2. Первая строка — заголовки ---
-            header = normalized[0]
-            data = normalized[1:]
-
-            df = pd.DataFrame(data, columns=header)
-
-            # --- 2.3. Удаляем полностью пустые столбцы (Qt их добавляет) ---
-            df = df.replace({"NULL": "", None: ""})
-            df = df.loc[:, (df != "").any(axis=0)]
-
-            # --- 2.4. Если таблица сравнения → оставляем только 3 столбца ---
-            if len(df.columns) > 3:
-                df = df.iloc[:, :3]
-
-            dfs.append(df)
-
-        html_without_tables = html
-        for t in tables:
-            html_without_tables = html_without_tables.replace(t, "")
-
-
-        doc = QTextDocument()
-        doc.setHtml(html_without_tables)
-        plain = doc.toPlainText()
-
-        lines = [l.strip() for l in plain.split("\n") if l.strip()]
-
-
-        data = []
-        
-        for line in lines:
-            if ":" in line:
-                key, value = line.split(":", 1)
-                data.append({"Parameter": key.strip(), "Value": value.strip()})
-            else:
-                data.append({"Parameter": line, "Value": ""})
-
-        df_text = pd.DataFrame(data, columns=["Parameter", "Value"])
-        
-        if dfs:
-            dfs.insert(0, df_text)
-            final_df = pd.concat(dfs, ignore_index=True, sort=False)
-        else:
-            final_df = df_text
-
-        
-        final_df = final_df.replace({"NULL": "", None: ""})
-        final_df = final_df.loc[:, (final_df != "").any(axis=0)]
-
-        return final_df
 
     def parse_log_table_gpkg(self, gpkg_path):
         """Читает параметры из таблицы :log внутри GeoPackage."""
@@ -855,7 +870,7 @@ class form_relative(QDialog, FORM_CLASS):
         if not layer: return {}
 
         defn = layer.GetLayerDefn()
-        field_count = defn.GetFieldCount()
+        field_count = defn.GetFieldCount()        
         if field_count != 2:
             return {}
         

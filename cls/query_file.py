@@ -26,7 +26,8 @@ from common import (seconds_to_time,
                     FIELD_ID,
                     fast_write_gpkg,
                     make_service_area_report_gpkg,
-                    get_prefix_alias)
+                    get_prefix_alias,
+                    make_pivot_gpkg)
 
 def myload_all_dict(self, PathToNetwork, mode ):
         path = PathToNetwork
@@ -200,6 +201,9 @@ def runRaptorWithProtocol(self,
     MaxWalkDist3 = int(self.config['Settings']['MaxWalkDist3'])/Speed
 
     MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60           # to sec
+    if roundtrip_mode:
+        MaxTimeTravel = round(2*MaxTimeTravel/3)
+
     
     MaxWaitTime = float(self.config['Settings']['MaxWaitTime'].replace(',', '.'))*60               # to sec
     #MaxWaitTime_copy = MaxWaitTime
@@ -338,6 +342,7 @@ def runRaptorWithProtocol(self,
                 
     
     if not (shift_mode):
+
         vis = visualization(self, 
                             layer_viz, 
                             mode=protocol_type,
@@ -411,7 +416,6 @@ def runRaptorWithProtocol(self,
             
         
         nearby_buildings_from_start = footpath_on_projection.get_nearby_buildings(str(SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b")
-        list_buildings_from_start = {(osm_id) for osm_id, _ in nearby_buildings_from_start}
         
         SOURCE = str(SOURCE)
         D_TIME_copy = D_TIME
@@ -439,7 +443,8 @@ def runRaptorWithProtocol(self,
                             MaxWaitTime,
                             MaxWaitTimeTransfer,
                             timetable_mode,
-                            MaxExtraTime                            
+                            MaxExtraTime,
+                            steps_to_buildings  =  nearby_buildings_from_start
                             )
 
             else:
@@ -462,7 +467,8 @@ def runRaptorWithProtocol(self,
                                 MaxWaitTime,
                                 MaxWaitTimeTransfer,
                                 timetable_mode,
-                                MaxExtraTime                                                                                                
+                                MaxExtraTime,
+                                steps_to_buildings  =  nearby_buildings_from_start                                                                                                
                                 )
             
             
@@ -533,7 +539,8 @@ def runRaptorWithProtocol(self,
                             MaxWaitTime,
                             MaxWaitTimeTransfer,
                             timetable_mode,
-                            MaxExtraTime                            
+                            MaxExtraTime,
+                            steps_to_buildings  =  nearby_buildings_from_start                            
                             )
                     
                     
@@ -558,28 +565,30 @@ def runRaptorWithProtocol(self,
                                 MaxWaitTimeTransfer,
                                 timetable_mode,
                                 MaxExtraTime,
-                                D_TIME_copy = D_TIME_copy                             
+                                D_TIME_copy = D_TIME_copy,
+                                steps_to_buildings  =  nearby_buildings_from_start                             
                                 )
                 
-                for p_i in output_endtime.keys():
-                   
+                
+                for p_i in output_endtime.keys():                    
                     # Обновляем словарь endtime
                     data_endtime = output_endtime[p_i]
                     end_time = data_endtime[4]
                     duration = data_endtime[1]
-                    if duration < MaxTimeTravel_copy:
-                        if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4] :
+                    #if duration <= MaxTimeTravel_copy:
+                    if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4] :
                             final_output_endtime[p_i] = data_endtime
-    
+                
+                for p_i in output_duration.keys():
+                
                     # Обновляем словарь duration
                     data_duration = output_duration[p_i]
                     duration = data_duration[1]
                     end_time = data_duration[4]
                     
-                    if duration < MaxTimeTravel_copy:
-                        if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
+                    #if duration <= MaxTimeTravel_copy:
+                    if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
                             final_output_duration[p_i] = data_duration
-                                    
                     
             output_endtime = final_output_endtime
             output_duration = final_output_duration
@@ -719,9 +728,7 @@ def runRaptorWithProtocol(self,
                                                   destinations,
                                           output_duration,                        
                                           grades,
-                                          aggregate_dict_all[field],
-                                          nearby_buildings_from_start,
-                                          list_buildings_from_start,
+                                          aggregate_dict_all[field],                                          
                                           set_stops,
                                           field,
                                           short_result
@@ -737,9 +744,7 @@ def runRaptorWithProtocol(self,
                                                   destinations,
                                           output_endtime,                                          
                                           grades,
-                                          aggregate_dict_all[field],
-                                          nearby_buildings_from_start,
-                                          list_buildings_from_start,
+                                          aggregate_dict_all[field],                                          
                                           set_stops,
                                           field
                                           )
@@ -755,12 +760,9 @@ def runRaptorWithProtocol(self,
                                     raptor_mode,
                                     D_TIME_copy,
                                     output_endtime,                                    
-                                    timetable_mode,
-                                    nearby_buildings_from_start,
-                                    list_buildings_from_start,
+                                    timetable_mode,                                    
                                     set_stops,
-                                    SOURCE,
-                                    destinations                               
+                                    SOURCE                                    
                                     )
                 
                 #if not roundtrip_mode:
@@ -769,10 +771,11 @@ def runRaptorWithProtocol(self,
                 #if timetable_mode:
 
                 
-                table_name = f'{file_name}_earliest_arrive_{name}_{SOURCE}'
-                fast_write_gpkg(file_name_gpkg, table_name, df_current_min_endtime)
+                
                 if len(sources) == 1:
+                    table_name = f'{file_name}_earliest_arrive_{name}_{SOURCE}'                
                     table_name_list.append(table_name)
+                    fast_write_gpkg(file_name_gpkg, table_name, df_current_min_endtime)
                 
             QApplication.processEvents()
                                       
@@ -780,12 +783,9 @@ def runRaptorWithProtocol(self,
                                    raptor_mode,
                                    D_TIME_copy,
                                    output_duration,                                   
-                                   timetable_mode,
-                                   nearby_buildings_from_start,
-                                   list_buildings_from_start,
+                                   timetable_mode,                                   
                                    set_stops,
                                    SOURCE,
-                                   destinations,
                                    short_result
                                    )
             
@@ -793,12 +793,12 @@ def runRaptorWithProtocol(self,
             if not roundtrip_mode:
                 df_current_min_duration = pd.DataFrame(data_body, columns=header_list)
                 df_min_duration_all.append(df_current_min_duration)
-                #if timetable_mode:
+                #if timetable_mode:                
                 
-                table_name = f'{file_name}_fastest_trip_{name}_{SOURCE}'
-                fast_write_gpkg(file_name_gpkg, table_name, df_current_min_duration)
-                if len(sources) == 1: 
+                if len(sources) == 1:                     
+                    table_name = f'{file_name}_fastest_trip_{name}_{SOURCE}'
                     table_name_list.append(table_name)
+                    fast_write_gpkg(file_name_gpkg, table_name, df_current_min_duration)
                             
             QApplication.processEvents()
 
@@ -828,16 +828,24 @@ def runRaptorWithProtocol(self,
 
         df_min_duration, short_result = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash)
         
-        table_name = f'{file_name}_fastest_trip_{name}_all'
+        table_name = f'{file_name}_fastest_trip_{name}'
         table_name_list.append(table_name)
         fast_write_gpkg(file_name_gpkg, table_name, df_min_duration)
 
+        df_pivot = make_pivot_gpkg (df_min_duration_all,col_star, col_hash)
+        table_name = f'{file_name}_fastest_by_{name}s'
+        fast_write_gpkg(file_name_gpkg, table_name, df_pivot)
+
         
         if timetable_mode:
-            table_name = f'{file_name}_earliest_arrive_{name}_all'
+            table_name = f'{file_name}_earliest_arrive_{name}'
             df_min_endtime, _ = make_service_area_report_gpkg(df_min_endtime_all, col_star, col_hash)
             table_name_list.append(table_name)
             fast_write_gpkg(file_name_gpkg, table_name, df_min_endtime)
+
+            df_pivot = make_pivot_gpkg (df_min_duration_all,col_star, col_hash)
+            table_name = f'{file_name}_earliest_by_{name}s'
+            fast_write_gpkg(file_name_gpkg, table_name, df_pivot)
         
     
     QApplication.processEvents()

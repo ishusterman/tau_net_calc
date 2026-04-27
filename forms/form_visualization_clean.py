@@ -136,8 +136,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
+        self.setMessage("")                
 
-        if highlight_empty_fields(self, exclude=[self.textLog, self.txtAddHex]):        
+        if highlight_empty_fields(self, exclude=[self.textLog, self.txtAddHex]):     
+            self.setMessage("All required fields must be filled in")                   
             self.run_button.setEnabled(True)
             return 0
 
@@ -257,9 +259,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             name, _ = os.path.splitext(log_name)
             filelog_name = os.path.join(self.folder_name, f"{name}_log.csv")            
             file_name_gpkg = os.path.join(self.folder_name, f"{log_name}") 
-
-            print (filelog_name)           
-            print (file_name_gpkg)           
+      
 
             text = transform_log_to_csv_text(self.textLog.toPlainText())
             with open(filelog_name, "w") as file:
@@ -268,8 +268,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             text = transform_log_to_dataframe(self.textLog.toPlainText())
             file_name = os.path.basename(log_name)
             name, _ = os.path.splitext(file_name)
-            table_name = f"_log_{name}"
-            print (f'table_name {table_name}')
+            table_name = f"_{name}_log"
+
             fast_write_gpkg(file_name_gpkg, table_name, text)
     
     def save_project(self):

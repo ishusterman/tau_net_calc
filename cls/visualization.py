@@ -27,6 +27,7 @@ class visualization:
                  schedule_mode = False,
                  from_to = "",
                  roundtrip = False,
+                 roundtrip_compare = False,
                  ):
 
         self.mode = mode
@@ -41,7 +42,14 @@ class visualization:
             self.fieldname_in_protocol = cols["star"]
         else:  # AREA
             self.fieldname_in_protocol = cols["hash"]
+        
+        if roundtrip_compare:
+            if self.mode == 2:
+                self.fieldname_in_protocol = "Destination_aid_1"
+            else: 
+                self.fieldname_in_protocol = "Origin_aid_1"
 
+        
         self.fieldname_layer = fieldname_layer
         self.parent = parent
 
@@ -60,16 +68,20 @@ class visualization:
         
         join_info = QgsVectorLayerJoinInfo()
         join_info.setJoinLayer(self.protocol_layer)
-        join_info.setJoinFieldName(self.fieldname_in_protocol)
+        
+
+        if self.roundtrip:
+            join_info.setJoinFieldName("Destination_aid_1")            
+        else:
+            join_info.setJoinFieldName(self.fieldname_in_protocol)            
+
         join_info.setTargetFieldName(self.fieldname_layer)
         join_info.setUsingMemoryCache(True)
-        join_info.setPrefix('')
-        join_info.setJoinFieldNamesSubset([self.targetField_base])
-
-        if self.mode_compare:
-            join_info.setJoinFieldNamesSubset(
-                [self.add_name_field1, self.add_name_field2, self.targetField_base])
-        else:
+        join_info.setPrefix('')        
+        
+        if self.mode_compare:         
+            pass
+        else:         
             join_info.setJoinFieldNamesSubset([self.targetField_base])
 
         self.layer_clone.addJoin(join_info)
@@ -122,6 +134,8 @@ class visualization:
         self.protocol_layer = QgsVectorLayer(uri, aliase, "ogr")
         
         fields = self.protocol_layer.fields()
+
+        #print([f.name() for f in fields])
         
         self.targetField_base = fields[-1].name()
         if self.roundtrip:
@@ -148,7 +162,7 @@ class visualization:
             self.max_abs_value = 0
             data_provider = self.protocol_layer.dataProvider()
 
-            for feature in data_provider.getFeatures():
+            for feature in data_provider.getFeatures():                
                 value = feature[self.targetField_base]
                 
                 if value is not None:
@@ -161,7 +175,7 @@ class visualization:
                     
         # make clone
         self.layer_clone = self.layer_buildings.clone()
-        self.layer_clone.setName(aliase)
+        self.layer_clone.setName(f'{aliase}({self.layer_buildings_name})')
 
         QgsProject.instance().addMapLayer(self.layer_clone, False)
         insert_layer_ontop (self.layer_clone)
@@ -181,80 +195,7 @@ class visualization:
             
             if self.mode == 1:
                 self.slyle_Region()
-
-    """
-    def add_thematic_map(self, path_protokol, aliase, set_min_value=float('inf'), type_compare = ''):
-                      
-        self.type_compare = type_compare
-        self.path_protokol = os.path.normpath(path_protokol)
-        self.file_name = os.path.splitext(os.path.basename(path_protokol))[0]
-        self.path_protokol = self.path_protokol.replace("\\", "/")
-
-        uri = f"file:///{self.path_protokol}?type=csv&maxFields=10000&detectTypes=yes&geomType=none&subsetIndex=no&watchFile=no"
-
-        self.protocol_layer = QgsVectorLayer(uri, aliase, "delimitedtext")
-        
-        fields = self.protocol_layer.fields()
-        
-        self.targetField_base = fields[-1].name()
-        if self.roundtrip:
-            self.targetField_base = "Duration_ave"
-
-        if self.mode_compare:
-            self.add_name_field1 = fields[-3].name()
-            self.add_name_field2 = fields[-2].name()
-
-        if self.protocol_layer.featureCount() == 0:
-            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} is empty. Visualization skipped.</font> </b></a>')
-            return
-
-        if self.protocol_layer.featureCount() == 1:
-            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} contains 1 record only. Visualization skipped.</font> </b></a>')
-            return
-
-        if self.protocol_layer.featureCount() > 0:
-            QgsProject.instance().addMapLayer(self.protocol_layer, False)
-           
-            insert_layer_ontop (self.protocol_layer)
-         
-            self.max_value = 0
-            self.max_abs_value = 0
-            data_provider = self.protocol_layer.dataProvider()
-
-            for feature in data_provider.getFeatures():
-                value = feature[self.targetField_base]
-                if value is not None:
-                    if self.max_value == 0 or value > self.max_value:
-                        self.max_value = value
-
-                    abs_value = abs(value)  # Вычисляем абсолютное значение
-                    if abs_value > self.max_abs_value:
-                        self.max_abs_value = abs_value  # Обновляем максимальное абсолютное значение
-
-            
-        # make clone
-        self.layer_clone = self.layer_buildings.clone()
-        self.layer_clone.setName(aliase)
-
-        QgsProject.instance().addMapLayer(self.layer_clone, False)
-        insert_layer_ontop (self.layer_clone)
-        
-        self.parent.setMessage(f'Joining...')
-        QApplication.processEvents()
-        self.targetField = self.make_join()
-
-        self.parent.setMessage(f'Establishing symbology...')
-        QApplication.processEvents()
-
-        if self.type_compare != "":
-            self.slyle_compare()
-        else:
-            if self.mode == 2:
-                self.style_ServiceArea()
-            
-            if self.mode == 1:
-                self.slyle_Region()
-    """
+   
     def slyle_compare(self):
         
         if self.type_compare == "CompareFirstOnly":

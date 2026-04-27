@@ -5,9 +5,7 @@ def make_protocol_summary(SOURCE,
                           destinations,
                           dictInput,                          
                           grades,
-                          attribute_dict,
-                          nearby_buildings_from_start,
-                          list_buildings_from_start,
+                          attribute_dict,                          
                           set_stops,
                           field,
                           short_result = None
@@ -27,21 +25,16 @@ def make_protocol_summary(SOURCE,
     time_grad = grades
     # [[-1,0], [0,10],[10,20],[20,30],[30,40],[40,50],[50,61] ]
 
-    counts = {x: 0 for x in range(0, len(time_grad))}  # counters for grades
+    counts = {x: 1 for x in range(0, len(time_grad))}  # counters for grades - (1-{source,source})
     agrregates = {x: attribute_dict.get(SOURCE_int, 0) for x in range(0, len(time_grad))}
 
     if short_result is not None: 
         if field == "nbldg":
             short_result[(SOURCE_int, SOURCE_int)] = 0
-    
-    
         
     for dest, info in dictInput.items():
 
             if dest in set_stops:
-                continue
-
-            if dest in list_buildings_from_start:
                 continue
 
             dest_int = int (dest)
@@ -67,33 +60,7 @@ def make_protocol_summary(SOURCE,
                 if field == "nbldg":
                     short_result[(SOURCE_int, dest_int)] = time_to_dest
 
-                        
-
-        #counts[0] = counts[0] + 1 # for case time_item = 0 (from source to source)
-
-        # add build to build to var counts
-    for build_item, time_item in nearby_buildings_from_start:
-
-            build_item_int = int(build_item)
-
-            if build_item_int not in  destinations:
-                continue
-            for i in range(0, len(time_grad)):
-                grad = time_grad[i]
-                
-                if time_item <= grad[1]*60:
-                    if SOURCE != build_item:
-                        counts[i] = counts[i] + 1
-                    
-                        if field != "nbldg":
-                            agrregates[i] = agrregates[i] + \
-                                attribute_dict.get(build_item_int, 0)
-                    
-            if short_result is not None: 
-                if SOURCE != build_item:
-                    if field == "nbldg":
-                        short_result[(SOURCE_int, build_item_int)] = time_item
-
+    
     row = str(SOURCE)
     if field == "nbldg":
             Total = counts[len(time_grad)-1]
@@ -113,12 +80,9 @@ def make_protocol_summary(SOURCE,
 def make_protocol_detailed(raptor_mode,
                            D_TIME,
                            dictInput,                           
-                           timetable_mode,
-                           nearby_buildings_from_start,
-                           list_buildings_from_start,
+                           timetable_mode,                           
                            set_stops,
-                           SOURCE,
-                           destinations,
+                           SOURCE,                           
                            short_result = None
                            ):
     
@@ -141,44 +105,18 @@ def make_protocol_detailed(raptor_mode,
         SOURCE_int = int(SOURCE)
 
         start_time = seconds_to_time(D_TIME)
-
-        if SOURCE_int in destinations:
+        
+        if True: #SOURCE_int in destinations:
             if raptor_mode == 1:
-                    
-                        
-                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+                row = f'{SOURCE}{sep}{start_time}{sep}0{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}0{sep}0'
             else:
-                    row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
+                row = f'{SOURCE}{sep}{start_time}{sep}0{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}0'
 
-        
-        #filetowrite.write(row + "\n")
             rows_to_write.append(row)
             if short_result is not None:
-                short_result[(SOURCE_int, SOURCE_int)] = 0
-        
-        for build, dist in nearby_buildings_from_start:
-
-            build_int = int(build)
-            if build_int not in destinations:
-                continue
-
-            if raptor_mode == 1:
-                        finish_time = seconds_to_time(D_TIME+dist)
-                        row = f'{SOURCE}{sep}{start_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{build}{sep}{finish_time}{sep}0{sep}{dist}'
-            else:
-                        finish_time = seconds_to_time(D_TIME-dist)
-                        row = f'{build}{sep}{finish_time}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}\
-{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{dist}{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}{dist}'
-
-            if (build) != (SOURCE):
-                #filetowrite.write(row + "\n")
-                rows_to_write.append(row)
-                if short_result is not None:
-                    short_result[(SOURCE_int, build_int)] = (dist)
-
+                short_result[(SOURCE_int, SOURCE_int)] = 0        
         # dictInput - dict from testRaptor
         # every item dictInput : dest - key, info - value
 
@@ -261,7 +199,7 @@ def make_protocol_detailed(raptor_mode,
 
                 walk1_time = ""  # walk time from orgin to first bus stop or to destination if no buses
                 walk1_arriving_time = ""  # I need it to compute wait1_time
-                wait1_time = 0
+                wait1_time = ""
                 line1_id = ""  # number of first route (or trip)
                 ride1_time = ""
 
@@ -455,7 +393,7 @@ def make_protocol_detailed(raptor_mode,
                 if timetable_mode and raptor_mode == 1:
                     D_TIME = journey[0][4]
 
-                if raptor_mode == 1:
+                if raptor_mode == 1:                    
                     arrival_time = last_leg[4] + last_leg[3]
                     sarrival_time = seconds_to_time(arrival_time)
 
@@ -478,13 +416,6 @@ def make_protocol_detailed(raptor_mode,
 
                     orig_dest_int = int(orig_dest)
 
-                    if (orig_dest) in list_buildings_from_start:
-                        continue
-                    
-
-                    if orig_dest_int not in destinations:
-                        continue
-
                     row = f'{SOURCE}{sep}{seconds_to_time(D_TIME)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
 {sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
@@ -500,11 +431,6 @@ def make_protocol_detailed(raptor_mode,
                         continue
 
                     SOURCE_REV_int = int(SOURCE_REV)
-                    if (SOURCE_REV) in list_buildings_from_start:
-                        continue
-                    
-                    if SOURCE_REV_int not in destinations:
-                        continue
 
                     row = f'{SOURCE_REV}{sep}{seconds_to_time(start_time)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\

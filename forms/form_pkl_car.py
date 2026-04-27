@@ -143,7 +143,11 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.progressBar.setMaximum(2)
 
+        self.test_button.setFixedWidth(185)       
+        self.btnCheckOSM.setFixedWidth(185)       
+
         self.run_completed = False
+        
 
     def on_field_changed (self):
         if self.cmbFieldsSpeed.count() > 0 and self.cmbFieldsDirection.count() > 0:
@@ -205,16 +209,17 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.str_info1 = f'direction: {str(round(oneway_pct))}% correct'
         #self.lblMaxspeed_prc.setText(f'speed: {str(round(maxspeed_pct))}% correct')
         self.str_info2 = f'speed: {str(round(maxspeed_pct))}% correct'
-        if result:
-            self.test_button.setText("Test road atributes-passed")
-            self.test_button.setStyleSheet("background-color: #d9534f; color: white;")
+        if result:            
+            self.test_button.setText('Road attributes test: PASSED!')
+            self.test_button.setStyleSheet("background-color: #A1C935; color: black;")            
             self.setEnabledAll(True)
             if self.checkOSM_result:
                 self.cmbFieldsDirection.setEnabled(False)
                 self.cmbFieldsSpeed.setEnabled(False)
         else:
-            self.test_button.setText(f"Test road atributes - no passed ({100 - min(oneway_pct,maxspeed_pct)}%)")
+            self.test_button.setText(f"Road attributes test: FAILED!({100 - min(oneway_pct,maxspeed_pct)}%)")
             self.test_button.setStyleSheet("background-color: #d9534f; color: white;")
+            
 
         
         self.test_button.setEnabled(False)
@@ -269,7 +274,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
                 
                 self.lblOSMInfo.setVisible(True)
                 self.lblOSMInfo.setText("Local GIS, Choose attributes for")
-                self.btnCheckOSM.setText("Road layer sorce is NO OSM")
+                self.btnCheckOSM.setText("Road layer sorce is NOT OSM")
                 self.cmbFieldsDirection.setEnabled(True)
                 self.cmbFieldsSpeed.setEnabled(True)
 
@@ -281,7 +286,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
             self.set_field_case_insensitive(self.cmbFieldsDirection, "oneway")
 
             
-        self.btnCheckOSM.setStyleSheet("background-color: #d9534f; color: white;")
+        #self.btnCheckOSM.setStyleSheet("background-color: #d9534f; color: white;")
+        #self.btnCheckOSM.setStyleSheet("background-color: #A1C935; color: black;")
 
         if self.cmbFieldsSpeed.count() > 0 and self.cmbFieldsDirection.count():
             self.test_button.setEnabled(True)
@@ -317,8 +323,10 @@ class form_pkl_car(QDialog, FORM_CLASS):
             
         self.run_button.setEnabled(False)
         self.break_on = False
+        self.setMessage("")                
 
-        if highlight_empty_fields(self, exclude=[self.textLog]):        
+        if highlight_empty_fields(self, exclude=[self.textLog]):
+            self.setMessage("All required fields must be filled in")                        
             self.run_button.setEnabled(True)
             return 0
         
