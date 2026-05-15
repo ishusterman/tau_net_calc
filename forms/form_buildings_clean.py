@@ -22,6 +22,8 @@ from PyQt5.QtWidgets import (QDialogButtonBox,
                              QMessageBox
                              )
 
+from qgis.PyQt.QtGui import QColor
+
 from PyQt5.QtGui import QDesktopServices
 from PyQt5 import uic
 
@@ -184,15 +186,33 @@ class form_buildings_clean(QDialog, FORM_CLASS):
             self.btnBreakOn.setEnabled(False)
             self.close_button.setEnabled(True)
     
+    
+    def set_no_fill_style(self, layer):
+        symbol = layer.renderer().symbol()
+
+        # Прозрачная заливка
+        symbol.setColor(QColor(0, 0, 0, 0))
+
+        # Обводка (можно настроить)
+        symbol.symbolLayer(0).setStrokeColor(QColor(0, 0, 0))
+        symbol.symbolLayer(0).setStrokeWidth(0.3)
+
+        layer.triggerRepaint()
+
     def add_layers(self, list_layer):
-        
         for path_shp, name_layer in list_layer:
-            saved_layer = QgsVectorLayer(path_shp, name_layer, "ogr")
+            uri = f"{path_shp}|layername={name_layer}"
+            saved_layer = QgsVectorLayer(uri, name_layer, "ogr")
+
             if saved_layer.isValid():
+                
+                self.set_no_fill_style(saved_layer)
+
                 QgsProject.instance().addMapLayer(saved_layer, False)
                 insert_layer_ontop(saved_layer)
+
+        QTimer.singleShot(250, self.save_project)
         
-        QTimer.singleShot(250, self.save_project)        
         
 
     def save_log(self, need_save, log_name) :

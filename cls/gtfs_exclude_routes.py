@@ -91,7 +91,7 @@ class GTFSExcludeRoutes:
                 self.parent.setMessage("Deleting lines from GTFS ('trips.txt') ...")
                 QApplication.processEvents()
             trips_df = pd.read_csv(os.path.join(self.gtfs_path, 'trips.txt'),
-                                   dtype={'route_id': str, 'trip_id': str, 'service_id': str})
+                                   dtype={'route_id': str, 'trip_id': str, 'service_id': str, 'shape_id': str})
 
             mask_trips_excluded = trips_df['route_id'].isin(self.exclude_ids)
 
@@ -100,6 +100,52 @@ class GTFSExcludeRoutes:
 
             filtered_trips.to_csv(os.path.join(self.output_path, 'trips.txt'), index=False)
             removed_trips.to_csv(os.path.join(self.excluded_data_path, 'trips.txt'), index=False)
+
+
+            # --- SHAPES ---
+            if self.verify_break():
+                return 0
+            if self.IN_QGIS:
+                self.parent.progressBar.setValue(1)
+                self.parent.setMessage("Deleting lines from GTFS ('shapes.txt') ...")
+                QApplication.processEvents()
+
+            shapes_path = os.path.join(self.gtfs_path, 'shapes.txt')
+            if os.path.exists(shapes_path):
+
+                shapes_df = pd.read_csv(
+                    shapes_path,
+                    dtype={'shape_id': str, 'shape_pt_sequence': str}
+                )
+
+                
+                keep_shape_ids = set(filtered_trips['shape_id'].dropna().unique())
+                remove_shape_ids = set(removed_trips['shape_id'].dropna().unique())
+
+                filtered_shapes = shapes_df[shapes_df['shape_id'].isin(keep_shape_ids)]
+                removed_shapes = shapes_df[shapes_df['shape_id'].isin(remove_shape_ids)]
+
+                # Удаляем дубли (shape_id + shape_pt_sequence)
+                if not filtered_shapes.empty:
+                    filtered_shapes = filtered_shapes.drop_duplicates(
+                        subset=['shape_id', 'shape_pt_sequence']
+                    )
+
+                if not removed_shapes.empty:
+                    removed_shapes = removed_shapes.drop_duplicates(
+                        subset=['shape_id', 'shape_pt_sequence']
+                    )
+
+                filtered_shapes.to_csv(
+                    os.path.join(self.output_path, 'shapes.txt'),
+                    index=False
+                )
+                removed_shapes.to_csv(
+                    os.path.join(self.excluded_data_path, 'shapes.txt'),
+                    index=False
+                )
+
+
             
             # --- STOP TIMES ---
             if self.verify_break():

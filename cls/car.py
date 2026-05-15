@@ -38,7 +38,7 @@ class car_accessibility:
                  time_step_minutes,
                  layer_vis,
                  layer_vis_field,
-                 list_fields_aggregate
+                 list_fields_aggregate                 
                  ):
 
         self.max_time_minutes = max_time_minutes
@@ -85,8 +85,6 @@ class car_accessibility:
         self.df_all_dict = defaultdict(list)
 
         self.fields_ok = []
-
-        
 
     def read_factor_speed_by_hour(self):
              
@@ -345,29 +343,48 @@ class car_accessibility:
         ########################
 
         # --- ЭКСПЕРИМЕНТАЛЬНЫЙ БЛОК  ---
-               
+        """
         self.road_layer = iface.activeLayer()
         if self.check_speed_fields(self.road_layer):
             self.parent.textLog.append (f'Use layer of roads {self.road_layer.name()}, calculating on hour')
             graph = self.build_graph_from_layer(self.road_layer, self.hour, self.parent.mode)
             self.factor_speed = 1
+        """
                 
         # --- КОНЕЦ ЭКСПЕРИМЕНТА ---
 
         #################################
+
+        time_estimate_start = datetime.now()
+        total_tasks = count * self.roundtrip_cycle_all
         
         for source in self.parent.points:
             QApplication.processEvents()
             if self.verify_break():
                 return 0
+            
+            if i > 0:# and i%10 == 0:          
+                tasks_done = ((self.roundtrip_cycle_current - 1) * count) + i                    
+                # 3. Среднее время на одну задачу
+                elapsed = datetime.now() - time_estimate_start
+                avg_time_per_task = elapsed / i                
+                # 4. Сколько задач осталось
+                tasks_remaining = total_tasks - tasks_done                
+                # 5. Итоговое время            
+                remaining_duration = avg_time_per_task * tasks_remaining                            
+                display_time = str(remaining_duration).split('.')[0]            
+                self.parent.lblEstimateTime.setText(f'Time remaining: {display_time}')
+
+
             i += 1
 
             self.parent.setMessage(f'Building thematic map for the feature №{i} of {count}')
             QApplication.processEvents()
 
-            self.source = source
+            self.source = (source)
             
             idStart, _ = self.parent.dict_building_vertex.get(self.source, ("xxx", "xxx"))
+            
             if idStart == "xxx":
                 self.parent.progressBar.setValue(count+1)
                 continue
@@ -382,6 +399,7 @@ class car_accessibility:
                 self.df_all.append(df_current)
 
                 ######!!!
+                """
                 if self.parent.mode == 1:
                     name = 'origin'
                 else:
@@ -389,9 +407,10 @@ class car_accessibility:
                 
                 
                 if len(self.parent.points) == 1:
-                    table_name = f'{self.file_name}_fastest_trip_{name}_{source}'                
+                    table_name = f'{self.file_name}_fastest_trip'                
                     self.table_name_list.append(table_name)
                     fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_current)
+                """
 
             else:
 
@@ -406,15 +425,11 @@ class car_accessibility:
     def calc_min_cost(self):
 
         self.min_costs = {}
-
-        count = 0
-
+        count = 0        
         _, dist_start = self.parent.dict_building_vertex[self.source]
-
         sum_walk = self.parent.walk_on_start_m + self.parent.walk_on_finish_m
 
         # iterate through all edgeId in the tree
-
         for edgeId in self.tree:
 
             count += 1
@@ -431,39 +446,47 @@ class car_accessibility:
                 if self.costs[edgeId] == float('inf'):
                     continue
 
-                buildings, dists_finish = zip(
-                    *self.parent.dict_vertex_buildings[edgeId])
-                
+                #buildings, dists_finish = zip(*self.parent.dict_vertex_buildings[edgeId])
+                items = self.parent.dict_vertex_buildings.get(edgeId, [])
+                if not items:
+                    continue  # ← пропускаем пустые
+
+                buildings = [b for b, d in items]
+                dists_finish = [d for b, d in items]
 
             except KeyError:
                 continue
 
-            # cost = round(self.costs[edgeId]/self.factor_speed + time_start_avto + self.parent.walk_time_start + self.parent.walk_time_finish)
-            # cost = cost + 2 * self.parent.time_gap
-
             Dist_between_nodes = self.costs[edgeId] * 10
             Dist_OD_0 = dist_start + Dist_between_nodes
 
-            for building, dist_finish in zip(buildings, dists_finish):
-                # define the pair {self.source, building}
-                
-                pair = (self.source, building)
+            # experiment
+            #if Dist_between_nodes == 0:
+            #    continue
+            ################
 
+            for building, dist_finish in zip(buildings, dists_finish):
+                # define the pair {self.source, building}                             
+                pair = (self.source, building)
+                #if building == 1000085:
+                #    print (f'building == 1000085 Dist_between_nodes {Dist_between_nodes}')
                 Dist_OD = Dist_OD_0 + dist_finish
                 Dist_to_drive = Dist_OD - sum_walk
-                if Dist_to_drive <= 0:
-                    
-                    cost_res = round(Dist_OD / self.parent.walk_speed_m_s)
+                if Dist_to_drive <= 0:                    
+                    cost_res = round(Dist_OD / self.parent.walk_speed_m_s)                    
                     veh_legs = 0
                 else:
                     veh_legs = 1
-                    if Dist_between_nodes != 0:
-                        Time_to_drive = self.costs[edgeId] * \
-                            (Dist_to_drive/Dist_between_nodes)/self.factor_speed
+                    if Dist_between_nodes < self.parent.MinimalDistance:
+                        Time_to_drive = round(Dist_between_nodes/self.parent.walk_speed_m_s) # пешком
                     else:
-                        Time_to_drive = 0
-                    cost_res = round(
-                        (sum_walk)/self.parent.walk_speed_m_s + Time_to_drive)
+                        if Dist_between_nodes != 0: # едем
+                            Time_to_drive = self.costs[edgeId] * \
+                                (Dist_to_drive/Dist_between_nodes)/self.factor_speed
+                        else:
+                            Time_to_drive = 0
+                    cost_res = round((sum_walk)/self.parent.walk_speed_m_s + Time_to_drive)
+                    
                 
                 if int(self.source) == int(building):
                     cost_res = 0
@@ -471,15 +494,7 @@ class car_accessibility:
                 if cost_res > self.max_time_sec:
                     continue
              
-                # If the pair does not exist in the dictionary, add it with the current cost_res and veh_legs
-                """
-                if pair not in self.min_costs:
-                    self.min_costs[pair] = (cost_res, veh_legs)
-                else:
-                    # If the new cost_res is less than the stored one, update it
-                    if cost_res < self.min_costs[pair][0]:
-                        self.min_costs[pair] = (cost_res, veh_legs)
-                """
+                # If the pair does not exist in the dictionary, add it with the current cost_res and veh_legs               
                 existing = self.min_costs.get(pair)
                 if existing is None or cost_res < existing[0]:
                     self.min_costs[pair] = (cost_res, veh_legs)    
@@ -571,11 +586,13 @@ class car_accessibility:
             protocol_header += ',nbldg_total\n'
             field = "nbldg"
 
-            self.header_dict[field] = protocol_header.strip().split(',')
-                       
-            self.fields_ok.append(field)
-            self.aggregate_this_fields[field] = False
-            self.aggregate_dict_all[field] = {}
+            hex = "_hex_" in self.layer_dest.name().lower()
+
+            if not (hex and self.list_fields_aggregate):                                       
+                self.header_dict[field] = protocol_header.strip().split(',')                        
+                self.fields_ok.append(field)
+                self.aggregate_this_fields[field] = False
+                self.aggregate_dict_all[field] = {}
             
             if self.list_fields_aggregate != "":
 
@@ -591,7 +608,6 @@ class car_accessibility:
                     self.aggregate_this_fields[field] = True
 
                     features_dest = self.layer_dest.getFeatures()
-                                        
 
                     for feature in features_dest:
                         attribute_dict[int(feature[field_name_id])] = int(feature[field])
@@ -611,20 +627,30 @@ class car_accessibility:
 
                     for i in range(0, intervals_number):
                         protocol_header += f',{top_bound_min}m'
-                        protocol_header += f',sum({field}[{top_bound_min}m])'
+                        #protocol_header += f',sum({field}[{top_bound_min}m])'
+                        protocol_header += f',{top_bound_min}m_{field}'
                         top_bound_min = top_bound_min + time_step_min
 
                     if self.time_step_last != 0:
                         intervals_number += 1
                         top_bound_add = top_bound_min - time_step_min + self.time_step_last
                         protocol_header += f',{top_bound_add}m'
-                        protocol_header += f',sum({field}[{top_bound_add}m])'
+                        protocol_header += f',{top_bound_add}m_{field}'
 
                     protocol_header += f',{field}_total\n'
 
                     self.header_dict[field] = protocol_header.strip().split(',')
                    
-    def run(self, begin_computation_time, hour, graph, write_info):
+    def run(self, 
+            begin_computation_time, 
+            hour, 
+            graph, 
+            write_info, 
+            roundtrip_cycle_all = 1,
+            roundtrip_cycle_current =  1):
+        
+        self.roundtrip_cycle_all = roundtrip_cycle_all
+        self.roundtrip_cycle_current = roundtrip_cycle_current
 
         self.begin_computation_time = begin_computation_time
 
@@ -652,22 +678,27 @@ class car_accessibility:
                                 self.parent.roundtrip 
                                 )
         self.find_car_accessibility()
-        if self.parent.protocol_type == 2 and not self.parent.roundtrip and len(self.parent.points) > 1:
 
-            if self.parent.mode == 1:
-                name = 'origin'
-            else:
-                name = 'destination'
-            table_name = f'{self.file_name}_fastest_trip_{name}'
-            self.table_name_list.append(table_name)
-            df_min_duration, self.short_result = make_service_area_report_gpkg(self.df_all, self.cols["star"], self.cols["hash"])    
-            fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_min_duration)
-
-
-            df_pivot = make_pivot_gpkg (self.df_all, self.cols["star"], self.cols["hash"])
+        if self.parent.mode == 1:
+            name = 'origin'
+        else:
+            name = 'destination'
+        
+        # создаем pivot если не roundtrip, данные не свернутые
+        if not self.parent.roundtrip:
+            df_pivot = make_pivot_gpkg (self.short_result, self.cols["star"], self.cols["hash"])
             table_name = f'{self.file_name}_fastest_by_{name}s'
             fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_pivot)
 
+        # данные сворачиваем если SA 
+        if self.parent.protocol_type == 2: #and len(self.parent.points) > 1:
+            df_min_duration, self.short_result = make_service_area_report_gpkg(self.df_all, self.cols["star"], self.cols["hash"])    
+
+        # если SA и не roundtrip - сохраняем данные
+        if self.parent.protocol_type == 2 and not self.parent.roundtrip:
+            table_name = f'{self.file_name}_fastest_trip'
+            self.table_name_list.append(table_name)            
+            fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_min_duration)
         
         if self.parent.protocol_type == 1 and not self.parent.roundtrip:
     
@@ -692,6 +723,7 @@ class car_accessibility:
                 self.parent.textLog.append(f'<a><b><font color="red">Car accessibility computations are interrupted by user</font> </b></a>')
                 #self.write_info()
                 self.already_display_break = True
+                self.parent.lblEstimateTime.setText("")
 
             self.parent.progressBar.setValue(0)
             return True
@@ -703,7 +735,8 @@ class car_accessibility:
                             self.layer_vis,
                             mode=self.parent.protocol_type,
                             fieldname_layer=self.layer_vis_field,
-                            from_to = self.parent.mode
+                            from_to = self.parent.mode,
+                            prefix = self.file_name
                             )
         
         #self.parent.textLog.append(f'<a>Output:</a>')
@@ -730,5 +763,6 @@ class car_accessibility:
 
         self.parent.textLog.append(f'Output in file: <a href="file:///{self.parent.file_name_gpkg}" target="_blank" > {self.parent.file_name_gpkg}</a>')
         self.parent.setMessage(f'Finished')
+        self.parent.lblEstimateTime.setText("")
 
         

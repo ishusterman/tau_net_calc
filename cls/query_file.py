@@ -5,6 +5,9 @@ from datetime import datetime
 import pandas as pd
 from collections import defaultdict
 
+from osgeo import ogr, gdal
+import gc
+
 import cProfile
 import pstats
 #from collections import Counter
@@ -110,8 +113,11 @@ def myload_all_dict(self, PathToNetwork, mode ):
 
 def verify_break(self):
 
+    
+
     if getattr(self, 'break_on', False):
         if self.break_on:
+            self.lblEstimateTime.setText("")
 
             self.textLog.append(f'<a><b><font color="red">Raptor Algorithm is interrupted by user</font> </b></a>')
             time_after_computation = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -132,7 +138,8 @@ def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_
         curr_top = i * time_step
         header_parts.append(f"{curr_top}m")
         if is_aggregate:
-            header_parts.append(f"sum({field}[{curr_top}m])")
+            #header_parts.append(f"sum({field}[{curr_top}m])")
+            header_parts.append(f"{curr_top}m_{field}")
         grades.append([-1, curr_top])
 
     
@@ -141,7 +148,7 @@ def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_
         max_limit = (number_bins * time_step) + time_step_last
         header_parts.append(f"{max_limit}m")
         if is_aggregate:
-            header_parts.append(f"sum({field}[{max_limit}m])")
+            header_parts.append(f"{max_limit}m_{field}")
         grades.append([-1, max_limit])
 
     header_parts.append(f"{field}_total\n")
@@ -163,7 +170,9 @@ def runRaptorWithProtocol(self,
                           layer_viz,
                           path_to_pkl,
                           MaxExtraTime,
-                          roundtrip_mode = False):
+                          roundtrip_mode = False,
+                          roundtrip_cycle_all = 1,
+                          roundtrip_cycle_current = 1):
 
     short_result = {}
 
@@ -290,22 +299,19 @@ def runRaptorWithProtocol(self,
         header_list = protocol_header.strip().split(',')
     
     suffixes = ["_min_duration.csv"]
-    if timetable_mode:
-        suffixes.append("_min_endtime.csv")
-
     
     if protocol_type == 1:
         aggregate_dict_all = {}
         
-        # 1. Обработка базового поля "bldg"
+        # 1. Обработка базового поля "bldg"        
+        hex = "_hex_" in layer_dest.name().lower()
+        
         field_bldg = "nbldg"
-        
         header, grades = prepare_protocol_region(field_bldg, number_bins, time_step, time_step_last, cols ["star"])
-
-        header_dict[field_bldg] = header.strip().split(',')
-        
-        fields_ok.append(field_bldg)
-        aggregate_dict_all[field_bldg] = {}
+        if not (hex and list_fields_aggregate):                                        
+            header_dict[field_bldg] = header.strip().split(',')            
+            fields_ok.append(field_bldg)
+            aggregate_dict_all[field_bldg] = {}
         
         # 2. Обработка агрегируемых полей
         if list_fields_aggregate:
@@ -348,7 +354,8 @@ def runRaptorWithProtocol(self,
                             mode=protocol_type,
                             fieldname_layer=layer_vis_field, 
                             schedule_mode = timetable_mode, 
-                            from_to = raptor_mode
+                            from_to = raptor_mode,
+                            prefix = file_name
                             )
     else:
         vis = None 
@@ -367,11 +374,33 @@ def runRaptorWithProtocol(self,
         name = 'origin'
     else:
         name = 'destination' 
+
     
-    for source in sources:    
+    if timetable_mode:
+        MaxTimeTravel = MaxTimeTravel + MaxExtraTime 
+    
+    time_estimate_start = datetime.now()
+    total_tasks = count * roundtrip_cycle_all
+    for source in sources:
+
+        if i > 0 and i%10 == 0:          
+            tasks_done = ((roundtrip_cycle_current - 1) * count) + i                    
+            # 3. Среднее время на одну задачу
+            elapsed = datetime.now() - time_estimate_start
+            avg_time_per_task = elapsed / i                
+            # 4. Сколько задач осталось
+            tasks_remaining = total_tasks - tasks_done                
+            # 5. Итоговое время            
+            remaining_duration = avg_time_per_task * tasks_remaining                            
+            display_time = str(remaining_duration).split('.')[0]
+            print (f'tasks_remaining {tasks_remaining} avg_time_per_task {avg_time_per_task} remaining_duration {remaining_duration} display_time {display_time}')
+            self.lblEstimateTime.setText(f'Time remaining: {display_time}')
+   
+           
+            
         i = i + 1
 
-        #if i == 5:
+        #if i == 10:
         #    break
         if hasattr(self, 'progressBar'):
             self.progressBar.setValue(i)
@@ -415,8 +444,8 @@ def runRaptorWithProtocol(self,
 
             
         
-        nearby_buildings_from_start = footpath_on_projection.get_nearby_buildings(str(SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="find_b")
-        
+        nearby_buildings_from_start = footpath_on_projection.get_nearby(str(SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="b")
+
         SOURCE = str(SOURCE)
         D_TIME_copy = D_TIME
         if not (timetable_mode):
@@ -425,7 +454,7 @@ def runRaptorWithProtocol(self,
 
                 
             
-                output_endtime, output_duration = raptor(SOURCE,
+                output_duration = raptor(SOURCE,
                             D_TIME,
                             MAX_TRANSFER,
                             MIN_TRANSFER,
@@ -449,7 +478,7 @@ def runRaptorWithProtocol(self,
 
             else:
                 
-                output_endtime, output_duration = rev_raptor(SOURCE,
+                output_duration = rev_raptor(SOURCE,
                                 D_TIME,
                                 MAX_TRANSFER,
                                 MIN_TRANSFER,
@@ -470,31 +499,18 @@ def runRaptorWithProtocol(self,
                                 MaxExtraTime,
                                 steps_to_buildings  =  nearby_buildings_from_start                                                                                                
                                 )
-            
-            
-
-            
-            #keys_to_remove = [key for key, value in output.items() if value[-1] == (None, None, None, None)]
-            #for key in keys_to_remove:
-            #    del output[key]
-
-        
+                    
         if  timetable_mode:
-            
-            final_output_endtime = {}  
+                        
             final_output_duration = {}  
             
             
             time_curr = D_TIME
-            time_delta = 5 * 60 
-            #MaxExtraTime = time_delta # !!!!!!!!!!!!!!!!!!! test
-            #count_steps =  MaxExtraTime // time_delta
+            time_delta = 5 * 60             
             count_steps = max(1, MaxExtraTime // time_delta)
             step = 0
 
-            MaxWaitTime = 10*60
-            MaxTimeTravel_copy = MaxTimeTravel
-            MaxTimeTravel = MaxTimeTravel + MaxExtraTime 
+            MaxWaitTime = 10*60     
                                                             
             while step < count_steps:
                 
@@ -521,7 +537,7 @@ def runRaptorWithProtocol(self,
                 if raptor_mode == 1:
 
                                          
-                    output_endtime, output_duration = raptor(SOURCE,
+                    output_duration = raptor(SOURCE,
                             time_curr,
                             MAX_TRANSFER,
                             MIN_TRANSFER,
@@ -546,7 +562,7 @@ def runRaptorWithProtocol(self,
                     
                 else:
                     
-                    output_endtime, output_duration = rev_raptor(SOURCE,
+                    output_duration = rev_raptor(SOURCE,
                                 time_curr,
                                 MAX_TRANSFER,
                                 MIN_TRANSFER,
@@ -569,154 +585,17 @@ def runRaptorWithProtocol(self,
                                 steps_to_buildings  =  nearby_buildings_from_start                             
                                 )
                 
-                
-                for p_i in output_endtime.keys():                    
-                    # Обновляем словарь endtime
-                    data_endtime = output_endtime[p_i]
-                    end_time = data_endtime[4]
-                    duration = data_endtime[1]
-                    #if duration <= MaxTimeTravel_copy:
-                    if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4] :
-                            final_output_endtime[p_i] = data_endtime
-                
                 for p_i in output_duration.keys():
                 
                     # Обновляем словарь duration
                     data_duration = output_duration[p_i]
-                    duration = data_duration[1]
-                    end_time = data_duration[4]
-                    
+                    duration = data_duration[1]                                
                     #if duration <= MaxTimeTravel_copy:
                     if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
                             final_output_duration[p_i] = data_duration
-                    
-            output_endtime = final_output_endtime
+                               
             output_duration = final_output_duration
-        """
         
-        if  timetable_mode:
-            
-            final_output_endtime = {}  
-            final_output_duration = {}  
-            
-            MaxWaitTime_copy = MaxWaitTime
-            
-            trans_info = footpath_dict.get(SOURCE, [])
-            trans_info = [(stop_id, walk_time) for stop_id, walk_time in trans_info if walk_time <= MaxWalkDist1]
-            if raptor_mode == 2: 
-                time_start = D_TIME #- MaxExtraTime
-            else: 
-                time_start = D_TIME
-            
-            available_boardings = get_available_boardings(time_start, 
-                                                          MaxExtraTime, 
-                                                          trans_info, 
-                                                          stop_times_index,
-                                                          raptor_mode,
-                                                          express_mode=True 
-                                                          )
-
-            #print (available_boardings)
-
-            for step in available_boardings:
-                (stop_id, time_departure, dist) = step
-
-                if verify_break(self):
-                    return 0, 0
-                                    
-                
-                if hasattr(self, 'setMessage'):
-                    if stop_id == "xxx":
-                        self.setMessage(f'Calculating №{i} of {count}')
-                    else:
-                        self.setMessage(f'Calculating №{i} of {count} (checking stop {stop_id} time {seconds_to_time(time_departure)})')
-                    QApplication.processEvents()
-
-                if stop_id == "xxx":
-                    D_TIME = D_TIME_copy
-                    firts_step = None
-                    MaxWaitTime = MaxWaitTime_copy
-                else:
-                    MaxWaitTime = 1
-
-
-                if raptor_mode == 1:
-                    if stop_id != "xxx":
-                        time_departure -= 1
-                        D_TIME = time_departure - dist
-                        firts_step = (stop_id, time_departure, dist)
-                                            
-                    output_endtime, output_duration = raptor(SOURCE,
-                            D_TIME,
-                            MAX_TRANSFER,
-                            MIN_TRANSFER,
-                            CHANGE_TIME_SEC,
-                            routes_by_stop_dict,
-                            stops_dict,
-                            stoptimes_dict,
-                            footpath_dict,
-
-                            idx_by_route_stop_dict,
-                            MaxTimeTravel,
-                            MaxWalkDist1,
-                            MaxWalkDist2,
-                            MaxWalkDist3,
-                            MaxWaitTime,
-                            MaxWaitTimeTransfer,
-                            timetable_mode,
-                            MaxExtraTime,
-                            first_step = firts_step
-                            )
-                    
-                else:
-                    
-                    if stop_id != "xxx":
-                        time_departure += 1
-                        D_TIME = time_departure + dist
-                        firts_step = (stop_id, time_departure, dist)
-                    
-                    output_endtime, output_duration = rev_raptor(SOURCE,
-                                D_TIME,
-                                MAX_TRANSFER,
-                                MIN_TRANSFER,
-                                CHANGE_TIME_SEC,
-                                routes_by_stop_dict,
-                                stops_dict,
-                                stoptimes_dict,
-                                footpath_dict,
-
-                                idx_by_route_stop_dict,
-                                MaxTimeTravel,
-                                MaxWalkDist1,
-                                MaxWalkDist2,
-                                MaxWalkDist3,
-                                MaxWaitTime,
-                                MaxWaitTimeTransfer,
-                                timetable_mode,
-                                MaxExtraTime,
-                                first_step= firts_step
-                                )
-                
-                for p_i in output_endtime.keys():
-                   
-                    # Обновляем словарь endtime
-                    data_endtime = output_endtime[p_i]
-                    end_time = data_endtime[4]
-                    if p_i not in final_output_endtime or end_time < final_output_endtime[p_i][4]:
-                        final_output_endtime[p_i] = data_endtime
-    
-                    # Обновляем словарь duration
-                    data_duration = output_duration[p_i]
-                    duration = data_duration[1]
-                    if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
-                        final_output_duration[p_i] = data_duration
-
-                    
-                    
-            output_endtime = final_output_endtime
-            output_duration = final_output_duration
-            
-        """
         if protocol_type == 1:
             
             if len(fields_ok) > 0:
@@ -737,68 +616,32 @@ def runRaptorWithProtocol(self,
                             if not roundtrip_mode:                                
                                 df_current_min_duration = pd.DataFrame(data_body, columns=header_dict[field])
                                 df_min_duration_all_dict[field].append(df_current_min_duration)
-
-                        else:
-                            if not roundtrip_mode: 
-                                data_body = make_protocol_summary(SOURCE,
-                                                  destinations,
-                                          output_endtime,                                          
-                                          grades,
-                                          aggregate_dict_all[field],                                          
-                                          set_stops,
-                                          field
-                                          )
-                                df_current_min_endtime = pd.DataFrame(data_body, columns=header_dict[field])
-                                df_min_endtime_all_dict[field].append(df_current_min_endtime)
-                            
+                      
                         
         if protocol_type == 2:
-                        
-            if timetable_mode and not roundtrip_mode:
-                
-                data_body = make_protocol_detailed(                                    
-                                    raptor_mode,
-                                    D_TIME_copy,
-                                    output_endtime,                                    
-                                    timetable_mode,                                    
-                                    set_stops,
-                                    SOURCE                                    
-                                    )
-                
-                #if not roundtrip_mode:
-                df_current_min_endtime = pd.DataFrame(data_body, columns=header_list)
-                df_min_endtime_all.append(df_current_min_endtime)
-                #if timetable_mode:
-
-                
-                
-                if len(sources) == 1:
-                    table_name = f'{file_name}_earliest_arrive_{name}_{SOURCE}'                
-                    table_name_list.append(table_name)
-                    fast_write_gpkg(file_name_gpkg, table_name, df_current_min_endtime)
-                
-            QApplication.processEvents()
-                                      
+                                     
             data_body = make_protocol_detailed(                                   
                                    raptor_mode,
                                    D_TIME_copy,
                                    output_duration,                                   
                                    timetable_mode,                                   
                                    set_stops,
+                                   destinations,
                                    SOURCE,
                                    short_result
                                    )
             
             
-            if not roundtrip_mode:
-                df_current_min_duration = pd.DataFrame(data_body, columns=header_list)
-                df_min_duration_all.append(df_current_min_duration)
-                #if timetable_mode:                
+            #if not roundtrip_mode:
+            df_current_min_duration = pd.DataFrame(data_body, columns=header_list)
+            df_min_duration_all.append(df_current_min_duration)
                 
+            """
                 if len(sources) == 1:                     
-                    table_name = f'{file_name}_fastest_trip_{name}_{SOURCE}'
+                    table_name = f'{file_name}_fastest_trip'
                     table_name_list.append(table_name)
                     fast_write_gpkg(file_name_gpkg, table_name, df_current_min_duration)
+            """
                             
             QApplication.processEvents()
 
@@ -810,43 +653,28 @@ def runRaptorWithProtocol(self,
                     table_name = f'{file_name}_stat_{field}_fastest_trip'
                     table_name_list.append(table_name)
                     fast_write_gpkg(file_name_gpkg, table_name, df_final)
-   
-            for field, list_of_dfs in df_min_endtime_all_dict.items():
-                if list_of_dfs:
-                    df_final = pd.concat(list_of_dfs, ignore_index=True)
-                    table_name = f'{file_name}_stat_{field}_earliest_arrive'
-                    table_name_list.append(table_name)
-                    fast_write_gpkg(file_name_gpkg, table_name, df_final)
 
 
-    if protocol_type == 2 and not roundtrip_mode and len(sources) > 1: #and not (timetable_mode) 
+    col_star = cols["star"]
+    col_hash = cols["hash"]
 
-        table_name_list = []
-        col_star = cols["star"]
-        col_hash = cols["hash"]
+    # создаем pivot если не roundtrip, данные не свернутые
+    if not roundtrip_mode:
+       df_pivot = make_pivot_gpkg (short_result, col_star, col_hash)              
+       table_name = f'{file_name}_fastest_by_{name}s'
+       fast_write_gpkg(file_name_gpkg, table_name, df_pivot)        
 
+    # данные сворачиваем если SA и количество больше 1
+    if protocol_type == 2:# and len(sources) > 1:  
+        df_min_duration, short_result = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash)        
 
-        df_min_duration, short_result = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash)
-        
-        table_name = f'{file_name}_fastest_trip_{name}'
+    # если SA и не roundtrip - сохраняем данные
+    if protocol_type == 2 and not roundtrip_mode: 
+        table_name_list = []                
+        table_name = f'{file_name}_fastest_trip'
         table_name_list.append(table_name)
         fast_write_gpkg(file_name_gpkg, table_name, df_min_duration)
-
-        df_pivot = make_pivot_gpkg (df_min_duration_all,col_star, col_hash)
-        table_name = f'{file_name}_fastest_by_{name}s'
-        fast_write_gpkg(file_name_gpkg, table_name, df_pivot)
-
-        
-        if timetable_mode:
-            table_name = f'{file_name}_earliest_arrive_{name}'
-            df_min_endtime, _ = make_service_area_report_gpkg(df_min_endtime_all, col_star, col_hash)
-            table_name_list.append(table_name)
-            fast_write_gpkg(file_name_gpkg, table_name, df_min_endtime)
-
-            df_pivot = make_pivot_gpkg (df_min_duration_all,col_star, col_hash)
-            table_name = f'{file_name}_earliest_by_{name}s'
-            fast_write_gpkg(file_name_gpkg, table_name, df_pivot)
-        
+       
     
     QApplication.processEvents()
     if not (shift_mode):
@@ -859,9 +687,7 @@ def runRaptorWithProtocol(self,
         self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
     add_thematic_map = True
-    #if timetable_mode and len(sources) > 1 and  protocol_type == 2 :
-    #    add_thematic_map = False
-
+    
     write_info(self,
                file_name_gpkg,
                vis,
@@ -982,6 +808,8 @@ def write_info(self,
                add_thematic_map = True,
                ):
     
+    
+
     if shift_mode:
         return 0
     
@@ -1004,7 +832,9 @@ def write_info(self,
                 vis.add_thematic_map_gpkg(file_name_gpkg, item, alias )
     
     if not (shift_mode):
+        self.lblEstimateTime.setText("")
         self.textLog.append(f'Output in file: <a href="file:///{file_name_gpkg}" target="_blank" > {file_name_gpkg}</a>')
+    
 
 def int1(s):
     result = s

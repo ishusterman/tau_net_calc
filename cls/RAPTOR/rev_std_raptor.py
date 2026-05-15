@@ -122,7 +122,7 @@ def rev_raptor(SOURCE,
     
     if steps_to_buildings:
                 
-                for (building_id, dist) in steps_to_buildings:
+                for building_id, dist in steps_to_buildings.items():
                     if D_TIME_copy:
                         time_departure = D_TIME_copy - dist                     
                     else:
@@ -310,7 +310,7 @@ def rev_raptor(SOURCE,
         if marked_stop == deque([]):
             break
 
-    journeys_endtime, journeys_duration = post_processingAll(
+    journeys_duration = post_processingAll(
             SOURCE,
             D_TIME,
             list_stops,
@@ -325,7 +325,7 @@ def rev_raptor(SOURCE,
             D_TIME_copy = D_TIME_copy)
             
 
-    return journeys_endtime, journeys_duration
+    return journeys_duration
 
 def process_walking_stage(min_time,
                           WALKING_LIMIT,

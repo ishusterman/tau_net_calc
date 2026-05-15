@@ -12,11 +12,8 @@ import shutil
 import csv
 import sqlite3
 import geopandas as gpd
-
 from pathlib import Path
-
-
-#from openpyxl import load_workbook, Workbook
+import gc
 
 try:
     import qgis.core
@@ -40,8 +37,7 @@ try:
     QLineEdit,
     QTextEdit,
     QPlainTextEdit,
-    QComboBox,
-    QWidget
+    QComboBox
     )
 
     from qgis.gui import QgsCheckableComboBox
@@ -51,7 +47,7 @@ except ImportError:
     IN_QGIS = False
 
 import pandas as pd
-import io
+
 
 def transform_log_to_dataframe(raw_text):
     """
@@ -267,7 +263,7 @@ def get_prefix_alias(PT, protocol, mode, timetable = None, roundtrip = False):
     if roundtrip:
         mode_char = "R"    
     timetable_char = "x" if timetable is None else ("s" if timetable else "x")
-    result = f"{prefix}{mode_char}{timetable_char}{protocol_char}"
+    result = f"{prefix}{protocol_char}{timetable_char}{mode_char}"
         
     return result
 
@@ -442,6 +438,15 @@ def create_and_check_field(layer, name_field, type='bldg'):
     temp_layer.commitChanges()
     return temp_layer
 
+def is_gpkg_open_in_project(gpkg_path):
+    gpkg_norm = gpkg_path.replace("\\", "/")
+    for layer in QgsProject.instance().mapLayers().values():
+        if layer.providerType() == "ogr":
+            if gpkg_norm in layer.source().replace("\\", "/"):
+                return True
+    return False
+
+
 def get_unique_path(base_path):
         """
         Generates a unique path by appending an index if the file already exists.
@@ -518,6 +523,7 @@ def get_existing_path(folder_path, filename):
             return path_with_prefix
         return path_without_prefix
 
+"""
 def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative = False):
 
     if not os.path.exists(file_name_gpkg):
@@ -529,6 +535,25 @@ def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative = Fals
             df_current[last_col_name] = pd.to_numeric(df_current[last_col_name], errors='coerce')
     with sqlite3.connect(file_name_gpkg) as conn:
         df_current.to_sql(table_name, conn, if_exists='replace', index=False)
+"""
+
+def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative=False):
+
+    if not os.path.exists(file_name_gpkg):
+        create_empty_gpkg(file_name_gpkg)
+
+    if not mode_relative:
+        last_col_name = df_current.columns[-1]
+        if last_col_name != "Value":
+            df_current[last_col_name] = pd.to_numeric(df_current[last_col_name], errors='coerce')
+
+    conn = sqlite3.connect(file_name_gpkg)
+    conn.execute("PRAGMA journal_mode=DELETE;") 
+    df_current.to_sql(table_name, conn, if_exists='replace', index=False)
+    conn.commit()
+    conn.close()
+    gc.collect()
+
 
 
 
@@ -553,20 +578,25 @@ def make_service_area_report_gpkg(all_frames, col_star, col_hash):
     }
     return df_min, short_result
 
-def make_pivot_gpkg(all_frames, col_star, col_hash):
-    df_total = pd.concat(all_frames, ignore_index=True)
 
-    df_total['Duration'] = pd.to_numeric(df_total['Duration'], errors='coerce')
-    df_total[col_star] = pd.to_numeric(df_total[col_star], errors='coerce')
-    df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors='coerce')
+def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=50):
+    rows = [(h, s, d) for (h, s), d in all_frames.items()]
+    df_total = pd.DataFrame(rows, columns=[col_star, col_hash, "Duration"])
 
-    pivot = df_total.pivot(
-        index=col_hash,
-        columns=col_star,
-        values='Duration'
-    ).reset_index()  # ← теперь col_hash снова колонка
+    df_total["Duration"] = pd.to_numeric(df_total["Duration"], errors="coerce")
+    df_total[col_star] = pd.to_numeric(df_total[col_star], errors="coerce")
+    df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors="coerce")
 
+    # Берём только первые max_cols уникальных значений
+    allowed_stars = df_total[col_star].dropna().unique()[:max_cols]
+    df_total = df_total[df_total[col_star].isin(allowed_stars)]
+
+    pivot = df_total.pivot(index=col_hash, columns=col_star, values="Duration").reset_index()
+
+    new_cols = [pivot.columns[0]] + [f"Duration_{c}" for c in pivot.columns[1:]]
+    pivot.columns = new_cols
     return pivot
+
 
 
 def is_child_of(child, parent):
@@ -576,6 +606,11 @@ def is_child_of(child, parent):
         child = child.parentWidget()   # ← ключевое исправление
     return False
 
+def highlight_widget(widget):
+    widget.setStyleSheet("background-color: #fff7cc;")
+
+def highlight_widget_no(widget):
+    widget.setStyleSheet("")
 
 def highlight_empty_fields(widget, exclude=None) -> bool:
     if exclude is None:
@@ -615,4 +650,11 @@ def highlight_empty_fields(widget, exclude=None) -> bool:
             child.setStyleSheet("")
 
     return found_empty
+
+def get_tablename(layer):
+    uri = layer.dataProvider().dataSourceUri()
+    for part in uri.split("|"):
+        if part.startswith("layername="):
+            return part.split("=", 1)[1]
+    return None
 

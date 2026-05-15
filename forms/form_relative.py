@@ -36,7 +36,10 @@ from common import (getDateTime,
                     FIELD_ID,
                     check_layer,                    
                     fast_write_gpkg,
-                    highlight_empty_fields
+                    highlight_empty_fields,
+                    highlight_widget,
+                    highlight_widget_no,
+                    FIELD_ID
                     )
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'relative.ui'))
@@ -55,6 +58,11 @@ class form_relative(QDialog, FORM_CLASS):
         self.setWindowTitle(title)
         self.splitter.setSizes([int(self.width() * 0.6), int(self.width() * 0.4)])
 
+
+        self.fix_size = 35 * self.wgFileSave.fontMetrics().width('x')
+        self.comboBox_table1.setFixedWidth(self.fix_size)
+        self.comboBox_table2.setFixedWidth(self.fix_size)
+        
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
         self.break_on = False
@@ -94,8 +102,14 @@ class form_relative(QDialog, FORM_CLASS):
         self.ParametrsShow()
         self.show_info()
         self.log_array = []
+
+        if self.mode == 1:
+            self.comboBox_table1.setVisible(False)            
+            self.comboBox_table2.setVisible(False)
+            
       except Exception:
         traceback.print_exc()
+    
 
     def on_gpkg_changed(self, path):
         sender = self.sender()
@@ -134,11 +148,29 @@ class form_relative(QDialog, FORM_CLASS):
         self.break_on = True
         self.close_button.setEnabled(True)
 
+    def getTableName(self, path):
+        ds = ogr.Open(path)
+        if ds is None:
+            return None
+        for i in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(i)
+            name = layer.GetName()
+
+            # Условия:
+            # 1) имя содержит "_fastest_" и НЕ содержит "_by_"
+            # 3) или содержит "_stat_all"
+            if ("_fastest_" in name and "_by_" not in name):
+                return name  
+
+        return None
+
     def on_run_button_clicked(self):
+        
         self.progressBar.setMaximum(6)
         self.progressBar.setValue(0)
         self.run_button.setEnabled(False)
         self.setMessage("")                
+        highlight_widget_no(self.wgFileSave)        
 
         if highlight_empty_fields(self, exclude=[self.textLog]):   
             self.setMessage("All required fields must be filled in")                     
@@ -182,22 +214,53 @@ class form_relative(QDialog, FORM_CLASS):
             os.makedirs(folder, exist_ok=True)
 
         if os.path.exists(self.file_name_gpkg):
-            os.remove(self.file_name_gpkg)    
+            try:
+                os.remove(self.file_name_gpkg)
+            except PermissionError:
+                self.run_button.setEnabled(True)
+                highlight_widget(self.wgFileSave)
+                self.setMessage(f'The file "{self.file_name_gpkg}" is locked.')
+                return 0
         
         self.file_name_gpkg_short = Path(self.file_name_gpkg).stem
         self.file1 = self.widget_result1.filePath()
+
+        if not (os.path.isfile(self.file1) and self.file1.lower().endswith(".gpkg")):
+            self.setMessage('Select the correct file "Result_1"')
+            self.run_button.setEnabled(True)
+            return 0
+        
         self.file1_short = Path(self.file1).stem
         self.file2 = self.widget_result2.filePath()
+
+        if not (os.path.isfile(self.file2) and self.file2.lower().endswith(".gpkg")):
+            self.setMessage('Select the correct file "Result_2"')
+            self.run_button.setEnabled(True)
+            return 0
+        
         self.file2_short = Path(self.file2).stem
 
-        self.table1 = self.comboBox_table1.currentText()
-        self.table2 = self.comboBox_table2.currentText()
-
-        cols_dict = get_name_columns()
-       
-        mode_first, self.mode_roundtrip_first, self.MAP_first, AccessibilityText_first = self.check_log_gpkg(self.file1)
-
+        if self.mode == 2:
+            self.table1 = self.comboBox_table1.currentText()
+            self.table2 = self.comboBox_table2.currentText()
+        else:
+            self.table1 = self.getTableName(self.file1)
+            self.table2 = self.getTableName(self.file2)
         
+        prefix_result = f"{self.table1[:4]}_{self.table2[:4]}"
+
+        if not self.table1:
+            self.setMessage('Select the correct file "Result_1"')
+            self.run_button.setEnabled(True)
+            return 0
+        
+        if not self.table2:
+            self.setMessage('Select the correct file "Result_2"')
+            self.run_button.setEnabled(True)
+            return 0
+        
+        cols_dict = get_name_columns()
+        mode_first, self.mode_roundtrip_first, self.MAP_first, AccessibilityText_first = self.check_log_gpkg(self.file1)
 
         self.from_to_first = 1 if mode_first else 2
         protocol = 1 if self.MAP_first else 2
@@ -207,8 +270,8 @@ class form_relative(QDialog, FORM_CLASS):
         self.first_col_star = cols["star"]
         self.first_col_hash = cols["hash"]
 
-        self.first_col_star_name = cols[1]
-        self.first_col_hash_name = cols[2]
+        self.first_col_star_name = self.first_col_star #cols[1]
+        self.first_col_hash_name = self.first_col_hash #cols[2]
 
 
         mode_second, self.mode_roundtrip_second, self.MAP_second, AccessibilityText_second = self.check_log_gpkg(self.file2)
@@ -229,12 +292,14 @@ class form_relative(QDialog, FORM_CLASS):
         protocol = 1 if self.MAP_second else 2
         if self.mode_roundtrip_second:
             self.from_to_second = 2
+        
+        
         cols = cols_dict[(self.from_to_second, protocol)]
         self.second_col_star = cols["star"]
         self.second_col_hash = cols["hash"]
 
-        self.second_col_star_name = cols[1]
-        self.second_col_hash_name = cols[2]
+        self.second_col_star_name = self.second_col_star #cols[1]
+        self.second_col_hash_name = self.second_col_hash #cols[2]
 
         
         if self.mode_roundtrip_first or self.mode_roundtrip_second:
@@ -269,6 +334,10 @@ class form_relative(QDialog, FORM_CLASS):
                     )
                 )
                 return 0
+        
+        if self.mode_roundtrip_second:
+            self.first_col_hash = self.second_col_hash = "Origin_aid" 
+            self.first_col_star = self.second_col_star = "Destination_aid" 
        
         self.saveParameters()
         self.readParameters()
@@ -305,20 +374,18 @@ class form_relative(QDialog, FORM_CLASS):
         for key, value in qgis_info.items():
             self.log_array.append({
                 "parameter": key,
-                "value1": value
+                "Result_1": value
             })
         self.log_array.append({"parameter": "[Mode]"})
-        self.log_array.append({"parameter": "Mode", "value1": self.title})
+        self.log_array.append({"parameter": "Mode", "Result_1": self.title})
         self.log_array.append({"parameter": "[Settings]"})
-        self.log_array.append({"parameter": "Results_1 file", "value1": self.file1})
-        self.log_array.append({"parameter": "Results_1 table", "value1": self.table1})
-        self.log_array.append({"parameter": "Results_2 file", "value1": self.file2})
-        self.log_array.append({"parameter": "Results_2 table", "value1": self.table2})
-        self.log_array.append({"parameter": "Output file", "value1": self.file_name_gpkg})
-        self.log_array.append({"parameter": "Visualization layer", "value1": self.layer_vis_path})
-        self.log_array.append({"parameter": "Calculate ratio", "value1": str(self.cb_ratio.isChecked())})
-        self.log_array.append({"parameter": "Calculate difference", "value1": str(self.cb_difference.isChecked())})
-        self.log_array.append({"parameter": "Calculate relative difference", "value1": str(self.cb_relative_difference.isChecked())})
+        self.log_array.append({"parameter": "Results file", "Result_1": self.file1, "Result_2": self.file2})
+        self.log_array.append({"parameter": "Results table", "Result_1": self.table1, "Result_2": self.table2})
+        self.log_array.append({"parameter": "Output file", "Result_1": self.file_name_gpkg})
+        self.log_array.append({"parameter": "Visualization layer", "Result_1": self.layer_vis_path})
+        self.log_array.append({"parameter": "Calculate ratio", "Result_1": str(self.cb_ratio.isChecked())})
+        self.log_array.append({"parameter": "Calculate difference", "Result_1": str(self.cb_difference.isChecked())})
+        self.log_array.append({"parameter": "Calculate relative difference", "Result_1": str(self.cb_relative_difference.isChecked())})
         self.log_array.append({"parameter": "Comparison of scenarios"})
                
         fieldname_layer = FIELD_ID
@@ -350,14 +417,15 @@ class form_relative(QDialog, FORM_CLASS):
                             mode=mode_visualization,
                             fieldname_layer=fieldname_layer,
                             mode_compare=True,
-                            from_to = self.from_to_first,
-                            roundtrip_compare = self.roundtrip_compare
+                            from_to = self.from_to_second,
+                            roundtrip_compare = self.roundtrip_compare,
+                            prefix = prefix_result
                             )
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
         self.textLog.append(f'<a>Started: {begin_computation_str}</a>')
 
-        self.log_array.append({"parameter": "Started", "value1": begin_computation_str})
+        self.log_array.append({"parameter": "Started", "Result_1": begin_computation_str})
         
 
         self.progressBar.setValue(1)
@@ -393,8 +461,8 @@ class form_relative(QDialog, FORM_CLASS):
         if self.cb_relative_difference.isChecked():
             self.mode_calc = "relative_difference"
             self.table_name = f'rel_diff_{self.file1_short}_{self.table1}_{self.file2_short}_{self.table2}'
-            self.prepare()
-            type_compare = "RatioRelative"
+            self.prepare()            
+            type_compare = "Rel_difference"
             
             vis.add_thematic_map_gpkg(self.file_name_gpkg, self.table_name, self.table_name, type_compare = type_compare)
                        
@@ -410,8 +478,8 @@ class form_relative(QDialog, FORM_CLASS):
 
         if self.roundtrip_compare:            
             if self.MAP_first:
-                field_name1 = "Origin_aid"
-                field_name2 = "Origin_aid"
+                field_name1 = "Destination_aid"
+                field_name2 = "Destination_aid"
 
         roundtrip_mode = True if (self.mode_roundtrip_first and not self.MAP_first) else False
 
@@ -421,7 +489,8 @@ class form_relative(QDialog, FORM_CLASS):
                              fieldname_layer=fieldname_layer,
                              mode_compare=False,
                              from_to = self.from_to_first,
-                             roundtrip = roundtrip_mode)
+                             roundtrip = roundtrip_mode,
+                             prefix = prefix_result)
                 
         for df, col in [(self.df1, field_name1), (self.df2, field_name2)]:
             df.dropna(subset=[col], inplace=True)
@@ -429,9 +498,10 @@ class form_relative(QDialog, FORM_CLASS):
         # Оставляем строки из df1, которых нет в df2 по ключевому полю
         df1_only = self.df1[~self.df1[field_name1].isin(self.df2[field_name2])].copy()
                 
-        # Выбираем колонки: ключи + последняя (метрика)
-        #cols_to_save1 = [c for c in [field_name1, self.df1.columns[-1]] if c in self.df1.columns]
-        #df1_only = df1_only[cols_to_save1]
+        # Выбираем колонки: ключи + последняя (метрика)        
+        if not self.MAP_first:
+            cols_to_save1 = [c for c in [self.first_col_star, self.first_col_hash, "Duration", "Duration_ave"] if c in self.df1.columns]
+            df1_only = df1_only[cols_to_save1]
         # Сохранение и карта для DF1
         table = f'{self.file1_short}_{self.table1}_only'
         fast_write_gpkg(self.file_name_gpkg, table, df1_only )        
@@ -449,14 +519,15 @@ class form_relative(QDialog, FORM_CLASS):
                              fieldname_layer=fieldname_layer,
                              mode_compare=False,
                              from_to = self.from_to_second,
-                             roundtrip = roundtrip_mode)
+                             roundtrip = roundtrip_mode,
+                             prefix = prefix_result)
         
         # Оставляем строки из df2, которых нет в df1 по ключевому полю
         df2_only = self.df2[~self.df2[field_name2].isin(self.df1[field_name1])].copy()
         # Выбираем колонки
-        #cols_to_save2 = [c for c in [field_name1, self.df2.columns[-1]] if c in self.df2.columns]
-        
-        #df2_only = df2_only[cols_to_save2]
+        if not self.MAP_first:
+            cols_to_save2 = [c for c in [self.first_col_star, self.first_col_hash, "Duration", "Duration_ave"] if c in self.df2.columns]        
+            df2_only = df2_only[cols_to_save2]
         # Сохранение и карта для DF2
         table = f'{self.file2_short}_{self.table2}_only'
         fast_write_gpkg(self.file_name_gpkg, table, df2_only )        
@@ -467,13 +538,13 @@ class form_relative(QDialog, FORM_CLASS):
         after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
         self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
         self.log_array.append({"parameter": "[Processing]"})
-        self.log_array.append({"parameter": "Finished", "value1": after_computation_str})
+        self.log_array.append({"parameter": "Finished", "Result_1": after_computation_str})
         duration_computation = after_computation_time - begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
-        self.log_array.append({"parameter": "Processing time", "value1": duration_without_microseconds})
+        self.log_array.append({"parameter": "Processing time", "Result_1": duration_without_microseconds})
         self.textLog.append(f'Output in file: <a href="file:///{self.file_name_gpkg}" target="_blank" > {self.file_name_gpkg}</a>')
-        self.log_array.append({"parameter": "Output in file", "value1": self.file_name_gpkg})
+        self.log_array.append({"parameter": "Output in file", "Result_1": self.file_name_gpkg})
                 
         self.log_array_df = pd.DataFrame(self.log_array)
 
@@ -669,8 +740,8 @@ class form_relative(QDialog, FORM_CLASS):
             merged_df = pd.merge(df1_renamed, df2_renamed, left_on=self.first_col_star, right_on=self.second_col_star )
             result_df[self.first_col_star] = merged_df[self.first_col_star]
         else:
-            merged_df = pd.merge(df1_renamed, df2_renamed, left_on=f'Origin_aid_1', right_on=f'Origin_aid_2')
-            result_df[f'Origin_aid_1'] = merged_df[f'Origin_aid_1']
+            merged_df = pd.merge(df1_renamed, df2_renamed, left_on=f'Destination_aid', right_on=f'Destination_aid')
+            result_df[f'Destination_aid'] = merged_df[f'Destination_aid']
         
         col1 = f'{column_name1}_{postfix1}'
         col2 = f'{column_name2}_{postfix2}'
@@ -708,8 +779,7 @@ class form_relative(QDialog, FORM_CLASS):
             column_name2 = "Duration_ave"   
 
         if column_name1 == column_name2:
-            postfix2 = "_2"     
-
+            postfix2 = "_2"
        
         df1_filtered = df1
         df2_filtered = df2
@@ -720,7 +790,9 @@ class form_relative(QDialog, FORM_CLASS):
         
         # joining by Destination_ID
         
+        """
         if self.mode_roundtrip_second:
+            
             merged_df = pd.merge(
                             df1_filtered[[self.first_col_star, self.first_col_hash,column_name1]],
                             df2_filtered[[self.second_col_star, self.second_col_hash, column_name2]],
@@ -729,7 +801,8 @@ class form_relative(QDialog, FORM_CLASS):
                             suffixes=(postfix1, postfix2)
                         )
         else:
-            merged_df = pd.merge(
+        """
+        merged_df = pd.merge(
                                 df1_filtered[[self.first_col_star, self.first_col_hash, column_name1]],
                                 df2_filtered[[self.second_col_star, self.second_col_hash, column_name2]],
                                 left_on=self.first_col_hash,
@@ -737,14 +810,14 @@ class form_relative(QDialog, FORM_CLASS):
                                 suffixes=(postfix1, postfix2)
                             )
         
-        result_df[f'{self.first_col_star}_1'] = merged_df[self.first_col_star]
-        result_df[f'{self.first_col_hash}_1'] = merged_df[self.first_col_hash]
-        result_df[f'{self.second_col_star_name}_2'] = merged_df[self.second_col_star]
-        result_df[f'{self.second_col_hash_name}_2'] = merged_df[self.second_col_hash]
-
-        result_df[self.first_col_hash] = merged_df[self.first_col_hash]     
-        result_df['Duration_1'] = merged_df[f'{column_name1}{postfix1}']
-        result_df['Duration_2'] = merged_df[f'{column_name2}{postfix2}']
+        result_df[f'{self.first_col_star}_1'] = merged_df[f'{self.first_col_star}{postfix1}']
+        result_df[f'{self.second_col_star_name}_2'] = merged_df[f'{self.second_col_star}{postfix2}']
+        
+        #result_df[self.first_col_hash] = merged_df[self.first_col_hash]             
+        result_df[self.second_col_hash] = merged_df[self.first_col_hash]             
+        
+        result_df[f'{column_name1}_1'] = merged_df[f'{column_name1}{postfix1}']
+        result_df[f'{column_name2}_2'] = merged_df[f'{column_name2}{postfix2}']
 
         # calculating the ratio of Duration from the first file to Duration from the second file
         if self.mode_calc == "ratio":
@@ -808,47 +881,149 @@ class form_relative(QDialog, FORM_CLASS):
             self.textLog.append("<b style='color:red;'>[Error]: Log tables not found in GPKG files.</b>")
             return False, []
 
-        # Собираем все уникальные ключи параметров из обоих файлов
+        # Собираем все уникальные ключи параметров
         all_keys = list(params_file1.keys())
         for k in params_file2.keys():
             if k not in all_keys:
                 all_keys.append(k)
 
         comparison_array = []
-        
-        # Режим (Mode) обычно идет первым, выделим его, если он есть
+
+        # Mode — всегда первым
         mode_v1 = params_file1.pop('Mode', '---')
         mode_v2 = params_file2.pop('Mode', '---')
-        
+
         comparison_array.append({
             'parameter': 'Accessibility computation options',
-            'value1': mode_v1,
-            'value2': mode_v2
+            'Result_1': mode_v1,
+            'Result_2': mode_v2
         })
 
-        # Добавляем остальные параметры
+        # -----------------------------
+        # ПЕРВАЯ ПАРА: Arrive / Start
+        # -----------------------------
+        arrive_key = "Arrive to destination"
+        start_key  = "Start from the origin"
+
+        v1_arrive = params_file1.get(arrive_key)
+        v1_start  = params_file1.get(start_key)
+        v2_arrive = params_file2.get(arrive_key)
+        v2_start  = params_file2.get(start_key)
+
+        file1_has_1 = v1_arrive or v1_start
+        file2_has_1 = v2_arrive or v2_start
+
+        file1_param_1 = arrive_key if v1_arrive else (start_key if v1_start else None)
+        file2_param_1 = arrive_key if v2_arrive else (start_key if v2_start else None)
+
+        can_combine_1 = (
+            file1_has_1 and file2_has_1 and
+            file1_param_1 is not None and
+            file2_param_1 is not None and
+            file1_param_1 != file2_param_1
+        )
+
+        combined_1_added = False
+
+        # -----------------------------
+        # ВТОРАЯ ПАРА: Earliest start / Earliest arrival
+        # -----------------------------
+        earliest_start_key   = "The earliest start"
+        earliest_arrival_key = "The earliest arrival"
+
+        v1_es = params_file1.get(earliest_start_key)
+        v1_ea = params_file1.get(earliest_arrival_key)
+        v2_es = params_file2.get(earliest_start_key)
+        v2_ea = params_file2.get(earliest_arrival_key)
+
+        file1_has_2 = v1_es or v1_ea
+        file2_has_2 = v2_es or v2_ea
+
+        file1_param_2 = earliest_start_key if v1_es else (earliest_arrival_key if v1_ea else None)
+        file2_param_2 = earliest_start_key if v2_es else (earliest_arrival_key if v2_ea else None)
+
+        can_combine_2 = (
+            file1_has_2 and file2_has_2 and
+            file1_param_2 is not None and
+            file2_param_2 is not None and
+            file1_param_2 != file2_param_2
+        )
+
+        combined_2_added = False
+
+        # -----------------------------
+        # Основной цикл параметров
+        # -----------------------------
         for param in all_keys:
-            if param == 'Mode': continue # Уже добавили выше
+            if param == 'Mode':
+                continue
+
+            # --- ОБЪЕДИНЕНИЕ ПЕРВОЙ ПАРЫ ---
+            if param in (arrive_key, start_key) and can_combine_1 and not combined_1_added:
+
+                v1 = v1_arrive or v1_start or '---'
+                v2 = v2_arrive or v2_start or '---'
+
+                comparison_array.append({
+                    'parameter': "Start/Arrival",
+                    'Result_1': v1,
+                    'Result_2': v2
+                })
+
+                combined_1_added = True
+                continue
+
+            if can_combine_1 and param in (arrive_key, start_key):
+                continue
+
+            # --- ОБЪЕДИНЕНИЕ ВТОРОЙ ПАРЫ ---
+            if param in (earliest_start_key, earliest_arrival_key) and can_combine_2 and not combined_2_added:
+
+                v1 = v1_es or v1_ea or '---'
+                v2 = v2_es or v2_ea or '---'
+
+                comparison_array.append({
+                    'parameter': "Earliest Start/Arrival",
+                    'Result_1': v1,
+                    'Result_2': v2
+                })
+
+                combined_2_added = True
+                continue
+
+            if can_combine_2 and param in (earliest_start_key, earliest_arrival_key):
+                continue
+
+            # --- Обычный параметр ---
             comparison_array.append({
                 'parameter': param,
-                'value1': params_file1.get(param, '---'),
-                'value2': params_file2.get(param, '---')
+                'Result_1': params_file1.get(param, '---'),
+                'Result_2': params_file2.get(param, '---')
             })
 
-        # Генерируем HTML и выводим
-        html_table = self.generate_html_table(comparison_array)
+        # --- Обрезаем лог до [Processing], не включая его ---
+        trimmed = []
+        for row in comparison_array:
+            if row.get("parameter") == "[Processing]":
+                break
+            trimmed.append(row)
+
+        # Генерация HTML
+        html_table = self.generate_html_table(trimmed)
         self.textLog.append("<br><b style='font-size:14px;'>Comparison of scenarios:</b>")
         self.textLog.append(html_table)
-        return True, comparison_array
+
+        return True, trimmed
+
 
     def generate_html_table(self, comparison_array):
         
         html = "<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>"
-        html += "<tr bgcolor='#f2f2f2'><th>Settings</th><th>File1</th><th>File2</th></tr>"
+        html += "<tr bgcolor='#f2f2f2'><th>Settings</th><th>Result_1</th><th>Result_2</th></tr>"
         for entry in comparison_array:
             p = entry.get('parameter', '')
-            v1 = entry.get('value1', '---')
-            v2 = entry.get('value2', '---')
+            v1 = entry.get('Result_1', '---')
+            v2 = entry.get('Result_2', '---')
             html += f"<tr><td><b>{p}</b></td><td>{v1}</td><td>{v2}</td></tr>"
         html += "</table>"
         return html

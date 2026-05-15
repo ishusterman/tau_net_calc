@@ -560,181 +560,26 @@
   </geometryOptions>
   <legend type="default-vector" showLabelLegend="0"/>
   <referencedLayers/>
-  <fieldConfiguration>
-    <field name="fid" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="cat" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="osm_id" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="code" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="fclass" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="name" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="type" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="machoz" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="Duration_Gesher_2024_to_Schedule_PT_PBS" configurationFlags="NoFlag">
-      <editWidget type="Range">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" configurationFlags="NoFlag">
-      <editWidget type="Range">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="Difference" configurationFlags="NoFlag">
-      <editWidget type="Range">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
+  <fieldConfiguration>    
   </fieldConfiguration>
-  <aliases>
-    <alias field="fid" name="" index="0"/>
-    <alias field="cat" name="" index="1"/>
-    <alias field="osm_id" name="" index="2"/>
-    <alias field="code" name="" index="3"/>
-    <alias field="fclass" name="" index="4"/>
-    <alias field="name" name="" index="5"/>
-    <alias field="type" name="" index="6"/>
-    <alias field="machoz" name="" index="7"/>
-    <alias field="Duration_Gesher_2024_to_Schedule_PT_PBS" name="" index="8"/>
-    <alias field="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" name="" index="9"/>
-    <alias field="Difference" name="" index="10"/>
+  <aliases>    
   </aliases>
-  <splitPolicies>
-    <policy policy="Duplicate" field="fid"/>
-    <policy policy="Duplicate" field="cat"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="code"/>
-    <policy policy="Duplicate" field="fclass"/>
-    <policy policy="Duplicate" field="name"/>
-    <policy policy="Duplicate" field="type"/>
-    <policy policy="Duplicate" field="machoz"/>
-    <policy policy="Duplicate" field="Duration_Gesher_2024_to_Schedule_PT_PBS"/>
-    <policy policy="Duplicate" field="Duration_Gesher_2024_PT_To_Fixed_PT_PBX"/>
-    <policy policy="Duplicate" field="Difference"/>
+  <splitPolicies>    
   </splitPolicies>
-  <duplicatePolicies>
-    <policy policy="Duplicate" field="fid"/>
-    <policy policy="Duplicate" field="cat"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="code"/>
-    <policy policy="Duplicate" field="fclass"/>
-    <policy policy="Duplicate" field="name"/>
-    <policy policy="Duplicate" field="type"/>
-    <policy policy="Duplicate" field="machoz"/>
-    <policy policy="Duplicate" field="Duration_Gesher_2024_to_Schedule_PT_PBS"/>
-    <policy policy="Duplicate" field="Duration_Gesher_2024_PT_To_Fixed_PT_PBX"/>
-    <policy policy="Duplicate" field="Difference"/>
+  <duplicatePolicies>    
   </duplicatePolicies>
-  <defaults>
-    <default applyOnUpdate="0" field="fid" expression=""/>
-    <default applyOnUpdate="0" field="cat" expression=""/>
-    <default applyOnUpdate="0" field="osm_id" expression=""/>
-    <default applyOnUpdate="0" field="code" expression=""/>
-    <default applyOnUpdate="0" field="fclass" expression=""/>
-    <default applyOnUpdate="0" field="name" expression=""/>
-    <default applyOnUpdate="0" field="type" expression=""/>
-    <default applyOnUpdate="0" field="machoz" expression=""/>
-    <default applyOnUpdate="0" field="Duration_Gesher_2024_to_Schedule_PT_PBS" expression=""/>
-    <default applyOnUpdate="0" field="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" expression=""/>
-    <default applyOnUpdate="0" field="Difference" expression=""/>
+  <defaults>    
   </defaults>
-  <constraints>
-    <constraint exp_strength="0" field="fid" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="cat" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="osm_id" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="code" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="fclass" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="name" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="type" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="machoz" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="Duration_Gesher_2024_to_Schedule_PT_PBS" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="Difference" constraints="0" unique_strength="0" notnull_strength="0"/>
+  <constraints>    
   </constraints>
-  <constraintExpressions>
-    <constraint desc="" field="fid" exp=""/>
-    <constraint desc="" field="cat" exp=""/>
-    <constraint desc="" field="osm_id" exp=""/>
-    <constraint desc="" field="code" exp=""/>
-    <constraint desc="" field="fclass" exp=""/>
-    <constraint desc="" field="name" exp=""/>
-    <constraint desc="" field="type" exp=""/>
-    <constraint desc="" field="machoz" exp=""/>
-    <constraint desc="" field="Duration_Gesher_2024_to_Schedule_PT_PBS" exp=""/>
-    <constraint desc="" field="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" exp=""/>
-    <constraint desc="" field="Difference" exp=""/>
+  <constraintExpressions>    
   </constraintExpressions>
   <expressionfields/>
   <attributeactions>
     <defaultAction key="Canvas" value="{00000000-0000-0000-0000-000000000000}"/>
   </attributeactions>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
-    <columns>
-      <column type="field" name="fid" hidden="0" width="-1"/>
-      <column type="field" name="cat" hidden="0" width="-1"/>
-      <column type="field" name="osm_id" hidden="0" width="-1"/>
-      <column type="field" name="code" hidden="0" width="-1"/>
-      <column type="field" name="fclass" hidden="0" width="-1"/>
-      <column type="field" name="name" hidden="0" width="-1"/>
-      <column type="field" name="type" hidden="0" width="-1"/>
-      <column type="field" name="machoz" hidden="0" width="-1"/>
-      <column type="field" name="Duration_Gesher_2024_to_Schedule_PT_PBS" hidden="0" width="-1"/>
-      <column type="field" name="Difference" hidden="0" width="-1"/>
-      <column type="field" name="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" hidden="0" width="-1"/>
-      <column type="actions" hidden="1" width="-1"/>
+    <columns>      
     </columns>
   </attributetableconfig>
   <conditionalstyles>
@@ -765,53 +610,11 @@ def my_form_open(dialog, layer, feature):
 ]]></editforminitcode>
   <featformsuppress>0</featformsuppress>
   <editorlayout>generatedlayout</editorlayout>
-  <editable>
-    <field name="Difference" editable="0"/>
-    <field name="Duration_Gesher_2018_PT_To_Schedule_PT_PBS" editable="0"/>
-    <field name="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" editable="0"/>
-    <field name="Duration_Gesher_2024_to_Schedule_PT_PBS" editable="0"/>
-    <field name="access_30aug_17h24m_Duration" editable="0"/>
-    <field name="access_30aug_17h24m_Origin_ID" editable="0"/>
-    <field name="cat" editable="1"/>
-    <field name="code" editable="1"/>
-    <field name="fclass" editable="1"/>
-    <field name="fid" editable="1"/>
-    <field name="machoz" editable="1"/>
-    <field name="name" editable="1"/>
-    <field name="osm_id" editable="1"/>
-    <field name="type" editable="1"/>
+  <editable>    
   </editable>
-  <labelOnTop>
-    <field name="Difference" labelOnTop="0"/>
-    <field name="Duration_Gesher_2018_PT_To_Schedule_PT_PBS" labelOnTop="0"/>
-    <field name="Duration_Gesher_2024_PT_To_Fixed_PT_PBX" labelOnTop="0"/>
-    <field name="Duration_Gesher_2024_to_Schedule_PT_PBS" labelOnTop="0"/>
-    <field name="access_30aug_17h24m_Duration" labelOnTop="0"/>
-    <field name="access_30aug_17h24m_Origin_ID" labelOnTop="0"/>
-    <field name="cat" labelOnTop="0"/>
-    <field name="code" labelOnTop="0"/>
-    <field name="fclass" labelOnTop="0"/>
-    <field name="fid" labelOnTop="0"/>
-    <field name="machoz" labelOnTop="0"/>
-    <field name="name" labelOnTop="0"/>
-    <field name="osm_id" labelOnTop="0"/>
-    <field name="type" labelOnTop="0"/>
+  <labelOnTop>    
   </labelOnTop>
-  <reuseLastValue>
-    <field reuseLastValue="0" name="Difference"/>
-    <field reuseLastValue="0" name="Duration_Gesher_2018_PT_To_Schedule_PT_PBS"/>
-    <field reuseLastValue="0" name="Duration_Gesher_2024_PT_To_Fixed_PT_PBX"/>
-    <field reuseLastValue="0" name="Duration_Gesher_2024_to_Schedule_PT_PBS"/>
-    <field reuseLastValue="0" name="access_30aug_17h24m_Duration"/>
-    <field reuseLastValue="0" name="access_30aug_17h24m_Origin_ID"/>
-    <field reuseLastValue="0" name="cat"/>
-    <field reuseLastValue="0" name="code"/>
-    <field reuseLastValue="0" name="fclass"/>
-    <field reuseLastValue="0" name="fid"/>
-    <field reuseLastValue="0" name="machoz"/>
-    <field reuseLastValue="0" name="name"/>
-    <field reuseLastValue="0" name="osm_id"/>
-    <field reuseLastValue="0" name="type"/>
+  <reuseLastValue>    
   </reuseLastValue>
   <dataDefinedFieldProperties/>
   <widgets/>

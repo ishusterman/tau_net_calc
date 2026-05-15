@@ -20,10 +20,13 @@ from qgis.analysis import (
 )
 
 from converter_layer import MultiLineStringToLineStringConverter
+from footpath_on_projection import cls_footpath_on_projection
 from common import (getDateTime, 
                     convert_distance_to_meters, 
                     get_existing_path,
-                    transform_log_to_csv_text)
+                    transform_log_to_csv_text,
+                    FIELD_ID)
+
 
 class pkl_car ():
 
@@ -41,13 +44,17 @@ class pkl_car ():
         units = self.crs.mapUnits()
         self.crs_grad = (units == 6)
 
+
+        #############################################
+        
+
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
             '%Y-%m-%d %H:%M:%S')
         self.parent.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         QApplication.processEvents()
 
-        self.parent.progressBar.setMaximum(8)
+        self.parent.progressBar.setMaximum(10)
         self.parent.progressBar.setValue(0)
         
         if self.verify_break():
@@ -106,25 +113,65 @@ class pkl_car ():
         self.parent.progressBar.setValue(5)
 
         self.count_item = self.parent.layer_buildings.featureCount()
-        self.buildings = self.create_list_buidings()
+        self.buildings = self.create_list_buidings()       
+        self.converter.remove_temp_layer()        
+        QApplication.processEvents()
 
-        self.create_spatial_index_graph()
+
+        #############################
+        # 2. Строим словарь координата → ID вершины QGIS-графа
+        coord_to_vertex_id = self.build_coord_to_vertex_id(self.graph)
+
+        # 3. Создаём слой с проекциями
+        footpath_on_projection_car = cls_footpath_on_projection(self.parent, MaxPath=400)
+        new_layer, _ = footpath_on_projection_car.make_new_layer_with_projections(
+            layer_roads=self.layer_roads,
+            layer_buildings=self.parent.layer_buildings,
+            layer_buildings_field_id=FIELD_ID,
+            path_to_stops="",
+            file_name_gpkg=""
+        )
+
         if self.verify_break():
             return 0
         self.parent.progressBar.setValue(6)
-        self.create_dict_building_vertex()
+
+        graph_origin = footpath_on_projection_car.build_graph_original(self.layer_roads)
         if self.verify_break():
             return 0
         self.parent.progressBar.setValue(7)
-        self.create_dict_vertex_buildings()
+        graph, dict_osm_vertex, dict_vertex_osm = footpath_on_projection_car.build_graph(new_layer)
         if self.verify_break():
             return 0
-
-        # experiment
-        self.converter.remove_temp_layer()
-        # experiment
         self.parent.progressBar.setValue(8)
-        QApplication.processEvents()
+
+        # 6. Расчёт расстояний
+        dict_vertex_buildings = footpath_on_projection_car.construct_dict_near_buildings_for_origin_vertex(
+            graph_origin,
+            graph,
+            dict_vertex_osm,
+            coord_to_vertex_id,
+            path_to_file=r"c:\doc\Igor\GIS\temp"
+        )
+
+        self.save_pkl (dict_vertex_buildings,"dict_vertex_buildings.pkl")
+        if self.verify_break():
+            return 0
+        self.parent.progressBar.setValue(9)
+
+        dict_building_vertex = footpath_on_projection_car.construct_dict_nearest_origin_vertex_for_buildings(
+            graph_origin,
+            graph,
+            dict_osm_vertex,
+            coord_to_vertex_id,
+            path_to_file=r"c:\doc\Igor\GIS\temp"
+        )
+        
+        self.save_pkl (dict_building_vertex, "dict_building_vertex.pkl")
+
+        if self.verify_break():
+            return 0
+        self.parent.progressBar.setValue(10)
 
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
@@ -357,8 +404,7 @@ class pkl_car ():
                 costs
             )
 
-        graph = builder.graph()
-        #print(f"vertices = {graph.vertexCount()}, edges = {graph.edgeCount()}")
+        graph = builder.graph()        
 
         return graph
 
@@ -471,43 +517,12 @@ class pkl_car ():
             return True
         return False
 
-    def create_dict_vertex_buildings(self):
 
-        dict_vertex_nearest_buildings = {}
-
-        for c, (id, point) in enumerate(self.buildings):
-
-            if c % 1000 == 0:
-                if self.verify_break():
-                    return 0
-                QApplication.processEvents()
-                self.parent.setMessage(f'Constructing database {c} of {self.count_item}...')
-            building_id = id
-            # create a circle with a radius of 250 meters around the building
-            point_coords = [point.x(), point.y()]
-            latitude = point.y()
-            buffer_radius = 500
-            distances, indices = self.graph_vertex_index.query(point_coords,
-                                                               k=1000,
-                                                               distance_upper_bound=buffer_radius)
-
-            for index, distance in zip(indices, distances):
-
-                if math.isinf(distance): continue
-
-                if self.crs_grad:
-                    distance = convert_distance_to_meters(distance, latitude)
-                if distance <= buffer_radius:  # check that the distance does not exceed the radius
-                    nearest_vertex_id = index
-                    if nearest_vertex_id in dict_vertex_nearest_buildings:
-                        dict_vertex_nearest_buildings[nearest_vertex_id].append((building_id, round(distance)))
-                    else:
-                        # initialize the element as a list
-                        dict_vertex_nearest_buildings[nearest_vertex_id] = [(building_id, round(distance))]
+    def save_pkl (self, dict, filename):
         self.prefix = os.path.basename(self.parent.path_to_protocol)
-        file_path = os.path.join(self.parent.path_to_protocol, f'{self.prefix}_dict_vertex_buildings.pkl')
+        file_path = os.path.join(self.parent.path_to_protocol, f'{self.prefix}_{filename}')
         with open(file_path, 'wb') as f:
-            pickle.dump(dict_vertex_nearest_buildings, f)
+            pickle.dump(dict, f)
 
     def create_list_buidings(self):
 
@@ -534,27 +549,12 @@ class pkl_car ():
                           ))
         return points
 
-    def create_dict_building_vertex(self):
+    def build_coord_to_vertex_id(self, graph):
+            coord_to_id = {}
 
-        point_to_vertex_dict = {}
-        for c, (id, point) in enumerate(self.buildings):
+            for vid in range(graph.vertexCount()):
+                p = graph.vertex(vid).point()                
+                key = (p.x(), p.y())
+                coord_to_id[key] = vid
 
-            if c % 50000 == 0:
-                if self.verify_break():
-                    return 0
-                self.parent.setMessage(f'Constructing database {c} of {self.count_item}...')
-                QApplication.processEvents()
-
-            point_coords = [point.x(), point.y()]
-            latitude = point.y()
-            distance, nearest_vertex_index = self.graph_vertex_index.query(point_coords, k=1)
-            if self.crs_grad:
-                distance = convert_distance_to_meters(distance, latitude)
-            point_to_vertex_dict[int(id)] = ((nearest_vertex_index, round(distance)))
-        
-        self.prefix = os.path.basename(self.parent.path_to_protocol)
-        file_path = os.path.join(self.parent.path_to_protocol, f'{self.prefix}_dict_building_vertex.pkl')
-        with open(file_path, 'wb') as f:
-            pickle.dump(point_to_vertex_dict, f)
-
-        return point_to_vertex_dict
+            return coord_to_id

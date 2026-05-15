@@ -6,6 +6,7 @@ import webbrowser
 import configparser
 from datetime import datetime
 import math
+from math import floor
 import os
 from pathlib import Path
 
@@ -51,7 +52,10 @@ from visualization import visualization
 from AnalyzerFromTo_incremental import roundtrip_analyzer
 from common import (get_initial_directory,
                     get_name_columns,
-                    transform_log_to_csv_text)
+                    transform_log_to_csv_text,
+                    highlight_widget,
+                    highlight_widget_no,
+                    get_tablename)
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'raptor.ui'))
 
@@ -81,6 +85,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.fix_size2 = 5* self.txtMinTransfers.fontMetrics().width('x')
         
         self.fix_size3 = 25 * self.txtMinTransfers.fontMetrics().width('x')
+        self.fix_size4 = 20 * self.txtMinTransfers.fontMetrics().width('x')
 
         self.txtMinTransfers.setFixedWidth(self.fix_size2)
         self.txtMaxTransfers.setFixedWidth(self.fix_size2)
@@ -101,7 +106,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 
         self.txtTimeInterval.setFixedWidth(self.fix_size2)
 
-        self.cmbFields_ch.setFixedWidth(self.fix_size)
+        self.cmbFields_ch.setFixedWidth(self.fix_size4)
         
         self.tabWidget.setCurrentIndex(0)
         self.config = configparser.ConfigParser()
@@ -222,6 +227,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.fillComboBoxWithLayerFields()
         self.cmbLayers.currentIndexChanged.connect(self.fillComboBoxWithLayerFields)
         self.cmbLayersDest.currentIndexChanged.connect(self.fillComboBoxWithLayerFields)
+
+        self.lblEstimateTime.setText("")
         
     def move_fields_combo_to_origin(self, to_origin_layout: bool):
         # 1. Удаляем cmbFields_ch из текущего layout
@@ -257,6 +264,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         output_field.setText(str(abs(time_delta_min)))
     
     def on_radio_button_changed(self):
+        
         sender = self.sender()
         if not sender.isChecked():
             return
@@ -276,6 +284,19 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     # for widget with checkbox
     def fillComboBoxWithLayerFields(self):
+
+        sender = self.sender()
+        origin = self.mode == 2 or self.roundtrip
+
+        if self.roundtrip:
+            sender == self.cmbLayers        
+
+        if sender == self.cmbLayers and not origin:
+            return
+        
+        if sender == self.cmbLayersDest and origin:
+            return
+
         self.cmbFields_ch.clear()        
 
         if self.mode == 1:
@@ -287,27 +308,31 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         try:
             fields = [field for field in layer.fields()]
-        except:            
+        except:
             return 0
 
         for field in fields:
             field_type = field.type()
-            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
-                self.cmbFields_ch.addItem(field.name())
+            field_name = field.name()
 
-        if QApplication.keyboardModifiers() & Qt.ShiftModifier:                            
+            if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
+                if field_name.lower() not in ("fid", "osm_id", "id", "aid"):
+                    self.cmbFields_ch.addItem(field_name)
+
+        if QApplication.keyboardModifiers() & Qt.ShiftModifier:
             if 'Field_ch' not in self.config['Settings']:
-                    self.config['Settings']['Field_ch'] = ''
+                self.config['Settings']['Field_ch'] = ''
 
             for i in range(self.cmbFields_ch.count()):
-                    item_text = self.cmbFields_ch.itemText(i)
-                    
-                    if item_text in self.config['Settings']['Field_ch']:
-                        self.cmbFields_ch.setItemData(
-                            i, Qt.Checked, role=Qt.CheckStateRole)
-                    else:
-                        self.cmbFields_ch.setItemData(
-                            i, Qt.Unchecked, role=Qt.CheckStateRole)
+                item_text = self.cmbFields_ch.itemText(i)
+
+                if item_text in self.config['Settings']['Field_ch']:
+                    self.cmbFields_ch.setItemData(
+                        i, Qt.Checked, role=Qt.CheckStateRole)
+                else:
+                    self.cmbFields_ch.setItemData(
+                        i, Qt.Unchecked, role=Qt.CheckStateRole)
+
                             
     def changeInterface (self):
 
@@ -377,7 +402,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         self.run_button.setEnabled(False)
         self.break_on = False
-        self.setMessage("")        
+        self.setMessage("")
+
+        highlight_widget_no(self.wgFileSave)        
 
 
         if highlight_empty_fields(self, exclude=[self.textLog, self.cmbFields_ch]):
@@ -435,7 +462,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             os.makedirs(folder, exist_ok=True)
 
         if os.path.exists(self.file_name_gpkg):
-            os.remove(self.file_name_gpkg)
+            try:
+                os.remove(self.file_name_gpkg)
+            except PermissionError:
+                self.run_button.setEnabled(True)
+                highlight_widget(self.wgFileSave)
+                self.setMessage(f'The file "{self.file_name_gpkg}" is locked.')
+                return 0
+            
 
         
         
@@ -466,8 +500,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         self.textLog.append("<a style='font-weight:bold;'>[Input Layers]</a>")        
         self.textLog.append(f"<a> Transit routing database folder: {self.config['Settings']['pathtopkl']}</a>")
-        self.textLog.append(f'<a> Layer of origins: {self.layer_path1} </a>')        
-        self.textLog.append(f'<a> Layer of destinations: {self.layer_path2} </a>')
+        self.textLog.append(f'<a> Layer of origins: {self.layer_path1} ({get_tablename(self.layer1)}) </a>')        
+        self.textLog.append(f'<a> Layer of destinations: {self.layer_path2} ({get_tablename(self.layer2)})</a>')
 
         if self.protocol_type == 1:  # MAP mode
             if self.config['Settings']['field_ch'] != "":
@@ -482,7 +516,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             if self.mode == 1:
                 self.textLog.append(f"Start from the origin: {self.config['Settings']['TIME']}")
             else:
-                self.textLog.append(f"Arrive to destination before: {self.config['Settings']['TIME']}")
+                self.textLog.append(f"Arrive to destination: {self.config['Settings']['TIME']}")
 
         if self.timetable_mode :
             if self.mode == 1:
@@ -495,6 +529,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     str_to = f'<a>The earliest arrival: {self.config['Settings']['TIME']} schedule-adjustment gap {self.config['Settings']['MaxExtraTime']} minutes</a>'                
                     self.textLog.append(str_to)
 
+        self.total_cycles_roundtrip = 1
+
         if self.roundtrip:
             self.time_delta_to_min = int(self.config['Settings']['time_delta_to']) 
             self.time_delta_from_min = int(self.config['Settings']['time_delta_from']) 
@@ -505,6 +541,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.from_time_end = time_to_seconds(self.config['Settings']['from_time_end'])
             self.to_time_start = time_to_seconds(self.config['Settings']['to_time_start'])
             self.to_time_end = time_to_seconds(self.config['Settings']['to_time_end'])
+
+            cycles_to   = floor((self.to_time_end   - self.to_time_start)   / self.time_delta_to)   + 1
+            cycles_from = floor((self.from_time_end - self.from_time_start) / self.time_delta_from) + 1
+            self.total_cycles_roundtrip = cycles_to * cycles_from
 
             if self.timetable_mode:
                 text_add = "schedule-adjustment gap"
@@ -710,7 +750,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 
         if QApplication.keyboardModifiers() & Qt.ShiftModifier:
             self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer']))
-            self.cmbLayersDest.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerDest']))            
+            self.cmbLayersDest.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['LayerDest']))  
+            self.txtMaxTimeTravel.setText(self.config['Settings']['MaxTimeTravel'])          
         else:
             self.cmbLayers.setCurrentIndex(0)
             self.cmbLayersDest.setCurrentIndex(0)            
@@ -734,7 +775,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.txtMaxWaitTime.setText('0') 
         self.txtMaxWaitTimeTransfer.setText(self.config['Settings']['MaxWaitTimeTransfer'])
         self.txtMaxExtraTime.setText (self.config['Settings']['MaxExtraTime'])
-        self.txtMaxTimeTravel.setText(self.config['Settings']['MaxTimeTravel'])
+        
         
         self.txtRountrip_timedelta1.setText(self.config['Settings']['time_delta_to'])
         self.txtRountrip_timedelta2.setText(self.config['Settings']['time_delta_from'])
@@ -887,12 +928,12 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             return 0
 
         run = True
-        
+        """
         if len(sources) > 10:
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
             msgBox.setWindowTitle("Confirm")
-            take_min = round((len(sources)*2)/60)
+            take_min = round((len(sources)*2)/60)*self.total_cycles_roundtrip
             msgBox.setText(
                 f"Layer contains {len(sources)} feature and it will take at least {take_min} minutes to finish the computations. Maximum 10 feature are recommended. Are you sure?")
             msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
@@ -902,7 +943,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 run = True
             else:
                 run = False
-
+        """
         if run:
             PathToNetwork = self.config['Settings']['PathToPKL']
 
@@ -968,16 +1009,19 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 cols_dict = get_name_columns()
                 cols = cols_dict[(2, protocol_type)]
                 MaxTimeTravel = float(self.config['Settings']['MaxTimeTravel'].replace(',', '.'))*60
+                bin = float(self.config['Settings']['timeinterval'].replace(',', '.'))*60
+                
                 #duration_max = MaxTimeTravel * 1.5
                 duration_max = MaxTimeTravel
                 analyzer = roundtrip_analyzer(                                        
                                         duration_max=duration_max,                                                                                 
                                         service_area = (protocol_type == 2),
-                                        dict_numpoints = dict_NUMPOINTS
+                                        dict_numpoints = dict_NUMPOINTS,
+                                        bin = bin
                                         )
                 
                 
-                
+                roundtrip_cycle_current = 0
                 ###########################
                 #  TO
                 # #########################
@@ -1002,6 +1046,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                        self.textLog.append(f"<a style='font-weight:bold;'> Arrive before: {D_TIME_str}</a>")
                                                                                 
                     MaxExtraTime = self.MaxExtraTimeTo
+                    roundtrip_cycle_current += 1
                     short_result= runRaptorWithProtocol(self,
                                                         self.file_name_gpkg,
                                   sources,
@@ -1017,13 +1062,15 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.layer_visualization,
                                   PathToNetwork,
                                   MaxExtraTime,
-                                  roundtrip_mode = True
+                                  roundtrip_mode = True,
+                                  roundtrip_cycle_all = self.total_cycles_roundtrip,
+                                  roundtrip_cycle_current = roundtrip_cycle_current,
                                   )
                     
                     if not(self.break_on):
                         #begin_analyzer_time = time.perf_counter()
 
-                        data_to = analyzer.get_data_for_analyzer_from_to (short_result)
+                        data_to = analyzer.get_data_for_analyzer_from_to (short_result)                        
                         analyzer.add_to_data(data_to, D_TIME_str)
 
                         #end_analyzer_time = time.perf_counter()
@@ -1064,7 +1111,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     postfix = i + 1
                     
                     MaxExtraTime = self.MaxExtraTimeFrom
-                    
+                    roundtrip_cycle_current += 1
                     short_result = runRaptorWithProtocol(self,
                                                          self.file_name_gpkg,
                                   sources,
@@ -1080,13 +1127,16 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                                   self.layer_visualization,
                                   PathToNetwork,
                                   MaxExtraTime,
-                                  roundtrip_mode = True
+                                  roundtrip_mode = True,
+                                  roundtrip_cycle_all = self.total_cycles_roundtrip,
+                                  roundtrip_cycle_current = roundtrip_cycle_current,
                                   )
                     
                     if not(self.break_on):
                         #begin_analyzer_time = time.perf_counter()
 
                         data_from = analyzer.get_data_for_analyzer_from_to (short_result)
+                        
                         analyzer.add_from_data(data_from, D_TIME_str)
          
                         #end_analyzer_time = time.perf_counter()
@@ -1109,15 +1159,19 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             
                     #begin_analyzer_time = time.perf_counter()
 
-                    df_rows_std, df_rows_strict, header  = analyzer.run_finalize_all()
+                    df_rows_std, df_rows_strict, header, pivot  = analyzer.run_finalize_all()
                     
                     
-                    table_name1 = f'{file_name}_stat_all'
+                    table_name1 = f'{file_name}_fastest_trip_all'
                     df_rows_std.columns = header
                     fast_write_gpkg(self.file_name_gpkg, table_name1, df_rows_std)
-                    table_name2 = f'{file_name}_stat_strict'
-                    df_rows_strict.columns = header
-                    fast_write_gpkg(self.file_name_gpkg, table_name2, df_rows_strict)
+
+                    table_name2 = f'{file_name}_fastest_trip_by_destinations'                    
+                    fast_write_gpkg(self.file_name_gpkg, table_name2, pivot)
+                    
+                    #table_name2 = f'{file_name}_stat_strict'
+                    #df_rows_strict.columns = header
+                    #fast_write_gpkg(self.file_name_gpkg, table_name2, df_rows_strict)
 
                     #end_analyzer_time = time.perf_counter()
                     #analyzer_time += end_analyzer_time - begin_analyzer_time  
@@ -1131,12 +1185,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                             mode = protocol_type,
                             fieldname_layer=self.layer_vis_field, 
                             from_to = 1, # from
-                            roundtrip = True if protocol_type == 2 else False
+                            roundtrip = True if protocol_type == 2 else False,
+                            prefix = file_name
                             )
                     #vis.add_thematic_map(PathToRep, self.alias, set_min_value=0)   
 
                     after_computation_time = datetime.now()
                     after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
+                    self.lblEstimateTime.setText("")
                     self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
                     
                     duration_computation = after_computation_time - begin_computation_time
@@ -1156,7 +1212,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         file.write(text)
 
                     vis.add_thematic_map_gpkg(self.file_name_gpkg, table_name1, table_name1)
-                    vis.add_thematic_map_gpkg(self.file_name_gpkg, table_name2, table_name2)
+                    #vis.add_thematic_map_gpkg(self.file_name_gpkg, table_name2, table_name2)
                     self.setMessage('Finished')
 
 

@@ -61,7 +61,7 @@ def raptor(SOURCE,
             
     if first_step is None:
                 if trans_info == -1:
-                    trans_info = footpath_dict.get(SOURCE, [])
+                    trans_info = footpath_dict.get(SOURCE, [])                   
 
                 for i in trans_info:
                     (p_dash, to_pdash_time) = i
@@ -105,7 +105,7 @@ def raptor(SOURCE,
     
     if steps_to_buildings:
                 
-                for (building_id, dist) in steps_to_buildings:
+                for building_id, dist in steps_to_buildings.items():
                     time_departure = D_TIME + dist                    
                     bid = str(building_id)
                     if SOURCE != bid:
@@ -267,7 +267,7 @@ def raptor(SOURCE,
         if marked_stop == deque([]):
             break
 
-    journeys_endtime, journeys_duration = post_processingAll(
+    journeys_duration = post_processingAll(
         SOURCE,
         D_TIME,
         list_stops,
@@ -281,7 +281,7 @@ def raptor(SOURCE,
         mode = 1       
     )
 
-    return journeys_endtime, journeys_duration
+    return journeys_duration
 
 def process_walking_stage(max_time,
                           WALKING_LIMIT,

@@ -505,8 +505,7 @@
   </selection>
   <customproperties>
     <Option type="Map">
-      <Option type="List" name="dualview/previewExpressions">
-        <Option value="&quot;osm_id&quot;" type="QString"/>
+      <Option type="List" name="dualview/previewExpressions">        
       </Option>
       <Option value="0" type="int" name="embeddedWidgets/count"/>
       <Option name="variableNames"/>
@@ -577,14 +576,7 @@
           <Option/>
         </config>
       </editWidget>
-    </field>
-    <field name="osm_id" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
+    </field>    
     <field name="bldg_total" configurationFlags="NoFlag">
       <editWidget type="Range">
         <config>
@@ -600,9 +592,7 @@
     <alias field="right" name="" index="3"/>
     <alias field="bottom" name="" index="4"/>
     <alias field="row_index" name="" index="5"/>
-    <alias field="col_index" name="" index="6"/>
-    <alias field="osm_id" name="" index="7"/>
-    <alias field="bldg_total" name="" index="8"/>
+    <alias field="col_index" name="" index="6"/>    
   </aliases>
   <splitPolicies>
     <policy policy="Duplicate" field="id"/>
@@ -611,9 +601,7 @@
     <policy policy="Duplicate" field="right"/>
     <policy policy="Duplicate" field="bottom"/>
     <policy policy="Duplicate" field="row_index"/>
-    <policy policy="Duplicate" field="col_index"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="bldg_total"/>
+    <policy policy="Duplicate" field="col_index"/>    
   </splitPolicies>
   <duplicatePolicies>
     <policy policy="Duplicate" field="id"/>
@@ -622,9 +610,7 @@
     <policy policy="Duplicate" field="right"/>
     <policy policy="Duplicate" field="bottom"/>
     <policy policy="Duplicate" field="row_index"/>
-    <policy policy="Duplicate" field="col_index"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="bldg_total"/>
+    <policy policy="Duplicate" field="col_index"/>    
   </duplicatePolicies>
   <defaults>
     <default applyOnUpdate="0" field="id" expression=""/>
@@ -634,8 +620,7 @@
     <default applyOnUpdate="0" field="bottom" expression=""/>
     <default applyOnUpdate="0" field="row_index" expression=""/>
     <default applyOnUpdate="0" field="col_index" expression=""/>
-    <default applyOnUpdate="0" field="osm_id" expression=""/>
-    <default applyOnUpdate="0" field="bldg_total" expression=""/>
+    
   </defaults>
   <constraints>
     <constraint exp_strength="0" field="id" constraints="0" unique_strength="0" notnull_strength="0"/>
@@ -644,9 +629,7 @@
     <constraint exp_strength="0" field="right" constraints="0" unique_strength="0" notnull_strength="0"/>
     <constraint exp_strength="0" field="bottom" constraints="0" unique_strength="0" notnull_strength="0"/>
     <constraint exp_strength="0" field="row_index" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="col_index" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="osm_id" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="bldg_total" constraints="0" unique_strength="0" notnull_strength="0"/>
+    <constraint exp_strength="0" field="col_index" constraints="0" unique_strength="0" notnull_strength="0"/>    
   </constraints>
   <constraintExpressions>
     <constraint desc="" field="id" exp=""/>
@@ -655,9 +638,7 @@
     <constraint desc="" field="right" exp=""/>
     <constraint desc="" field="bottom" exp=""/>
     <constraint desc="" field="row_index" exp=""/>
-    <constraint desc="" field="col_index" exp=""/>
-    <constraint desc="" field="osm_id" exp=""/>
-    <constraint desc="" field="bldg_total" exp=""/>
+    <constraint desc="" field="col_index" exp=""/>    
   </constraintExpressions>
   <expressionfields/>
   <attributeactions>
@@ -671,9 +652,7 @@
       <column type="field" name="right" hidden="0" width="-1"/>
       <column type="field" name="bottom" hidden="0" width="-1"/>
       <column type="field" name="row_index" hidden="0" width="-1"/>
-      <column type="field" name="col_index" hidden="0" width="-1"/>
-      <column type="field" name="osm_id" hidden="0" width="-1"/>
-      <column type="field" name="bldg_total" hidden="0" width="-1"/>
+      <column type="field" name="col_index" hidden="0" width="-1"/>      
       <column type="actions" hidden="1" width="-1"/>
     </columns>
   </attributetableconfig>
@@ -710,8 +689,7 @@ def my_form_open(dialog, layer, feature):
     <field name="bottom" editable="1"/>
     <field name="col_index" editable="1"/>
     <field name="id" editable="1"/>
-    <field name="left" editable="1"/>
-    <field name="osm_id" editable="1"/>
+    <field name="left" editable="1"/>    
     <field name="right" editable="1"/>
     <field name="row_index" editable="1"/>
     <field name="top" editable="1"/>
@@ -721,8 +699,7 @@ def my_form_open(dialog, layer, feature):
     <field name="bottom" labelOnTop="0"/>
     <field name="col_index" labelOnTop="0"/>
     <field name="id" labelOnTop="0"/>
-    <field name="left" labelOnTop="0"/>
-    <field name="osm_id" labelOnTop="0"/>
+    <field name="left" labelOnTop="0"/>    
     <field name="right" labelOnTop="0"/>
     <field name="row_index" labelOnTop="0"/>
     <field name="top" labelOnTop="0"/>
@@ -732,15 +709,13 @@ def my_form_open(dialog, layer, feature):
     <field reuseLastValue="0" name="bottom"/>
     <field reuseLastValue="0" name="col_index"/>
     <field reuseLastValue="0" name="id"/>
-    <field reuseLastValue="0" name="left"/>
-    <field reuseLastValue="0" name="osm_id"/>
+    <field reuseLastValue="0" name="left"/>    
     <field reuseLastValue="0" name="right"/>
     <field reuseLastValue="0" name="row_index"/>
     <field reuseLastValue="0" name="top"/>
   </reuseLastValue>
   <dataDefinedFieldProperties/>
-  <widgets/>
-  <previewExpression>"osm_id"</previewExpression>
+  <widgets/>  
   <mapTip enabled="1"></mapTip>
   <layerGeometryType>2</layerGeometryType>
 </qgis>

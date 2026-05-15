@@ -109,6 +109,8 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
         self.show_info()
+
+        #self.cbVoronoi.setVisible(False)
     
     def showFoldersDialog(self, obj):
         folder_path = QFileDialog.getExistingDirectory(

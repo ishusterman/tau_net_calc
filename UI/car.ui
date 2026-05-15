@@ -82,9 +82,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-327</y>
              <width>656</width>
-             <height>695</height>
+             <height>728</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -368,6 +368,24 @@ QGroupBox::title {
                      </item>
                      <item>
                       <widget class="QLineEdit" name="txtWalkingSpeed">
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_13">
+                     <item>
+                      <widget class="QLabel" name="label">
+                       <property name="text">
+                        <string>Minimal distance that is worth driving,m (cannot exceed 800m)</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtMinimalDistance">
                        <property name="alignment">
                         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                        </property>
@@ -753,6 +771,16 @@ QGroupBox::title {
        </property>
        <property name="text">
         <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblEstimateTime">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
      </item>

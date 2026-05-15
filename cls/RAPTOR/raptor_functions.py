@@ -289,18 +289,13 @@ def post_processingAll(
         if pareto_set != None and len(pareto_set) > 0:
             # Just one journey with minimal end time will be in pareto set
 
-            optimal_endtime, optimal_duration = get_optimal_journeys(pareto_set)
+            optimal_duration = get_optimal_journeys(pareto_set)
 
             # Заполнение словарей на основе полученных данных
-            
-            duration, transfers, end_time, journey = optimal_endtime
-            
-            Dict_endtime[p_i] = [SOURCE, duration, journey, transfers, end_time ]
-
             duration, transfers, end_time, journey = optimal_duration
             Dict_duration[p_i] = [SOURCE, duration, journey, transfers, end_time]
                     
-    return Dict_endtime, Dict_duration, 
+    return Dict_duration
 
 def get_optimal_journeys(pareto_set):
     """
@@ -310,30 +305,19 @@ def get_optimal_journeys(pareto_set):
     :return: Кортеж из четырех кортежей с оптимальными данными для каждого критерия.
     """
     
-    first_journey_data = pareto_set[0]
-    
-    count_leg_0, duration_0, end_time_0, journey_0 = first_journey_data
-    
-    
+    first_journey_data = pareto_set[0]    
+    count_leg_0, duration_0, end_time_0, journey_0 = first_journey_data   
     # Инициализация оптимальных значений
-    optimal_duration_journey = (duration_0, count_leg_0, end_time_0, journey_0)
-    optimal_end_time_journey = (duration_0, count_leg_0, end_time_0, journey_0)
-    
-
+    optimal_duration_journey = (duration_0, count_leg_0, end_time_0, journey_0)  
 
     # Единый проход по набору Парето, начиная со второго элемента
-    for journey_data in pareto_set[1:]:
-        
-        count_leg, duration, end_time, journey = journey_data
-        
+    for journey_data in pareto_set[1:]:        
+        count_leg, duration, end_time, journey = journey_data        
         # Обновляем оптимальный маршрут по длительности
         if duration < optimal_duration_journey[0] or (duration == optimal_duration_journey[0] and count_leg < optimal_duration_journey[1]):
-            optimal_duration_journey = (duration, count_leg, end_time, journey)
+            optimal_duration_journey = (duration, count_leg, end_time, journey)        
         
-        if end_time < optimal_end_time_journey[2] or (end_time == optimal_end_time_journey[2] and count_leg < optimal_end_time_journey[1]):
-            optimal_end_time_journey = (duration, count_leg, end_time, journey)
-        
-    return optimal_end_time_journey, optimal_duration_journey
+    return optimal_duration_journey
 
 
 def initialize_rev_raptor(routes_by_stop_dict,

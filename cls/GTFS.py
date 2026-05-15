@@ -6,19 +6,41 @@ import geopandas as gpd
 import os
 import datetime
 import shutil
+import processing
+import sqlite3
 
 from collections import defaultdict
 
 from shapely.geometry import Point
 from pyproj import Geod
 
-from qgis.core import QgsVectorFileWriter, QgsProject, NULL
 from PyQt5.QtWidgets import QApplication
+
+from qgis.core import (
+                QgsVectorLayer,
+                QgsFeature,
+                QgsGeometry,
+                QgsPointXY,
+                QgsVectorFileWriter, 
+                QgsProject, 
+                QgsField,
+                QgsCoordinateReferenceSystem,
+                QgsCoordinateTransform,
+                QgsCoordinateTransformContext,
+                QgsWkbTypes,
+                NULL
+            )
+from PyQt5.QtCore import QVariant
 
 
 from footpath_on_projection import cls_footpath_on_projection
 from converter_layer import MultiLineStringToLineStringConverter
-from common import getDateTime, time_to_seconds, seconds_to_time
+from common import (getDateTime, 
+                    time_to_seconds, 
+                    seconds_to_time,                     
+                    get_unique_path,
+                    is_gpkg_open_in_project,                    
+                    )
 
 
 class GTFS ():
@@ -54,6 +76,20 @@ class GTFS ():
         self.filelog_name = f'{self.__path_to_file}//log_processing_GTFS_{postfix}.txt'
         self.log_processing = []
         self.line_break = '-----------------------------'
+
+        self.prefix = os.path.basename(self.pkl_path)
+        
+        gpkg_path = os.path.join(self.pkl_path, f"{self.prefix}_layers.gpkg")
+
+        if os.path.exists(gpkg_path):
+            if is_gpkg_open_in_project(gpkg_path):                
+                self.file_name_gpkg = get_unique_path(gpkg_path)
+            else:                
+                os.remove(gpkg_path)
+                self.file_name_gpkg = gpkg_path
+        else:            
+            self.file_name_gpkg = gpkg_path
+
 
         os.makedirs(self.__path_to_file, exist_ok=True)
     
@@ -320,7 +356,16 @@ class GTFS ():
         self.routes_df = pd.read_csv(
             f'{self.__path_to_GTFS}//routes.txt', sep=',')
                         
-        self.trips_df = pd.read_csv(f'{self.__path_to_GTFS}//trips.txt', sep=',', dtype={'trip_id': str})
+        self.trips_df = pd.read_csv(f'{self.__path_to_GTFS}//trips.txt', sep=',', dtype={'trip_id': str, 'shape_id': str})
+
+        self.shapes_df_exist = False
+        path = f"{self.__path_to_GTFS}/shapes.txt"
+        if os.path.exists(path):
+            self.shapes_df = pd.read_csv(path, sep=',', dtype={'shape_id': str})
+            self.shapes_df_exist = True
+        
+
+            
         
         
         self.stop_times_df = pd.read_csv(
@@ -577,8 +622,22 @@ class GTFS ():
         self.create_footpath_on_graph()
         if self.verify_break():
             return 0
-            
+        
+        self.insert_layer_on_top(self.layer_links_to_add)
+        self.insert_layer_on_top(self.layer_routes_to_add)
+        self.insert_layer_on_top(self.layer_stops_to_add)            
         return 1
+
+    def insert_layer_on_top(self, layer):    
+        QgsProject.instance().addMapLayer(layer)
+        root = QgsProject.instance().layerTreeRoot()
+        node = root.findLayer(layer.id())
+        if not node:
+            return
+        parent = node.parent()        
+        clone = node.clone()
+        parent.insertChildNode(0, clone)
+        parent.removeChildNode(node)
 
     def create_footpath_on_graph(self, need_save_layer_with_projection = False, filename = ""):
         if self.parent is not None:
@@ -586,6 +645,7 @@ class GTFS ():
         self.converter = MultiLineStringToLineStringConverter(
             self.parent, self.layer_road)
         self.layer_road = self.converter.execute()
+
 
         if self.verify_break():
             return 0
@@ -597,10 +657,12 @@ class GTFS ():
         path_to_stops = self.__path_to_file
 
         footpath_on_projection = cls_footpath_on_projection(self.parent, self.MaxPathRoad)
-        new_layer = footpath_on_projection.make_new_layer_with_projections(self.layer_road,
+        new_layer, self.layer_links_to_add = footpath_on_projection.make_new_layer_with_projections(self.layer_road,
                                                                            self.layer_origins,
                                                                            self.layer_origins_field,
-                                                                           path_to_stops
+                                                                           path_to_stops,
+                                                                           self.file_name_gpkg,
+                                                                           self.prefix
                                                                            )
         
         if need_save_layer_with_projection:
@@ -620,7 +682,7 @@ class GTFS ():
         if self.parent is not None:
             self.parent.progressBar.setValue(11)
             QApplication.processEvents()
-        graph = footpath_on_projection.build_graph(new_layer, self.pkl_path)
+        graph, _, _ = footpath_on_projection.build_graph(new_layer, self.pkl_path)
         if self.verify_break():
             return 0
         if self.parent is not None:
@@ -766,8 +828,180 @@ class GTFS ():
             self.log_processing.append('Corrected repeated stops...')
             self.log_processing.extend(logs)
             self.log_processing.append(self.line_break)
+    
+    def add_layer_stops(self, file_name_gpkg, table_name="stops"):
 
+        context = QgsCoordinateTransformContext()
+        QgsProject.instance().setTransformContext(context)
 
+        crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
+        crs_dst = QgsProject.instance().crs()
+
+        # Создаём memory‑layer
+        layer = QgsVectorLayer(f"Point?crs={crs_dst.authid()}", f'{self.prefix}_{table_name}', "memory")
+        provider = layer.dataProvider()
+
+        fields = [QgsField(col, QVariant.String) for col in self.stop_df.columns]
+        provider.addAttributes(fields)
+        layer.updateFields()
+
+        transform = QgsCoordinateTransform(crs_src, crs_dst, context)
+        features = []
+
+        for _, row in self.stop_df.iterrows():
+
+            lon = float(row["stop_lon"])
+            lat = float(row["stop_lat"])
+
+            pt = QgsPointXY(lon, lat)
+            pt_trans = transform.transform(pt)
+
+            feat = QgsFeature(layer.fields())
+            feat.setGeometry(QgsGeometry.fromPointXY(pt_trans))
+            feat.setAttributes([str(v) for v in row.values])
+
+            features.append(feat)
+
+            if len(features) > 10000:
+                provider.addFeatures(features)
+                features = []
+
+        if features:
+            provider.addFeatures(features)
+
+        layer.updateExtents()
+
+        # --- Сохраняем слой в GPKG ---
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GPKG"
+        options.layerName = table_name
+        options.fileEncoding = "UTF-8"
+
+        QgsVectorFileWriter.writeAsVectorFormatV2(
+            layer,
+            file_name_gpkg,
+            QgsProject.instance().transformContext(),
+            options
+        )
+
+        # --- Подключаем слой из GPKG ---
+        uri = f"{file_name_gpkg}|layername={table_name}"
+        self.layer_stops_to_add = QgsVectorLayer(uri, f'{self.prefix}_{table_name}', "ogr")
+        #QgsProject.instance().addMapLayer(gpkg_layer)
+    
+    def add_layer_routes(self, path_to_shapes, file_name_gpkg, table_name="routes"):
+        
+        context = QgsCoordinateTransformContext()
+        QgsProject.instance().setTransformContext(context)
+
+        crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
+        crs_dst = QgsProject.instance().crs()
+
+        uri = (
+            f"file:///{path_to_shapes}"
+            f"?delimiter=,"
+            f"&xField=shape_pt_lon"
+            f"&yField=shape_pt_lat"
+            f"&crs=EPSG:4326"
+        )
+        point_layer = QgsVectorLayer(uri, "temp_points", "delimitedtext")
+
+        result = processing.run("native:pointstopath", {
+            "INPUT": point_layer,
+            "ORDER_FIELD": "shape_pt_sequence",
+            "GROUP_FIELD": "shape_id",
+            "OUTPUT": "memory:"
+        })
+        line_layer = result["OUTPUT"]
+
+        # --- 3. Таблица соответствия shape_id → route_id ---
+        df = self.trips_df[['shape_id', 'route_id']].drop_duplicates()
+        df['shape_id'] = df['shape_id'].astype(str)
+        df['route_id'] = df['route_id'].astype(str)
+
+        shape_to_routes = {}
+        for row in df.itertuples(index=False):
+            shape_to_routes.setdefault(row.shape_id, []).append(row.route_id)
+
+        # --- 4. routes.txt: подготовка к джойну ---
+        routes_df = self.routes_df.copy()
+        routes_df['route_id'] = routes_df['route_id'].astype(str)
+        routes_df = routes_df.set_index("route_id")
+
+        # --- 5. Создаём итоговый слой LineString (memory) ---
+        final_layer = QgsVectorLayer(f"LineString?crs={crs_dst.authid()}", f'{self.prefix}_{table_name}', "memory")
+        pr = final_layer.dataProvider()
+
+        fields = [
+            QgsField("shape_id", QVariant.String),
+            QgsField("route_id", QVariant.String)
+        ]
+        for col in routes_df.columns:
+            fields.append(QgsField(col, QVariant.String))
+
+        pr.addAttributes(fields)
+        final_layer.updateFields()
+
+        transform = QgsCoordinateTransform(crs_src, crs_dst, context)
+
+        new_features = []
+
+        # --- 6. Создание объектов ---
+        for feat in line_layer.getFeatures():
+
+            sid = str(feat["shape_id"])
+            routes = shape_to_routes.get(sid, [])
+
+            if not routes:
+                continue
+
+            geom = QgsGeometry(feat.geometry())
+            geom.transform(transform)
+
+            for rid in routes:
+
+                if rid not in routes_df.index:
+                    continue
+
+                route_row = routes_df.loc[rid]
+
+                new_feat = QgsFeature(final_layer.fields())
+                new_feat.setGeometry(geom)
+
+                attrs = [sid, rid] + [str(route_row[col]) for col in routes_df.columns]
+                new_feat.setAttributes(attrs)
+
+                new_features.append(new_feat)
+
+            if len(new_features) > 10000:
+                pr.addFeatures(new_features)
+                new_features = []
+
+        if new_features:
+            pr.addFeatures(new_features)
+
+        final_layer.updateExtents()
+
+        # --- 7. Сохраняем слой в GPKG ---
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GPKG"
+        options.layerName = table_name
+        options.fileEncoding = "UTF-8"
+        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer
+
+        err, msg = QgsVectorFileWriter.writeAsVectorFormatV2(
+            final_layer,
+            file_name_gpkg,
+            QgsProject.instance().transformContext(),
+            options
+        )
+
+        # --- 8. Подключаем слой из GPKG в проект ---
+        uri = f"{file_name_gpkg}|layername={table_name}"
+        self.layer_routes_to_add = QgsVectorLayer(uri, f'{self.prefix}_{table_name}', "ogr")
+        #QgsProject.instance().addMapLayer(gpkg_layer)
+
+ 
     def save_GTFS(self):
         
         self.parent.setMessage('Saving stops ...')
@@ -775,6 +1009,10 @@ class GTFS ():
         if self.verify_break():
             return 0
         self.stop_df.to_csv(f'{self.__path_to_file}//stops.txt', index=False)
+        #self.add_layer_stops()
+        
+        
+        self.add_layer_stops (self.file_name_gpkg)
         self.parent.setMessage('Saving time schedule ...')
         QApplication.processEvents()
         if self.verify_break():
@@ -785,14 +1023,7 @@ class GTFS ():
         selected_columns = ['trip_id', 'arrival_time',
                             'departure_time', 'stop_id', 'stop_sequence', ]
         
-        ##################
-        # For testing algo!!!!!!!!
-        ##################
-        #self.filter_trips(nth=3)
-        ##################
-        ##################
-        ##################
-
+        
         self.stop_times_df[selected_columns].to_csv(
             f'{self.__path_to_file}//stop_times.txt', index=False)
 
@@ -841,6 +1072,20 @@ class GTFS ():
                                                                             'route_type',
                                                                             'route_color'],
                               index=False)
+        
+        if self.shapes_df_exist:
+            self.parent.setMessage('Saving shapes ...')
+            QApplication.processEvents()
+            if self.verify_break():
+                return 0
+            shape_ids = self.trips_df['shape_id'].dropna().unique()
+            self.filtered_shapes = self.shapes_df[self.shapes_df['shape_id'].isin(shape_ids)]
+            path_to_shapes = f'{self.__path_to_file}/shapes.txt'
+            self.filtered_shapes.to_csv(path_to_shapes, index=False, header=['shape_id', 'shape_pt_lat', 'shape_pt_lon', 'shape_pt_sequence'])
+            #self.add_layer_routes(path_to_shapes)
+            self.add_layer_routes(path_to_shapes, self.file_name_gpkg)
+
+
         if self.verify_break():
             return 0
 
@@ -940,9 +1185,6 @@ class GTFS ():
                 QApplication.processEvents()
                 if self.verify_break():
                     return 0
-
-            #if i == 1000:
-            #    break
 
             trip_id = freq_row["trip_id"]
             trip_data = trips_df[trips_df["trip_id"] == trip_id]

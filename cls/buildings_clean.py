@@ -6,6 +6,8 @@ from qgis.core import (
     QgsVectorFileWriter,
     QgsTask,
     QgsProject,
+    QgsFeature, QgsRectangle,
+    QgsPointXY, QgsGeometry,
     edit)
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal
@@ -14,6 +16,7 @@ from qgis import processing
 
 from common import (get_unique_path, 
                     create_and_check_field,
+                    convert_meters_to_degrees,
                     FIELD_ID)
 
 class TaskSignals(QObject):
@@ -41,6 +44,8 @@ class cls_clean_buildings(QgsTask):
         self.exception = None
         self.break_on = False
         self.list_layer = []
+
+        self.dist_buffer = 50
 
     def run(self):
 
@@ -104,6 +109,25 @@ class cls_clean_buildings(QgsTask):
         removed_count = self.remove_duplicate_centroids(layer_singlepart)
         
         self.layer_name_single_part =  self.save_layer_single_part (layer_singlepart)
+
+        ##############
+        # 1. Вороной
+
+        self.layer = layer_singlepart
+
+        units = self.layer.crs().mapUnits()
+        crs_grad = (units == 6)        
+        # Точка для расчета искажений проекции
+        first_feat = next(self.layer.getFeatures(), None)        
+        if not first_feat: return False
+        ref_point = first_feat.geometry().centroid().asPoint()        
+            
+        v_dist = self.dist_buffer
+        if crs_grad: v_dist = convert_meters_to_degrees(self.dist_buffer, ref_point.y())        
+        centroids_layer = self.make_centroids(self.layer)        
+        self.process_voronoi(centroids_layer, v_dist)
+        
+        ##############
         self.write_finish_info()
         self.signals.change_button_status.emit(True)
         self.signals.progress.emit(5)
@@ -155,7 +179,6 @@ class cls_clean_buildings(QgsTask):
         self.signals.save_log.emit(True, self.layer_name_single_part)
         self.signals.log.emit(f'"{self.layer_name_single_part}.gpkg" in <a href="file:///{self.folder_name}" target="_blank" >folder</a>')
         self.signals.add_layers.emit(self.list_layer)
-        
 
     def cancel(self):
         try:
@@ -165,38 +188,93 @@ class cls_clean_buildings(QgsTask):
             super().cancel()
         except:
             return
-    
+        
     def save_layer_single_part(self, layer_single_part):
         self.signals.set_message.emit('Saving layer of buildings...')
+
         file_dir = self.folder_name
-        
-        # 1. Меняем расширение на .gpkg
-        self.ext = ".gpkg" 
+        self.ext = ".gpkg"
         output_file_name = f"{self.name}_cleaned{self.ext}"
         output_path = os.path.join(file_dir, output_file_name)
         unique_output_path = get_unique_path(output_path)
-        
+
         layer_name = os.path.splitext(os.path.basename(unique_output_path))[0]
-        
+
         options = QgsVectorFileWriter.SaveVectorOptions()
-        
-        # 2. Указываем драйвер GPKG
         options.driverName = "GPKG"
         options.fileEncoding = "UTF-8"
-        
-        # 3. Для GeoPackage желательно явно указать имя слоя внутри контейнера
         options.layerName = layer_name
+        # важно: если файл уже есть — создаём/перезаписываем слой, а не файл
+        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
 
-        # Сохраняем формат
         QgsVectorFileWriter.writeAsVectorFormatV3(
-            layer_single_part, 
-            unique_output_path, 
-            QgsProject.instance().transformContext(), 
+            layer_single_part,
+            unique_output_path,
+            QgsProject.instance().transformContext(),
             options
         )
+
+        self.output_gpkg_path = unique_output_path
+        self.list_layer.append((unique_output_path, layer_name))
+
+        return layer_name
+
+    def save_layer_to_gpkg(self, layer, layer_name):
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GPKG"
+        options.fileEncoding = "UTF-8"
+        options.layerName = layer_name        
+        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer
+
+        QgsVectorFileWriter.writeAsVectorFormatV3(
+            layer,
+            self.output_gpkg_path,
+            QgsProject.instance().transformContext(),
+            options
+        )
+        #self.list_layer.append((self.output_gpkg_path, layer_name))    
+
+    def process_voronoi(self, centroids, dist):
+
+        self.signals.set_message.emit('Voronoi ...')
+        ext = centroids.extent()
+        b = ext.width() * 0.05
+        rect = QgsRectangle(ext.xMinimum()-b, ext.yMinimum()-b, ext.xMaximum()+b, ext.yMaximum()+b)
         
-        self.list_layer.append((unique_output_path, layer_name))    
+        mem = QgsVectorLayer(f"Point?crs={centroids.crs().authid()}", "vor_tmp", "memory")
+        mem.dataProvider().addAttributes(centroids.fields())
+        mem.updateFields()
         
-        return layer_name   
+        feats = list(centroids.getFeatures())
+        for pt in [QgsPointXY(rect.xMinimum(), rect.yMinimum()), QgsPointXY(rect.xMaximum(), rect.yMaximum())]:
+            f = QgsFeature(); f.setGeometry(QgsGeometry.fromPointXY(pt))
+            f.setAttributes([None]*centroids.fields().count()); feats.append(f)
+        mem.dataProvider().addFeatures(feats)
+
+        vor = processing.run("native:voronoipolygons", {'INPUT': mem, 'OUTPUT': 'memory:'})['OUTPUT']
+        buf = processing.run("native:buffer", {'INPUT': self.layer, 'DISTANCE': dist, 'DISSOLVE': True, 'OUTPUT': 'memory:'})['OUTPUT']                
+        clip = processing.run("native:clip", {'INPUT': vor, 'OVERLAY': buf, 'OUTPUT': 'memory:'})['OUTPUT']
+
+        base, idx = self.split_name_and_index(self.layer_name_single_part)
+        if idx:
+            voronoi_name = f"{base}_voronoi_{idx}"
+        else:
+            voronoi_name = f"{self.layer_name_single_part}_voronoi"        
+        self.save_layer_to_gpkg(clip, voronoi_name)
+
+        self.signals.progress.emit(1)   
+
+    def make_centroids(self, lyr):
+        return processing.run("native:centroids", {'INPUT': lyr, 'OUTPUT': 'memory:'})['OUTPUT']
+    
+    def split_name_and_index(self, name):
+        """
+        Разделяет имя вида base_5 на ('base', '5').
+        Если индекса нет — возвращает (name, None).
+        """
+        parts = name.rsplit("_", 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            return parts[0], parts[1]
+        return name, None
 
                 

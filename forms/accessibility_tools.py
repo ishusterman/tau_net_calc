@@ -146,7 +146,7 @@ class AccessibilityTools(QWidget):
                        "Compare accessibility. Service areas maps",
                        "Compare accessibility. Cumulative opportunities maps",
                    ]
-        
+                
     """ Проверяет, есть ли уже открытое окно с указанным заголовком. """
     def get_existing_window(self, titles):
         
@@ -176,12 +176,17 @@ class AccessibilityTools(QWidget):
             link_tama_cleaned = "https://github.com/ishusterman/TAMA_cleaned_QGIS_Project/archive/refs/heads/main.zip"
             link_tlv_cleaned = "https://github.com/ishusterman/TLV_cleaned_QGIS_Project/archive/refs/heads/main.zip"
             link_tama_tlv_cleaned = "https://github.com/ishusterman/TAMA-TLV_QGIS_Project/archive/refs/heads/main.zip"
+
+            link_gtfs_2018 = "https://drive.google.com/file/d/1gW-HG58Ijj0SI1Eh7GtO62oTMHYavOSn/view?usp=drive_link"
+            link_gtfs_2024 = "https://drive.google.com/file/d/1CeTu8X2Bz-Ges6fsG93VyuXrKcVGbepL/view?usp=drive_link"
                         
             message = (f"TAMA dataset before topological cleaning <a href='{link_tama}'>(47MB)</a><br>"
                       f"TAMA dataset after topological cleaning  <a href='{link_tama_cleaned}'>(57MB)</a><br>"
                       f"Tel Aviv dataset before topological cleaning <a href='{link_tlv}'>(5MB)</a><br>"
                       f"Tel Aviv dataset after topological cleaning <a href='{link_tlv_cleaned}'>(6MB)</a><br>"
-                      f"All datasets together <a href='{link_tama_tlv_cleaned}'>(115MB)</a>.<br>"  
+                      f"Israel GTFS dataset (2018) <a href='{link_gtfs_2018}'>(102MB)</a><br>"
+                      f"Israel GTFS dataset (2024) <a href='{link_gtfs_2024}'>(142MB)</a><br>"
+                      #f"All datasets together <a href='{link_tama_tlv_cleaned}'>(115MB)</a>.<br>"  
                       
             )
 

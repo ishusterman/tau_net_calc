@@ -441,8 +441,7 @@
   </selection>
   <customproperties>
     <Option type="Map">
-      <Option type="List" name="dualview/previewExpressions">
-        <Option value="&quot;osm_id&quot;" type="QString"/>
+      <Option type="List" name="dualview/previewExpressions">        
       </Option>
       <Option value="0" type="int" name="embeddedWidgets/count"/>
       <Option name="variableNames"/>
@@ -464,181 +463,26 @@
   </geometryOptions>
   <legend type="default-vector" showLabelLegend="0"/>
   <referencedLayers/>
-  <fieldConfiguration>
-    <field name="id" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="left" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="top" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="right" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="bottom" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="row_index" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="col_index" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="osm_id" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="bldg_totalREG_F_PT_RFX_bldg" configurationFlags="NoFlag">
-      <editWidget type="Range">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="bldg_total28feb_15h15m09s_PT_RFX_bldg" configurationFlags="NoFlag">
-      <editWidget type="Range">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="Difference" configurationFlags="NoFlag">
-      <editWidget type="Range">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
+  <fieldConfiguration>    
   </fieldConfiguration>
-  <aliases>
-    <alias field="id" name="" index="0"/>
-    <alias field="left" name="" index="1"/>
-    <alias field="top" name="" index="2"/>
-    <alias field="right" name="" index="3"/>
-    <alias field="bottom" name="" index="4"/>
-    <alias field="row_index" name="" index="5"/>
-    <alias field="col_index" name="" index="6"/>
-    <alias field="osm_id" name="" index="7"/>
-    <alias field="bldg_totalREG_F_PT_RFX_bldg" name="" index="8"/>
-    <alias field="bldg_total28feb_15h15m09s_PT_RFX_bldg" name="" index="9"/>
-    <alias field="Difference" name="" index="10"/>
+  <aliases>    
   </aliases>
-  <splitPolicies>
-    <policy policy="Duplicate" field="id"/>
-    <policy policy="Duplicate" field="left"/>
-    <policy policy="Duplicate" field="top"/>
-    <policy policy="Duplicate" field="right"/>
-    <policy policy="Duplicate" field="bottom"/>
-    <policy policy="Duplicate" field="row_index"/>
-    <policy policy="Duplicate" field="col_index"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="bldg_totalREG_F_PT_RFX_bldg"/>
-    <policy policy="Duplicate" field="bldg_total28feb_15h15m09s_PT_RFX_bldg"/>
-    <policy policy="Duplicate" field="Difference"/>
+  <splitPolicies>    
   </splitPolicies>
-  <duplicatePolicies>
-    <policy policy="Duplicate" field="id"/>
-    <policy policy="Duplicate" field="left"/>
-    <policy policy="Duplicate" field="top"/>
-    <policy policy="Duplicate" field="right"/>
-    <policy policy="Duplicate" field="bottom"/>
-    <policy policy="Duplicate" field="row_index"/>
-    <policy policy="Duplicate" field="col_index"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="bldg_totalREG_F_PT_RFX_bldg"/>
-    <policy policy="Duplicate" field="bldg_total28feb_15h15m09s_PT_RFX_bldg"/>
-    <policy policy="Duplicate" field="Difference"/>
+  <duplicatePolicies>    
   </duplicatePolicies>
-  <defaults>
-    <default applyOnUpdate="0" field="id" expression=""/>
-    <default applyOnUpdate="0" field="left" expression=""/>
-    <default applyOnUpdate="0" field="top" expression=""/>
-    <default applyOnUpdate="0" field="right" expression=""/>
-    <default applyOnUpdate="0" field="bottom" expression=""/>
-    <default applyOnUpdate="0" field="row_index" expression=""/>
-    <default applyOnUpdate="0" field="col_index" expression=""/>
-    <default applyOnUpdate="0" field="osm_id" expression=""/>
-    <default applyOnUpdate="0" field="bldg_totalREG_F_PT_RFX_bldg" expression=""/>
-    <default applyOnUpdate="0" field="bldg_total28feb_15h15m09s_PT_RFX_bldg" expression=""/>
-    <default applyOnUpdate="0" field="Difference" expression=""/>
+  <defaults>    
   </defaults>
-  <constraints>
-    <constraint exp_strength="0" field="id" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="left" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="top" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="right" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="bottom" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="row_index" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="col_index" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="osm_id" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="bldg_totalREG_F_PT_RFX_bldg" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="bldg_total28feb_15h15m09s_PT_RFX_bldg" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="Difference" constraints="0" unique_strength="0" notnull_strength="0"/>
+  <constraints>    
   </constraints>
-  <constraintExpressions>
-    <constraint desc="" field="id" exp=""/>
-    <constraint desc="" field="left" exp=""/>
-    <constraint desc="" field="top" exp=""/>
-    <constraint desc="" field="right" exp=""/>
-    <constraint desc="" field="bottom" exp=""/>
-    <constraint desc="" field="row_index" exp=""/>
-    <constraint desc="" field="col_index" exp=""/>
-    <constraint desc="" field="osm_id" exp=""/>
-    <constraint desc="" field="bldg_totalREG_F_PT_RFX_bldg" exp=""/>
-    <constraint desc="" field="bldg_total28feb_15h15m09s_PT_RFX_bldg" exp=""/>
-    <constraint desc="" field="Difference" exp=""/>
+  <constraintExpressions>    
   </constraintExpressions>
   <expressionfields/>
   <attributeactions>
     <defaultAction key="Canvas" value="{00000000-0000-0000-0000-000000000000}"/>
   </attributeactions>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
-    <columns>
-      <column type="field" name="id" hidden="0" width="-1"/>
-      <column type="field" name="left" hidden="0" width="-1"/>
-      <column type="field" name="top" hidden="0" width="-1"/>
-      <column type="field" name="right" hidden="0" width="-1"/>
-      <column type="field" name="bottom" hidden="0" width="-1"/>
-      <column type="field" name="row_index" hidden="0" width="-1"/>
-      <column type="field" name="col_index" hidden="0" width="-1"/>
-      <column type="field" name="osm_id" hidden="0" width="-1"/>
-      <column type="field" name="bldg_totalREG_F_PT_RFX_bldg" hidden="0" width="-1"/>
-      <column type="field" name="bldg_total28feb_15h15m09s_PT_RFX_bldg" hidden="0" width="-1"/>
-      <column type="field" name="Difference" hidden="0" width="-1"/>
-      <column type="actions" hidden="1" width="-1"/>
+    <columns>      
     </columns>
   </attributetableconfig>
   <conditionalstyles>
@@ -669,48 +513,15 @@ def my_form_open(dialog, layer, feature):
 ]]></editforminitcode>
   <featformsuppress>0</featformsuppress>
   <editorlayout>generatedlayout</editorlayout>
-  <editable>
-    <field name="Difference" editable="0"/>
-    <field name="bldg_total28feb_15h15m09s_PT_RFX_bldg" editable="0"/>
-    <field name="bldg_totalREG_F_PT_RFX_bldg" editable="0"/>
-    <field name="bottom" editable="1"/>
-    <field name="col_index" editable="1"/>
-    <field name="id" editable="1"/>
-    <field name="left" editable="1"/>
-    <field name="osm_id" editable="1"/>
-    <field name="right" editable="1"/>
-    <field name="row_index" editable="1"/>
-    <field name="top" editable="1"/>
+  <editable>    
   </editable>
-  <labelOnTop>
-    <field name="Difference" labelOnTop="0"/>
-    <field name="bldg_total28feb_15h15m09s_PT_RFX_bldg" labelOnTop="0"/>
-    <field name="bldg_totalREG_F_PT_RFX_bldg" labelOnTop="0"/>
-    <field name="bottom" labelOnTop="0"/>
-    <field name="col_index" labelOnTop="0"/>
-    <field name="id" labelOnTop="0"/>
-    <field name="left" labelOnTop="0"/>
-    <field name="osm_id" labelOnTop="0"/>
-    <field name="right" labelOnTop="0"/>
-    <field name="row_index" labelOnTop="0"/>
-    <field name="top" labelOnTop="0"/>
+  <labelOnTop>    
   </labelOnTop>
-  <reuseLastValue>
-    <field reuseLastValue="0" name="Difference"/>
-    <field reuseLastValue="0" name="bldg_total28feb_15h15m09s_PT_RFX_bldg"/>
-    <field reuseLastValue="0" name="bldg_totalREG_F_PT_RFX_bldg"/>
-    <field reuseLastValue="0" name="bottom"/>
-    <field reuseLastValue="0" name="col_index"/>
-    <field reuseLastValue="0" name="id"/>
-    <field reuseLastValue="0" name="left"/>
-    <field reuseLastValue="0" name="osm_id"/>
-    <field reuseLastValue="0" name="right"/>
-    <field reuseLastValue="0" name="row_index"/>
-    <field reuseLastValue="0" name="top"/>
+  <reuseLastValue>    
   </reuseLastValue>
   <dataDefinedFieldProperties/>
   <widgets/>
-  <previewExpression>"osm_id"</previewExpression>
+  <previewExpression></previewExpression>
   <mapTip enabled="1"></mapTip>
   <layerGeometryType>2</layerGeometryType>
 </qgis>

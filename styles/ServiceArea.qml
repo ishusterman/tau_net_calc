@@ -144,7 +144,7 @@
       </symbol>
     </profileMarkerSymbol>
   </elevation>
-  <renderer-v2 enableorderby="0" graduatedMethod="GraduatedColor" symbollevels="0" type="graduatedSymbol" forceraster="0" referencescale="-1" attr="Duration">
+  <renderer-v2 enableorderby="0" graduatedMethod="GraduatedColor" symbollevels="0" type="graduatedSymbol" forceraster="0" referencescale="-1">
     <ranges>
       <range lower="0.000000000000000" upper="300.000000000000000" label="0 - 5 min" symbol="0" render="true" uuid="{59ef90d5-d5ef-4e73-a306-3d58b5ad7218}"/>
       <range lower="300.000000000000000" upper="600.000000000000000" label="5 - 10 min" symbol="1" render="true" uuid="{aa27c2ae-a099-435e-bdd9-fec45d7101b5}"/>
@@ -580,153 +580,26 @@
   </geometryOptions>
   <legend type="default-vector" showLabelLegend="0"/>
   <referencedLayers/>
-  <fieldConfiguration>
-    <field name="id" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="left" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="top" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="right" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="bottom" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="row_index" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="col_index" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="osm_id" configurationFlags="NoFlag">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
-    <field name="Duration" configurationFlags="NoFlag">
-      <editWidget type="Range">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
+  <fieldConfiguration>       
   </fieldConfiguration>
-  <aliases>
-    <alias field="id" name="" index="0"/>
-    <alias field="left" name="" index="1"/>
-    <alias field="top" name="" index="2"/>
-    <alias field="right" name="" index="3"/>
-    <alias field="bottom" name="" index="4"/>
-    <alias field="row_index" name="" index="5"/>
-    <alias field="col_index" name="" index="6"/>
-    <alias field="osm_id" name="" index="7"/>
-    <alias field="Duration" name="" index="8"/>
+  <aliases>    
   </aliases>
-  <splitPolicies>
-    <policy policy="Duplicate" field="id"/>
-    <policy policy="Duplicate" field="left"/>
-    <policy policy="Duplicate" field="top"/>
-    <policy policy="Duplicate" field="right"/>
-    <policy policy="Duplicate" field="bottom"/>
-    <policy policy="Duplicate" field="row_index"/>
-    <policy policy="Duplicate" field="col_index"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="Duration"/>
+  <splitPolicies>    
   </splitPolicies>
-  <duplicatePolicies>
-    <policy policy="Duplicate" field="id"/>
-    <policy policy="Duplicate" field="left"/>
-    <policy policy="Duplicate" field="top"/>
-    <policy policy="Duplicate" field="right"/>
-    <policy policy="Duplicate" field="bottom"/>
-    <policy policy="Duplicate" field="row_index"/>
-    <policy policy="Duplicate" field="col_index"/>
-    <policy policy="Duplicate" field="osm_id"/>
-    <policy policy="Duplicate" field="Duration"/>
+  <duplicatePolicies>    
   </duplicatePolicies>
-  <defaults>
-    <default applyOnUpdate="0" field="id" expression=""/>
-    <default applyOnUpdate="0" field="left" expression=""/>
-    <default applyOnUpdate="0" field="top" expression=""/>
-    <default applyOnUpdate="0" field="right" expression=""/>
-    <default applyOnUpdate="0" field="bottom" expression=""/>
-    <default applyOnUpdate="0" field="row_index" expression=""/>
-    <default applyOnUpdate="0" field="col_index" expression=""/>
-    <default applyOnUpdate="0" field="osm_id" expression=""/>
-    <default applyOnUpdate="0" field="Duration" expression=""/>
+  <defaults>    
   </defaults>
-  <constraints>
-    <constraint exp_strength="0" field="id" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="left" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="top" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="right" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="bottom" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="row_index" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="col_index" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="osm_id" constraints="0" unique_strength="0" notnull_strength="0"/>
-    <constraint exp_strength="0" field="Duration" constraints="0" unique_strength="0" notnull_strength="0"/>
+  <constraints>    
   </constraints>
-  <constraintExpressions>
-    <constraint desc="" field="id" exp=""/>
-    <constraint desc="" field="left" exp=""/>
-    <constraint desc="" field="top" exp=""/>
-    <constraint desc="" field="right" exp=""/>
-    <constraint desc="" field="bottom" exp=""/>
-    <constraint desc="" field="row_index" exp=""/>
-    <constraint desc="" field="col_index" exp=""/>
-    <constraint desc="" field="osm_id" exp=""/>
-    <constraint desc="" field="Duration" exp=""/>
+  <constraintExpressions>    
   </constraintExpressions>
   <expressionfields/>
   <attributeactions>
     <defaultAction key="Canvas" value="{00000000-0000-0000-0000-000000000000}"/>
   </attributeactions>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
-    <columns>
-      <column type="field" name="osm_id" hidden="0" width="-1"/>
-      <column type="field" name="Duration" hidden="0" width="-1"/>
-      <column type="field" name="id" hidden="0" width="-1"/>
-      <column type="field" name="left" hidden="0" width="-1"/>
-      <column type="field" name="top" hidden="0" width="-1"/>
-      <column type="field" name="right" hidden="0" width="-1"/>
-      <column type="field" name="bottom" hidden="0" width="-1"/>
-      <column type="field" name="row_index" hidden="0" width="-1"/>
-      <column type="field" name="col_index" hidden="0" width="-1"/>
-      <column type="actions" hidden="1" width="-1"/>
+    <columns>            
     </columns>
   </attributetableconfig>
   <conditionalstyles>
@@ -757,65 +630,12 @@ def my_form_open(dialog, layer, feature):
 ]]></editforminitcode>
   <featformsuppress>0</featformsuppress>
   <editorlayout>generatedlayout</editorlayout>
-  <editable>
-    <field name="Duration" editable="0"/>
-    <field name="access_30aug_17h24m_Duration" editable="0"/>
-    <field name="access_30aug_17h24m_Origin_ID" editable="0"/>
-    <field name="bottom" editable="1"/>
-    <field name="cat" editable="1"/>
-    <field name="code" editable="1"/>
-    <field name="col_index" editable="1"/>
-    <field name="fclass" editable="1"/>
-    <field name="fid" editable="1"/>
-    <field name="id" editable="1"/>
-    <field name="left" editable="1"/>
-    <field name="machoz" editable="1"/>
-    <field name="name" editable="1"/>
-    <field name="osm_id" editable="1"/>
-    <field name="right" editable="1"/>
-    <field name="row_index" editable="1"/>
-    <field name="top" editable="1"/>
-    <field name="type" editable="1"/>
+  <editable>    
   </editable>
-  <labelOnTop>
-    <field name="Duration" labelOnTop="0"/>
-    <field name="access_30aug_17h24m_Duration" labelOnTop="0"/>
-    <field name="access_30aug_17h24m_Origin_ID" labelOnTop="0"/>
-    <field name="bottom" labelOnTop="0"/>
-    <field name="cat" labelOnTop="0"/>
-    <field name="code" labelOnTop="0"/>
-    <field name="col_index" labelOnTop="0"/>
-    <field name="fclass" labelOnTop="0"/>
-    <field name="fid" labelOnTop="0"/>
-    <field name="id" labelOnTop="0"/>
-    <field name="left" labelOnTop="0"/>
-    <field name="machoz" labelOnTop="0"/>
-    <field name="name" labelOnTop="0"/>
-    <field name="osm_id" labelOnTop="0"/>
-    <field name="right" labelOnTop="0"/>
-    <field name="row_index" labelOnTop="0"/>
-    <field name="top" labelOnTop="0"/>
-    <field name="type" labelOnTop="0"/>
+  <labelOnTop>   
   </labelOnTop>
   <reuseLastValue>
-    <field reuseLastValue="0" name="Duration"/>
-    <field reuseLastValue="0" name="access_30aug_17h24m_Duration"/>
-    <field reuseLastValue="0" name="access_30aug_17h24m_Origin_ID"/>
-    <field reuseLastValue="0" name="bottom"/>
-    <field reuseLastValue="0" name="cat"/>
-    <field reuseLastValue="0" name="code"/>
-    <field reuseLastValue="0" name="col_index"/>
-    <field reuseLastValue="0" name="fclass"/>
-    <field reuseLastValue="0" name="fid"/>
-    <field reuseLastValue="0" name="id"/>
-    <field reuseLastValue="0" name="left"/>
-    <field reuseLastValue="0" name="machoz"/>
-    <field reuseLastValue="0" name="name"/>
-    <field reuseLastValue="0" name="osm_id"/>
-    <field reuseLastValue="0" name="right"/>
-    <field reuseLastValue="0" name="row_index"/>
-    <field reuseLastValue="0" name="top"/>
-    <field reuseLastValue="0" name="type"/>
+    
   </reuseLastValue>
   <dataDefinedFieldProperties/>
   <widgets/>

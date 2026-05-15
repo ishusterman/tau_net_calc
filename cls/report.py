@@ -82,6 +82,7 @@ def make_protocol_detailed(raptor_mode,
                            dictInput,                           
                            timetable_mode,                           
                            set_stops,
+                           destinations,
                            SOURCE,                           
                            short_result = None
                            ):
@@ -414,7 +415,12 @@ def make_protocol_detailed(raptor_mode,
                     if (orig_dest) in set_stops:
                         continue
 
+                    
+
                     orig_dest_int = int(orig_dest)
+
+                    if orig_dest_int not in destinations:
+                        continue
 
                     row = f'{SOURCE}{sep}{seconds_to_time(D_TIME)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\
@@ -431,6 +437,9 @@ def make_protocol_detailed(raptor_mode,
                         continue
 
                     SOURCE_REV_int = int(SOURCE_REV)
+
+                    if SOURCE_REV_int not in destinations:
+                        continue
 
                     row = f'{SOURCE_REV}{sep}{seconds_to_time(start_time)}{sep}{walk1_time}{sep}{sfirst_boarding_stop}\
 {sep}{wait1_time}{sep}{sfirst_boarding_time}{sep}{line1_id}{sep}{ride1_time}{sep}{sfirst_arrive_stop}{sep}{sfirst_arrive_time}\

@@ -83,7 +83,7 @@ class GTFSAddRoutes:
         
         self.files_to_merge = [
             'routes.txt', 'trips.txt', 'stop_times.txt', 
-            'stops.txt', 'calendar.txt', 'calendar_dates.txt', 'agency.txt'
+            'stops.txt', 'calendar.txt', 'calendar_dates.txt', 'agency.txt', 'shapes.txt'
         ]
 
         self.parent.setMessage("Loading GTFS files...")
@@ -137,6 +137,44 @@ class GTFSAddRoutes:
                     first_write = False
                     if self.verify_break(): return 0
                 continue
+
+            if filename == "shapes.txt":
+                df1 = cache1.get(filename)
+                df2 = self._read_file(self.gtfs_path2, filename)
+                df2 = self.fix_ids(df2)
+
+                out_path = os.path.join(self.output_path, filename)
+
+                if df2 is None:
+                    # shapes.txt отсутствует во втором GTFS → просто копируем первый
+                    if df1 is not None:
+                        df1.to_csv(out_path, index=False, encoding='utf-8')
+                    continue
+
+                # Получаем shape_id, которые используются в выбранных trip_id
+                df_trips2 = df_trips2_raw
+                df_trips2 = df_trips2[df_trips2['trip_id'].isin(trips_to_add)]
+                shape_ids_to_add = set(df_trips2['shape_id'].dropna().unique())
+
+                # Фильтруем shapes.txt второго GTFS
+                df2 = df2[df2['shape_id'].isin(shape_ids_to_add)]
+
+                # Объединяем с основным GTFS
+                frames = [df for df in (df1, df2) if df is not None]
+                if frames:
+                    res_df = pd.concat(frames, ignore_index=True)
+                    res_df = self.fix_ids(res_df)
+
+                    # Удаляем дубли по shape_id + shape_pt_sequence
+                    if 'shape_id' in res_df.columns and 'shape_pt_sequence' in res_df.columns:
+                        res_df = res_df.drop_duplicates(
+                            subset=['shape_id', 'shape_pt_sequence']
+                        )
+
+                    res_df.to_csv(out_path, index=False, encoding='utf-8')
+
+                continue
+
 
             df2 = self._read_file(self.gtfs_path2, filename)
             if df2 is None and filename not in ['calendar.txt', 'calendar_dates.txt']:
