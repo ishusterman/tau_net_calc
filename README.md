@@ -39,7 +39,7 @@ These three datasets are translated into: a topologically cleaned layers of the 
 
 # Cumulative Number of Opportunities (CNO)
 
-The CNO is an aggregate measure of accessibility computed for each building B in the area.
+The CNO is an aggregate measure of accessibility computed for each building **B** in the area.
 - The default CNO measure of a building's **FROM-accessibility** is the total number of buildings in the area accessible from **B** within a given travel time, starting at a certain hour of the day. Other measures, like the total number of shops or jobs accessible from **B**, can be calculated if information on jobs or building use is available.
 - The default CNO measure of a building's **TO-accessibility** is the total number of buildings from which it is possible to arrive at **B** at a certain hour of the day and within a given travel time. Other measures, like the total population that can reach **B**, can be calculated if information on the buildings’ population is available.
 - The default CNO measure of a building's **ROUNDTRIP-accessibility** is the total number of buildings from which it is possible to arrive at **B**, arriving at a certain hour of the day, and then get back, starting at another hour of a day, within a given total travel time. Other measures, like the total population that can reach the building and get back, can be calculated if information on the buildings’ population is available.
