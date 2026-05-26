@@ -237,7 +237,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#topological-cleaning-of-the-road-and-building-layers"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/data_preprocessing.html#cleaning-the-layer-of-buildings-foundations"
         webbrowser.open(url)
 
     def readParameters(self):

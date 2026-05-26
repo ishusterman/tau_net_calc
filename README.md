@@ -1,99 +1,63 @@
 # What is it all about?
 
-What is it all about?
-The goal of the Accessibility Calculator plugin is to assess transport accessibility at the resolution of a single building. The assessment is based on a precise estimation of the travel time between the Origin (O), and the Destination (D) buildings of a trip. The OD travel time depends on the transportation mode which can be a Public Transport (PT) or a Private Car. The results of accessibility computations are stored as a CSV table that presents the details of trips and presented visually as an accessibility map.
+The goal of the Accessibility Calculator plugin is to assess transport accessibility at the resolution of a single building or at a lower resolutions represented by several layers of hexagons, constructed within the plugin. Each hexagon is considered as a larger building that aggregates the information of all buildings whose centroids are inside it. 
+The assessment is based on a precise estimation of the travel time between the Origin (O) and the Destination (D) buildings of a trip. The OD travel time depends on the transportation mode, which can be Public Transport (PT) or a Private Car. The results of each accessibility computation scenario are stored as a set of tables in the GeoPackage format and presented visually as accessibility maps.
 
-# ACCESSIBILITY plugin accounts for every component of a trip
 
-The PT or car trip consists of several components: A PT user walks from the O-building to the initial stop, waits for a PT vehicle (bus, tram, metro, other), rides to the transfer stop, waits for the next PT vehicle, and, after, possibly, more transfers, alights at the final stop and walks to the D-building. The car traveler takes a walk from the O-building to the parked car, drives to the destination, finds a parking place nearby, and then walks to the D-building.
+# The ACCESSIBILITY plugin accounts for every component of a trip
+
+A PT or car trip consists of several legs: A PT user walks from the O-building to the initial stop, waits for a PT vehicle (bus, tram, metro, or other), rides to the transfer stop, waits for the next PT vehicle, and, after possibly more transfers, alights at the final stop and walks to the D-building. A car traveler walks from the O-building to the parked car, drives to the destination, finds a parking place nearby, and then walks to the D-building.
 
 # The algorithms employed in the ACCESSIBILITY plugin
 
--   We employ the modified RAPTOR algorithm for estimating the PT accessibility based on [https://github.com/transnetlab/transit-routing](https://github.com/transnetlab/transit-routing).
--   To estimate accessibility with the private car we employ
-    Dijkstra algorithm, also with modifications.
+-   We employ a modified RAPTOR algorithm for estimating PT accessibility based on [https://github.com/transnetlab/transit-routing](https://github.com/transnetlab/transit-routing).
+-  To estimate accessibility with a private car, we employ the Dijkstra algorithm, also with modifications.
 
 # The data necessary for ACCESSIBILITY computations
 
-To use the Accessibility Calculator, you need three sets of data, all covering the region of your interest:
+To use the Accessibility Calculator, you need three sets of data, all covering your region of interest:
+- A layer of roads represented by polylines.
+- A layer of buildings represented by polygons.
+- A GTFS dataset that represents the PT lines, stops, and schedules.
+These three datasets are translated into: a topologically cleaned layers of the road network and buildings, and fast-access databases for computing transit accessibility, and car accessibility.
 
-- The layer of roads.
 
-- The layer of buildings that are represented by polygons or points.
+# FROM-accessibility versus TO-accessibility versus ROUNDTRIP-accessibility
 
-- The GTFS dataset of the PT network and schedule.
+- **FROM-accessibility** assesses the travel time from each origin building to all other buildings, given the start time of a trip. FROM-accessibility answers the question: *“Where can you get from here in half an hour or less, starting at 10:00 in the morning?”*
+- **TO-accessibility** is based on the travel time to all destination buildings from all other buildings, given the arrival time. TO-accessibility answers the question: *“From where can you get here at 10:00 in the morning in half an hour or less?”*
+- **ROUNDTRIP-accessibility** is based on the travel time between the origin and destination and back, given the time of arrival at the destination and the time of starting the trip back from there. ROUNDTRIP-accessibility answers the question: *“From where can you get here at 10:00 and then return to your origin at 16:00, if you want to limit your total travel time to no more than an hour?”*
 
-Three datasets are checked and translated into three fast-access databases. The first one contains a topologically cleaned road network, the second is constructed for computing transit accessibility and the third is constructed for computing car accessibility. It is often convenient to use datasets that cover an area that is larger than the region of the current interest.
 
-# From-accessibility versus To-accessibility
+# Service area
 
-From-accessibility is based on the travel time from each of the selected buildings to all other locations in the city. The typical application of from-accessibility is the assessment of the residents’ travel time to the locations of their possible employment.
-To-accessibility is based on the travel time to each of the selected buildings from all other locations in the city. The typical application of to-accessibility is the assessment of the residents’ travel time to shops and attractions in the city center.
+- The **FROM-service area** of a set of facilities includes all buildings that can be reached within a maximum travel time or faster, starting the trip in a certain hour, from at least one of the facilities in this set. If a building can be reached from several facilities, the trip with the minimal travel time is accounted for. In addition, the travel time from each of the facilities is stored.
+- The **TO-service area** of a set of facilities includes all buildings from which at least one of the facilities can be reached within a maximum travel time or faster, arriving at the facility at a certain time. If several facilities can be reached, the trip with the minimal travel time is accounted for. In addition, the travel time to each of the facilities is stored.
+- The **ROUNDTRIP-service area** of a set of facilities includes all buildings from which a roundtrip to the facility and back will take no more than a certain total travel time. If several facilities satisfy this condition, the travel time to the closest one is accounted for. In addition, the roundtrip travel time to each of the facilities is stored.
 
-# Service area of several facilities versus accessibility of all buildings in the region
+# Cumulative Number of Opportunities (CNO)
 
-From- and To-accessibility computations can be performed to assess the service area of several facilities located in the buildings or aggregate measures of accessibility for all buildings in the region of interest – region accessibility. In both cases, origins and destinations can be all or just selected buildings. In the latter case, the selected buildings will be stored as a layer as a part of the results.
-The service area consists of buildings that can be served by at least one of the facilities.
-
-The “From” service area of the set of facilities includes all buildings that can be reached in maximum travel time or faster, from at least one of the facilities in this set. If the building can be reached from several facilities, then the trip with the minimal travel time is considered.
-
-The “To” service area of the set of facilities, includes all buildings from which at least one of the facilities can be reached in maximum travel time or faster. If several facilities can be reached, then the trip with minimal travel time is considered.
-
-The details of each leg of the fastest trips are stored as attributes of the served building and the thematic map presents the total travel time from the facilities to the served building or from the served building to the facility. Importantly, the service area of every facility is also stored. The user can exploit this file for computing other measures of accessibility, like the area from where the residents can reach more than half of the facilities in the center of the city in a maximum travel time.
-The region accessibility represents aggregate measures of accessibility for each building in the region.
-
-The default aggregate measure of the from-accessibility for the region’s building is the number of other buildings accessible from it. Other measures, like the number of shops, or jobs, accessible from the building can be calculated if the information on jobs or use at a building resolution is available.
-
-The default aggregate measure of the to-accessibility for the region’s building is the number of buildings from which it is accessible. Other measures, like the total population that can reach the building, can be calculated if the information on the population at a building resolution is available.
-
-The accessibility of a region is computed at a time resolution that is defined by the user. All aggregate measures are stored as attributes of the region’s buildings, for each time interval.
+The CNO is an aggregate measure of accessibility computed for each building B in the area.
+- The default CNO measure of a building's **FROM-accessibility** is the total number of buildings in the area accessible from **B** within a given travel time, starting at a certain hour of the day. Other measures, like the total number of shops or jobs accessible from **B**, can be calculated if information on jobs or building use is available.
+- The default CNO measure of a building's **TO-accessibility** is the total number of buildings from which it is possible to arrive at **B** at a certain hour of the day and within a given travel time. Other measures, like the total population that can reach **B**, can be calculated if information on the buildings’ population is available.
+- The default CNO measure of a building's **ROUNDTRIP-accessibility** is the total number of buildings from which it is possible to arrive at **B**, arriving at a certain hour of the day, and then get back, starting at another hour of a day, within a given total travel time. Other measures, like the total population that can reach the building and get back, can be calculated if information on the buildings’ population is available.
 
 # Adjustment of the trip’s start or arrival time to the transit timetable
 
-Modern transit users are aware of the time the bus or train arrives at the stop they plan to start from, or to the final stops of their trip, and plan their trips accordingly. To assess the accessibility for these informed users we modify the RAPTOR algorithm to account for the schedule-based trip’s start or finish. Schedule-defined accessibility can be chosen for each of the From/To and Location/Region regimes.
+Modern transit users are aware of the time a bus or train arrives at the stop they plan to start from, or at the final stop of their trip, and plan their trips accordingly. To assess accessibility for these informed users, we modify the RAPTOR algorithm to account for schedule-based trip start or finish. Schedule-based accessibility can be chosen for each of the FROM/TO/ROUNDTRIP and Service Area/Cumulative Number of Opportunities regimes.
 
 # Car speed for accessibility computation
 
-The assessment of car accessibility is based on the traffic speed of the
-OD route. We assume that the traffic speed is defined by the type of the
-road - a highway, major city street, neighborhood secondary street, etc.
-The average speed for every road type is provided by a user-defined
-table of average speeds by the road type.
+The assessment of car accessibility is based on traffic speed, and we assume that it is defined by the type of the road (e.g., a highway, major city street, neighborhood secondary street, etc.) and the hour of the day.
 
 # Comparing accessibility scenarios
 
-The study of accessibility does not end with assessment of **Service area** or
-**Region** accessibility. Typically, we compare accessibility for
-different scenarios of urban transportation development.
+The ACCESSIBILITY plugin includes three options for comparing accessibility across different urban transportation development scenarios:
+- **The difference in accessibility**, calculated as a difference in travel times or a cumulative numbers of opportunities in two scenarios.
+- **Relative accessibility**, calculated as a ratio of travel times or a cumulative numbers of opportunities in two scenarios.
+- **Relative difference**, calculated as a ratio of the difference in travel times or cumulative numbers of opportunities divided by the values of the measure for the second scenario.
 
-The ACCESSIBILITY plugin includes three options for this comparison:
-
--   Relative accessibility, is typically used for assessing the ratio
-    of the PT and Car travel times.
--   Accessibility difference, is typically used for comparing
-    scenarios of the PT scheduling or road network development.
--   Relative accessibility difference, combines two above measure,
-    estimating the difference between accessibility in two scenarios
-    divided the accessibility in the first of them.
-
-To compare two scenarios, accessibility for each of them must be ready.
 
 # Visualization of accessibility computations
 
-The results of the accessibility computations are stored as buildings\'
-attributes. It can be
-
--   In the **Service area** regime - the travel time to, or from a certain
-    building
--   In the **Region** regime - the number and the aggregate parameters of
-    buildings that can be accessed from a certain O-building, or from
-    which a certain D-building can be accessed
-
-These results are presented as thematic maps. These maps can be built
-based on the buildings themselves, but the gaps between buildings
-prevent clear view of the phenomenon. The better view can be constructed
-based on the continuous coverages and ACCESSIBILITY plugin employ
-covereges of two kinds:
-
--   Voronoi polygons constructed based on the buildings\' foundations    
--   H3 hexagons, of the h11, h10, h9 and h8 scales.
+The results of the accessibility computations are stored as attributes of buildings or aggregating hexagons and presented as thematic maps.

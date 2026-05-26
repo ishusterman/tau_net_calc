@@ -36,13 +36,13 @@ class RaptorSummary(RaptorDetailed):
         url = "https://geosimlab.github.io/accessibility-calculator-tutorial/raptor_map.html"
         
         if self.mode == 1 and not(self.timetable_mode):
-            section = "accessibility-from-every-location-in-the-region-fixed-time-departure"
+            section = "cumulative-number-of-accessible-opportunities-fixed-arrival-departure-time"
         
         if self.mode == 2 and not(self.timetable_mode):
-            section = "accessibility-to-every-location-in-the-region-fixed-time-arrival"
+            section = "cumulative-number-of-accessible-opportunities-fixed-arrival-departure-time"
 
         if self.timetable_mode:
-            section = "region-accessibility-for-the-schedule-based-departure-or-arrival"
+            section = "cumulative-number-of-accessible-opportunities-fixed-arrival-departure-time"
                         
         url = f'{url}#{section}'
         webbrowser.open(url)

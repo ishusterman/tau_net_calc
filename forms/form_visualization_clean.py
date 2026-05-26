@@ -284,7 +284,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.reject()
 
     def on_help_button_clicked(self):
-        url= "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-layers-for-visualization"
+        url= "https://geosimlab.github.io/accessibility-calculator-tutorial/prepare_database.html#preparing-layers-for-visualization-and-lower-resolution-computation"
         webbrowser.open(url)
 
     def readParameters(self):

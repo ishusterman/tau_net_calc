@@ -515,16 +515,16 @@ class CarAccessibility(QDialog, FORM_CLASS):
         url = "https://geosimlab.github.io/accessibility-calculator-tutorial/car_accessibility.html"
         
         if self.mode == 1 and self.protocol_type == 2:
-            section = "from-service-locations-fixed-time-departure"
+            section = "car-service-area-maps-parameters-and-computation-execution"
         
         if self.mode == 2 and self.protocol_type == 2:
-            section = "to-service-locations-fixed-time-arrival"
+            section = "car-service-area-maps-parameters-and-computation-execution"
 
         if self.mode == 1 and self.protocol_type == 1:
-            section = "car-accessibility-region-maps"
+            section = "cumulative-number-of-opportunities-accessible-by-car"
 
         if self.mode == 2 and self.protocol_type == 1:
-            section = "car-accessibility-to-every-location-in-the-region"
+            section = "cumulative-number-of-opportunities-accessible-by-car"
 
         url = f'{url}#{section}'
 

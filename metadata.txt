@@ -14,8 +14,8 @@ license=MIT
 
 about=Calculation of potential transit and car accessibility at a resolution of a single building.
 
-tracker=https://github.com/ishusterman/tau_net_calc
-repository=https://github.com/ishusterman/tau_net_calc
+tracker=https://github.com/geosimlab/tau_net_calc
+repository=https://github.com/geosimlab/tau_net_calc
 # End of mandatory metadata
 
 # Recommended items:
@@ -41,11 +41,11 @@ changelog=The changelog lists the plugin versions
 # Tags are comma separated with spaces allowed
 tags="Transport accessibility","Transit accessibility","Car accessibility","Accessibility map","Transportation planning","Service area","Dijkstra algorithm","Raptor algorithm",GTFS,"Public transport","Voronoi polygon",Hexagon
 
-homepage=https://github.com/ishusterman/tau_net_calc
+homepage=https://github.com/geosimlab/tau_net_calc
 category=Plugins
 icon=img/icon.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False

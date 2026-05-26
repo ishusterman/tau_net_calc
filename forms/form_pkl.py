@@ -209,7 +209,7 @@ class form_pkl(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'building_pkl.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-database-for-transit-accessibility"
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/prepare_database.html#building-a-database-for-transit-accessibility-computations"
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):

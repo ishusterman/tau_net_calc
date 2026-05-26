@@ -609,13 +609,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         url = "https://geosimlab.github.io/accessibility-calculator-tutorial/raptor_area.html"
 
         if self.mode == 1 and not(self.timetable_mode):
-            section = "from-service-locations-fixed-time-departure"
+            section = "transit-service-area-fixed-arrival-departure-time"
         
         if self.mode == 2 and not(self.timetable_mode):
-            section = "to-service-locations-fixed-time-arrival"
+            section = "transit-service-area-fixed-arrival-departure-time"
 
         if self.timetable_mode:
-            section = "service-area-for-schedule-based-departure-or-arrival"
+            section = "service-area-for-schedule-based-arrival-departure-time"
 
         url = f'{url}#{section}'
         

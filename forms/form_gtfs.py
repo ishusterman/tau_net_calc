@@ -434,7 +434,11 @@ class form_gtfs(QDialog, FORM_CLASS):
         #module_path = os.path.join(current_dir, 'help', 'build', 'html')
         #file = os.path.join(module_path, 'building_pkl.html')
         #webbrowser.open(f'file:///{file}')
-        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/building_pkl.html#building-database-for-transit-accessibility"
+        if self.mode == 1:
+            url = "https://geosimlab.github.io/accessibility-calculator-tutorial/prepare_database.html#add-lines-to-gtfs"
+        else:
+            url = "https://geosimlab.github.io/accessibility-calculator-tutorial/prepare_database.html#delete-lines-from-gtfs"
+
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):
