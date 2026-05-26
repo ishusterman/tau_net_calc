@@ -7,7 +7,7 @@ import configparser
 
 from qgis.PyQt.QtCore import QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from PyQt5.QtWidgets import QDockWidget,  QAction
+from qgis.PyQt.QtWidgets import QDockWidget, QAction
 from qgis.core import QgsProject
 
 from .forms.accessibility_tools import AccessibilityTools
@@ -93,11 +93,13 @@ class TAUNetCalc():
         return ""
 
     def initGui(self):
-
-        cache_dir = os.path.expanduser('~/.qgis2/cache/tau_net_calc')
+        
+        cache_dir = os.path.expanduser(
+            '~/.local/share/QGIS/QGIS3/profiles/default/cache/tau_net_calc'
+        )
         if os.path.exists(cache_dir):
             shutil.rmtree(cache_dir)
-        
+
         icon_accessibility_path = os.path.join(
             os.path.dirname(__file__), 'img', 'app.png')
 
@@ -108,8 +110,11 @@ class TAUNetCalc():
             icon_path=icon_accessibility_path,
             text=self.tr(name_plugin),
             callback=self.runAccessibility_tools,
-            parent=self.iface.mainWindow())
+            parent=self.iface.mainWindow()
+        )
+
         self.first_start_accessibility = True
+
 
     """Recursively compiles all .py files in the specified directory"""
 

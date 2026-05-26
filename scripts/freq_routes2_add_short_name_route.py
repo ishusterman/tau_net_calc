@@ -6,7 +6,7 @@ def extract_route_code(s):
     return s.split("-")[0]
 
 # === Загружаем файлы ===
-df1 = pd.read_csv(r"c:\doc\Igor\GIS\36_routes_26POI\stat_routes\7\lines_gtfs2025_freq.csv")
+df1 = pd.read_csv(r"c:\doc\Igor\GIS\36_routes_26POI\stat_routes\8\lines_gtfs2025_freq.csv")
 df2 = pd.read_csv(r"c:\doc\Igor\GIS\GTFS\ISR_2025\routes.txt")
 df3 = pd.read_csv(r"c:\doc\Igor\GIS\36_routes\strategic_matsim_gtfs\routes.txt")
 
@@ -47,7 +47,7 @@ df_final = df_final.rename(columns={"route_short_name_final": "route_short_name"
 
 # === Сохраняем ===
 df_final.to_csv(
-    r"c:\doc\Igor\GIS\36_routes_26POI\stat_routes\7\lines_gtfs2025_freq_add.csv",
+    r"c:\doc\Igor\GIS\36_routes_26POI\stat_routes\8\lines_gtfs2025_freq_add.csv",
     index=False
 )
 
