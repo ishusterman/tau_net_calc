@@ -20,6 +20,7 @@ To use the Accessibility Calculator, you need three sets of data, all covering y
 - A layer of roads represented by polylines.
 - A layer of buildings represented by polygons.
 - A GTFS dataset that represents the PT lines, stops, and schedules.
+
 These three datasets are translated into: a topologically cleaned layers of the road network and buildings, and fast-access databases for computing transit accessibility, and car accessibility.
 
 
