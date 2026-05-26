@@ -1,6 +1,7 @@
 # What is it all about?
 
 The goal of the Accessibility Calculator plugin is to assess transport accessibility at the resolution of a single building or at a lower resolutions represented by several layers of hexagons, constructed within the plugin. Each hexagon is considered as a larger building that aggregates the information of all buildings whose centroids are inside it.
+
 The assessment is based on a precise estimation of the travel time between the Origin (O) and the Destination (D) buildings of a trip. The OD travel time depends on the transportation mode, which can be Public Transport (PT) or a Private Car. The results of each accessibility computation scenario are stored as a set of tables in the GeoPackage format and presented visually as accessibility maps.
 
 
