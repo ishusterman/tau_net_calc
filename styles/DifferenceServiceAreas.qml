@@ -146,13 +146,13 @@
   </elevation>
   <renderer-v2 enableorderby="0" graduatedMethod="GraduatedColor" symbollevels="0" type="graduatedSymbol" forceraster="0" referencescale="-1" attr="Difference">
     <ranges>
-      <range lower="-1231.000000000000000" upper="-600.000000000000000" label="10+ min shorter trip" symbol="0" render="true" uuid="{9559330a-d64b-4562-a3a6-87bbb32ebcaf}"/>
+      <range lower="-1000000.000000000000000" upper="-600.000000000000000" label="10+ min shorter trip" symbol="0" render="true" uuid="{9559330a-d64b-4562-a3a6-87bbb32ebcaf}"/>
       <range lower="-600.000000000000000" upper="-300.000000000000000" label="5-10 min shorter trip" symbol="1" render="true" uuid="{01a20cdf-85b5-44e3-9015-02e0f635238e}"/>
       <range lower="-300.000000000000000" upper="-60.000000000000000" label=" 1- 5 min shorter trip" symbol="2" render="true" uuid="{63a37ecb-cad0-4683-9cbf-934fb634c275}"/>
       <range lower="-60.000000000000000" upper="60.000000000000000" label="the same trip time" symbol="3" render="true" uuid="{a2cbae0c-3ca0-4615-af27-724eb0047532}"/>
       <range lower="60.000000000000000" upper="300.000000000000000" label="1 - 5 min longer trip" symbol="4" render="true" uuid="{8b8c61cc-2c0b-47fc-b5d2-00462e7ea111}"/>
       <range lower="300.000000000000000" upper="600.000000000000000" label="5 - 10 min longer trip" symbol="5" render="true" uuid="{9a5cfe14-9502-4ba7-8bb4-2122796b131f}"/>
-      <range lower="600.000000000000000" upper="844.000000000000000" label="10+ min longer trip" symbol="6" render="true" uuid="{5bca5453-2a50-413f-a342-48ad88093348}"/>
+      <range lower="600.000000000000000" upper="1000000.000000000000000" label="10+ min longer trip" symbol="6" render="true" uuid="{5bca5453-2a50-413f-a342-48ad88093348}"/>
     </ranges>
     <symbols>
       <symbol force_rhr="0" alpha="1" type="fill" name="0" frame_rate="10" clip_to_extent="1" is_animated="0">

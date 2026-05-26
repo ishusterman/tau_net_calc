@@ -43,7 +43,8 @@ from common import (get_qgis_info,
                    transform_log_to_csv_text,
                    transform_log_to_dataframe,
                    fast_write_gpkg,
-                   highlight_empty_fields
+                   highlight_empty_fields,
+                   get_unique_path
                     )
 from visualization_clean import cls_clean_visualization
 
@@ -256,23 +257,25 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
         QTimer.singleShot(250, self.save_project)        
     
-    def save_log(self, need_save, log_name) :
-        if need_save:            
+    def save_log(self, need_save_log_csv, need_save_log_gpkg, log_name) :
+        if need_save_log_csv:            
             name, _ = os.path.splitext(log_name)
             filelog_name = os.path.join(self.folder_name, f"{name}_log.csv")            
-            file_name_gpkg = os.path.join(self.folder_name, f"{log_name}") 
-      
-
             text = transform_log_to_csv_text(self.textLog.toPlainText())
-            with open(filelog_name, "w") as file:
+            
+            with open(get_unique_path(filelog_name), "w") as file:
                 file.write(text)
 
+        if need_save_log_gpkg:
             text = transform_log_to_dataframe(self.textLog.toPlainText())
             file_name = os.path.basename(log_name)
             name, _ = os.path.splitext(file_name)
             table_name = f"_{name}_log"
+            file_name_gpkg = os.path.join(self.folder_name, f"{log_name}") 
 
             fast_write_gpkg(file_name_gpkg, table_name, text)
+
+        
     
     def save_project(self):
         QApplication.setOverrideCursor(Qt.ArrowCursor)

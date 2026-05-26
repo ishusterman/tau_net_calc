@@ -131,7 +131,7 @@ def rev_raptor(SOURCE,
                     if SOURCE != bid:
                         label[0][bid] = time_departure
                         pi_label[0][bid] = ('walking', SOURCE, bid, dist, time_departure)
-                        #print (pi_label[0][bid])
+                        list_stops.add(bid)                       
             
         
 

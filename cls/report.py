@@ -96,7 +96,7 @@ def make_protocol_detailed(raptor_mode,
     SOURCE type <'str'>
     orig_dest type <class 'str'>
     """
-    
+    buffer = []
     sep = ","
     stop_symbol = "s:"
     rows_to_write = []
@@ -122,6 +122,8 @@ def make_protocol_detailed(raptor_mode,
         # every item dictInput : dest - key, info - value
 
         for dest, info in dictInput.items():
+
+            
 
             SOURCE = info[0]
             duration = info[1]
@@ -150,7 +152,7 @@ def make_protocol_detailed(raptor_mode,
             # for journey in pareto_set: #each journey is array, legs are its elements
             if True:
 
-                journey = pareto_set
+                journey = pareto_set               
 
                 # run inversion jorney also raptor_mode = 1
                 
@@ -450,7 +452,19 @@ def make_protocol_detailed(raptor_mode,
                     if short_result is not None:
                         short_result[(SOURCE_int, SOURCE_REV_int)] = int(duration)
                 rows_to_write.append(row)
+
+                # experiment --- запись line1_id, line2_id, line3_id в файл  НЕ ЗАБЫТЬ УБРАТЬ---                
+                
+                #for lid in (line1_id, line2_id, line3_id):
+                #    if lid:
+                #        buffer.append(lid.split("_")[0] + "\n")
+                
+                # experiment --- запись line1_id, line2_id, line3_id в файл ---
     
     data_body = [row.split(',') for row in rows_to_write]
+
+    # experiment --- запись line1_id, line2_id, line3_id в файл  НЕ ЗАБЫТЬ УБРАТЬ---                
+    #with open(r"c:\doc\Igor\GIS\36_routes_26POI\stat_routes\lines_gtfs2025.txt", "a", encoding="utf-8") as f:
+    #    f.writelines(buffer)
   
     return  data_body

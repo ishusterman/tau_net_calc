@@ -120,8 +120,7 @@ class DayStat_DestinationID:
                 # Merge with the existing result DataFrame
                 self.result = pd.merge(self.result, df, on="Destination_ID", how="outer")
 
-        # Replace NaN values with zeros
-        # ?????????????????????????????
+        # Replace NaN values with zeros        
         if self.result is not None:
             #self.result.fillna(0, inplace=True)
 

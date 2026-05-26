@@ -10,10 +10,9 @@ from zipfile import ZipFile
 from datetime import datetime
 import shutil
 import csv
-import sqlite3
 import geopandas as gpd
 from pathlib import Path
-import gc
+
 
 try:
     import qgis.core
@@ -523,50 +522,47 @@ def get_existing_path(folder_path, filename):
             return path_with_prefix
         return path_without_prefix
 
-"""
-def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative = False):
-
-    if not os.path.exists(file_name_gpkg):
-        create_empty_gpkg(file_name_gpkg)
-    
-    if not mode_relative:
-        last_col_name = df_current.columns[-1]
-        if last_col_name != "Value":
-            df_current[last_col_name] = pd.to_numeric(df_current[last_col_name], errors='coerce')
-    with sqlite3.connect(file_name_gpkg) as conn:
-        df_current.to_sql(table_name, conn, if_exists='replace', index=False)
-"""
 
 def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative=False):
-
-    if not os.path.exists(file_name_gpkg):
-        create_empty_gpkg(file_name_gpkg)
-
-    if not mode_relative:
+    # Подготовка данных (числовой формат)
+    if not mode_relative and not df_current.empty:
         last_col_name = df_current.columns[-1]
         if last_col_name != "Value":
             df_current[last_col_name] = pd.to_numeric(df_current[last_col_name], errors='coerce')
 
-    conn = sqlite3.connect(file_name_gpkg)
-    conn.execute("PRAGMA journal_mode=DELETE;") 
-    df_current.to_sql(table_name, conn, if_exists='replace', index=False)
-    conn.commit()
-    conn.close()
-    gc.collect()
+    # Создаем GeoDataFrame (даже если нет геометрии)
+    # Это гарантирует создание правильной структуры GPKG
+    gdf = gpd.GeoDataFrame(df_current)
 
+    # Определяем режим записи
+    if not os.path.exists(file_name_gpkg):
+        # Создаем новый файл
+        gdf.to_file(file_name_gpkg, layer=table_name, driver="GPKG")
+    else:
+        # Добавляем или ПЕРЕЗАПИСЫВАЕМ слой в существующем файле
+        gdf.to_file(
+            file_name_gpkg, 
+            layer=table_name, 
+            driver="GPKG",             
+            mode="a", 
+            layer_options={'OVERWRITE': 'YES'}
+        )
 
-
-
+"""
 def create_empty_gpkg(path):
+    # Создаём минимальный валидный GeoPackage
     gdf = gpd.GeoDataFrame({"id": []}, geometry=[], crs="EPSG:4326")
     gdf.to_file(path, layer="__init__", driver="GPKG")
+
     conn = sqlite3.connect(path)
     conn.execute("DELETE FROM gpkg_contents WHERE table_name='__init__'")
     conn.execute("DROP TABLE IF EXISTS __init__")
     conn.commit()
     conn.close()
+"""
 
-def make_service_area_report_gpkg(all_frames, col_star, col_hash):
+"""
+def make_service_area_report_gpkg(all_frames, col_star, col_hash, mode = 1):
     df_total = pd.concat(all_frames, ignore_index=True)
     df_total['Duration'] = pd.to_numeric(df_total['Duration'], errors='coerce')
     df_total[col_star] = pd.to_numeric(df_total[col_star], errors='coerce')
@@ -577,9 +573,30 @@ def make_service_area_report_gpkg(all_frames, col_star, col_hash):
         for row in df_min.itertuples(index=False)
     }
     return df_min, short_result
+"""
+
+def make_service_area_report_gpkg(all_frames, col_star, col_hash):
+    df_total = pd.concat(all_frames, ignore_index=True)
+
+    df_total['Duration'] = pd.to_numeric(df_total['Duration'], errors='coerce')
+    df_total[col_star] = pd.to_numeric(df_total[col_star], errors='coerce')
+    df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors='coerce')
+
+    df_min = df_total.loc[df_total.groupby(col_hash)['Duration'].idxmin()]
+
+    # Определяем порядок колонок в зависимости от mode
+    key_cols = (col_star, col_hash)
+    
+    short_result = {
+        (int(row._asdict()[key_cols[0]]), int(row._asdict()[key_cols[1]])): int(row.Duration)
+        for row in df_min.itertuples(index=False)
+    }
+
+    return df_min, short_result
 
 
-def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=50):
+
+def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=10):
     rows = [(h, s, d) for (h, s), d in all_frames.items()]
     df_total = pd.DataFrame(rows, columns=[col_star, col_hash, "Duration"])
 

@@ -111,7 +111,7 @@ def raptor(SOURCE,
                     if SOURCE != bid:
                         label[0][bid] = time_departure
                         pi_label[0][bid] = ('walking', SOURCE, bid, dist, time_departure)
-                    
+                        list_stops.add(bid)                        
 
     for k in range(1, roundsCount + 1):
         QApplication.processEvents()

@@ -381,6 +381,13 @@ def runRaptorWithProtocol(self,
     
     time_estimate_start = datetime.now()
     total_tasks = count * roundtrip_cycle_all
+
+    ###  exp
+    # список множеств зданий, найденных для каждого source
+    #buildings_per_source = []
+    # временное хранилище line1/2/3_id для каждого source
+    #lines_per_source = []
+
     for source in sources:
 
         if i > 0 and i%10 == 0:          
@@ -392,8 +399,7 @@ def runRaptorWithProtocol(self,
             tasks_remaining = total_tasks - tasks_done                
             # 5. Итоговое время            
             remaining_duration = avg_time_per_task * tasks_remaining                            
-            display_time = str(remaining_duration).split('.')[0]
-            print (f'tasks_remaining {tasks_remaining} avg_time_per_task {avg_time_per_task} remaining_duration {remaining_duration} display_time {display_time}')
+            display_time = str(remaining_duration).split('.')[0]            
             self.lblEstimateTime.setText(f'Time remaining: {display_time}')
    
            
@@ -446,13 +452,13 @@ def runRaptorWithProtocol(self,
         
         nearby_buildings_from_start = footpath_on_projection.get_nearby(str(SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="b")
 
+        #print (f'nearby_buildings_from_start {nearby_buildings_from_start}')
+
         SOURCE = str(SOURCE)
         D_TIME_copy = D_TIME
         if not (timetable_mode):
 
-            if raptor_mode == 1:
-
-                
+            if raptor_mode == 1:               
             
                 output_duration = raptor(SOURCE,
                             D_TIME,
@@ -499,6 +505,7 @@ def runRaptorWithProtocol(self,
                                 MaxExtraTime,
                                 steps_to_buildings  =  nearby_buildings_from_start                                                                                                
                                 )
+            
                     
         if  timetable_mode:
                         
@@ -595,7 +602,33 @@ def runRaptorWithProtocol(self,
                             final_output_duration[p_i] = data_duration
                                
             output_duration = final_output_duration
-        
+
+        """
+        ######################### exp
+        # здания, найденные для текущего source
+        current_buildings = set(output_duration.keys())
+        buildings_per_source.append(current_buildings)
+
+            # сохраняем line1/2/3_id для каждого здания
+        current_lines = {}
+        for dest, info in output_duration.items():
+                pareto = info[2]
+                if pareto:
+                    journey = pareto
+                    # извлекаем line1_id, line2_id, line3_id
+                    line_ids = []
+                    for leg in journey:
+                        if isinstance(leg[0], int):  # автобусный сегмент
+                            line_ids.append(leg[4])
+                    # дополняем до 3 элементов
+                    while len(line_ids) < 3:
+                        line_ids.append("")
+                    current_lines[dest] = tuple(line_ids[:3])
+
+        lines_per_source.append(current_lines)
+        #########################
+        """
+
         if protocol_type == 1:
             
             if len(fields_ok) > 0:
@@ -665,16 +698,46 @@ def runRaptorWithProtocol(self,
        fast_write_gpkg(file_name_gpkg, table_name, df_pivot)        
 
     # данные сворачиваем если SA и количество больше 1
-    if protocol_type == 2:# and len(sources) > 1:  
+    if protocol_type == 2:# and len(sources) > 1:      
         df_min_duration, short_result = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash)        
+        ### experiment ############
+        #df_min_duration, _ = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash) 
+
+    """
+    origin_to_check = '1035910'
+    # --- Проверка в df_min_duration_all ---
+    found_in_frames = False
+    for i, df in enumerate(df_min_duration_all):
+        if origin_to_check in df[col_hash].values:
+            print(f"Origin {origin_to_check} FOUND in df_min_duration_all[{i}]")
+            found_in_frames = True
+
+    if not found_in_frames:
+        print(f"Origin {origin_to_check} NOT found in ANY df_min_duration_all frame")
+
+    origin_to_check = 1035910
+
+    matches = [
+        (src, dest, value)
+        for (src, dest), value in short_result.items()
+        if dest == origin_to_check
+    ]
+
+    if matches:
+        print(f"Origin {origin_to_check} FOUND in short_result, count = {len(matches)}")
+        for src, dest, value in matches[:10]:   # первые 10 для примера
+            print(f"  src={src}, dest={dest}, duration={value}")
+    else:
+        print(f"Origin {origin_to_check} NOT found in short_result")
+    """
+    
 
     # если SA и не roundtrip - сохраняем данные
     if protocol_type == 2 and not roundtrip_mode: 
         table_name_list = []                
         table_name = f'{file_name}_fastest_trip'
         table_name_list.append(table_name)
-        fast_write_gpkg(file_name_gpkg, table_name, df_min_duration)
-       
+        fast_write_gpkg(file_name_gpkg, table_name, df_min_duration)       
     
     QApplication.processEvents()
     if not (shift_mode):
@@ -711,6 +774,47 @@ def runRaptorWithProtocol(self,
     pr_child.dump_stats(output_filename_prof)
     """
     
+    """
+    ######################### exp
+    if buildings_per_source:
+        common_buildings = set.intersection(*buildings_per_source)
+    else:
+        common_buildings = set()
+
+    
+    common_buildings_int = {
+    int(b)
+    for b in common_buildings
+    if b.isdigit()
+    }
+
+    filtered_short_result = {
+    (src, dest): value
+    for (src, dest), value in short_result.items()
+    if (src == dest) or (dest in common_buildings_int)
+    }
+
+
+    output_file = r"c:\doc\Igor\GIS\36_routes_26POI\stat_routes\lines_gtfs2025.txt"
+
+    buffer = []
+
+    for lines_dict in lines_per_source:
+        for dest, (l1, l2, l3) in lines_dict.items():
+            if dest in common_buildings:
+                for lid in (l1, l2, l3):
+                    if lid:
+                        # обрезаем до первого _
+                        buffer.append(lid.split("_")[0] + "\n")
+
+    # записываем в файл
+    with open(output_file, "a", encoding="utf-8") as f:
+        f.writelines(buffer)
+
+    short_result = filtered_short_result
+
+    #########################
+    """
 
     return short_result
 

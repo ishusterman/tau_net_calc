@@ -107,6 +107,7 @@ class roundtrip_analyzer:
             
             o_id, d_id = key  # теперь key всегда (o, d)
             
+            
             if mean > self.duration_max:
                 continue
             
@@ -223,7 +224,7 @@ class roundtrip_analyzer:
             # Выбираем для каждого destination тот origin, у которого минимальный roundtrip
             rows_standard_best = select_best_origin_per_destination(rows_standard)
             rows_strict_best = select_best_origin_per_destination(rows_strict)
-
+            
             header = get_header(rows_standard_best)
             
             df_stats_std = pd.DataFrame(prepare_df_rows(rows_standard_best))

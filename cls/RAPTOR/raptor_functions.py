@@ -178,13 +178,6 @@ def post_processing(DESTINATION,
             if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist3) and (transfer_needed >= MIN_TRANSFER):
                 if append:
                     pareto_set.append((transfer_needed, duration, end_time, journey))
-            
-            
-
-    
-
-                    
-                
                     
     if len(pareto_set) == 0:
         return None
@@ -263,7 +256,8 @@ def post_processingAll(
         D_TIME_copy = ""
         ):
     
-    Dict_endtime, Dict_duration  = {}, {}
+    Dict_duration  = {}
+
     
     for p_i in list_stops:
 
@@ -288,10 +282,7 @@ def post_processingAll(
         
         if pareto_set != None and len(pareto_set) > 0:
             # Just one journey with minimal end time will be in pareto set
-
-            optimal_duration = get_optimal_journeys(pareto_set)
-
-            # Заполнение словарей на основе полученных данных
+            optimal_duration = get_optimal_journeys(pareto_set)            
             duration, transfers, end_time, journey = optimal_duration
             Dict_duration[p_i] = [SOURCE, duration, journey, transfers, end_time]
                     

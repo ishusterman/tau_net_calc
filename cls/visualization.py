@@ -80,8 +80,8 @@ class visualization:
     def auto_switch_cleaned_to_voronoi(self):
         """
         Если слой зданий из GPKG и его имя содержит '_cleaned',
-        но не содержит '_hex' и '_voronoi', то ищем в GPKG первый слой,
-        содержащий 'voronoi' в имени, и подменяем self.layer_buildings.
+        но не содержит '_hex' и '_vor_', то ищем в GPKG первый слой,
+        содержащий '_vor_' в имени, и подменяем self.layer_buildings.
         """
         
         if self.mode_compare:
@@ -97,7 +97,7 @@ class visualization:
         # Проверяем условия
         if "_cleaned" not in layer_name:
             return
-        if "_hex" in layer_name or "_voronoi" in layer_name:
+        if "_hex" in layer_name or "_vor_" in layer_name:
             return
 
         # Путь к gpkg
@@ -117,7 +117,7 @@ class visualization:
             if l is None:
                 continue
             lname = l.GetName()
-            if "voronoi" in lname.lower():
+            if "_vor_" in lname.lower():
                 voronoi_layer_name = lname
                 break  # берём первый найденный
 
@@ -292,25 +292,32 @@ class visualization:
             style_filename = "CompareFirstOnly.qml"
         elif self.type_compare == "CompareSecondOnly":
             style_filename = "CompareSecondOnly.qml"
-        elif self.type_compare == "DifferenceRegion":
-            style_filename = "DifferenceRegion.qml"
         elif self.type_compare == "DifferenceServiceAreas":
+
             style_filename = "DifferenceServiceAreas.qml"
-        #elif self.type_compare == "RatioRelative":
-        #    style_filename = "RatioRelative.qml"
-        elif self.type_compare == "RatioRelative":
-            style_filename = "Ratio.qml"
-        elif self.type_compare == "Rel_difference":
-            
-            # 1. Читаем цвета из QML
-            qml_path = os.path.join(self.style_directory, "Rel_difference.qml")
+            layer = self.layer_clone            
+            qml_path = os.path.join(self.style_directory, style_filename)
+            layer.loadNamedStyle(qml_path)
+            renderer = layer.renderer()            
+            renderer.setClassAttribute(self.targetField_base)
+            layer.triggerRepaint()
+            layer.setCustomProperty("showFeatureCount", True)
+            QTimer.singleShot(500, lambda: self.refresh_legend(layer))
+            return
+
+        elif self.type_compare in ("DifferenceRegion", "RatioRelative", "Rel_difference"):
+    
+            if self.type_compare == "DifferenceRegion":
+                style_filename = "DifferenceRegion.qml"
+            elif self.type_compare == "RatioRelative":
+                style_filename = "Ratio.qml"
+            elif self.type_compare == "Rel_difference":
+                style_filename = "Rel_difference.qml"
+
+            qml_path = os.path.join(self.style_directory, style_filename)
             colors = self.extract_colors_from_qml(qml_path)
             num_classes = len(colors)
-
-            # 2. Квантили
             quantiles = self.compute_quantiles(self.protocol_layer, num_classes)
-
-            # 3. Создаём рендерер
             ranges = []
             for i, (low, up) in enumerate(quantiles):
                 sym = QgsSymbol.defaultSymbol(self.layer_clone.geometryType())
@@ -318,145 +325,52 @@ class visualization:
                 r, g, b, a = map(int, colors[i])
                 sym.setColor(QColor(r, g, b, a))
                 sym.symbolLayer(0).setStrokeStyle(Qt.NoPen)
-
-                label = f"{low:.1f} – {up:.1f}"
+                if self.type_compare == "RatioRelative":
+                    label = f"{low:.3f}% – {up:.3f}%"
+                else:
+                    label = f"{low:.3f} – {up:.3f}"
                 ranges.append(QgsRendererRange(low, up, sym, label))
-
             renderer = QgsGraduatedSymbolRenderer(self.targetField_base, ranges)
             renderer.setMode(QgsGraduatedSymbolRenderer.Custom)
 
-            # 4. Применяем
             layer = self.layer_clone
             layer.setRenderer(renderer)
             layer.triggerRepaint()
-
             QTimer.singleShot(500, lambda: self.refresh_legend(layer))
             return
 
 
+        if self.type_compare in ("CompareFirstOnly", "CompareSecondOnly"):
 
-
-
-
-            
-
-        self.style_file = os.path.normpath(os.path.join(self.style_directory, style_filename))
-        layer = self.layer_clone
-
-        # Особый случай для DifferenceRegion
-        if self.type_compare == "DifferenceRegion" and self.max_abs_value > 0:
-            new_renderer = self.get_render_DifferenceRegion()
-            new_renderer.setClassAttribute(self.targetField_base)
-            layer.setRenderer(new_renderer)
-            layer.triggerRepaint()
-            layer.setCustomProperty("showFeatureCount", True)        
-            QTimer.singleShot(500, lambda: self.refresh_legend(layer))
-            return
-        
-                
-        layer.loadNamedStyle(self.style_file)
-        renderer = layer.renderer()
-        renderer.setClassAttribute(self.targetField_base)
-        layer.triggerRepaint()
-        layer.setCustomProperty("showFeatureCount", True)        
-        QTimer.singleShot(500, lambda: self.refresh_legend(layer))
-
-        
-        if self.type_compare == "RatioRelative":
+            layer = self.layer_clone            
+            layer.loadNamedStyle(os.path.join(self.style_directory, style_filename))
+            renderer = layer.renderer()            
             old_ranges = renderer.ranges()
             new_ranges = []
-
             for r in old_ranges:
-                sym = r.symbol().clone()
-                low = r.lowerValue()
-                up = r.upperValue()
-
-                # преобразуем в проценты
-                low_p = low 
-                up_p = up 
-
-                label = f"{low_p:.0f}% – {up_p:.0f}%"
-
-                new_ranges.append(
-                    QgsRendererRange(low, up, sym, label)
+                sym = r.symbol().clone()     
+                label = r.label()            
+                new_range = QgsRendererRange(
+                    0,
+                    self.max_value,
+                    sym,
+                    label
                 )
+                new_ranges.append(new_range)
+            
+            new_renderer = QgsGraduatedSymbolRenderer(
+                self.targetField_base,
+                new_ranges
+            )
+            new_renderer.setMode(QgsGraduatedSymbolRenderer.Custom)
 
-            new_renderer = QgsGraduatedSymbolRenderer(self.targetField_base, new_ranges)
             layer.setRenderer(new_renderer)
             layer.triggerRepaint()
 
             layer.setCustomProperty("showFeatureCount", True)
             QTimer.singleShot(500, lambda: self.refresh_legend(layer))
             return
-        
-
-        if self.type_compare in ("CompareFirstOnly", "CompareSecondOnly"):
-            old_ranges = renderer.ranges()
-            new_ranges = []
-            for r in old_ranges:
-                sym = r.symbol().clone()
-                label = r.label()
-                new_range = QgsRendererRange(
-                    0,                      
-                    self.max_value,         
-                    sym,
-                    label
-                )
-                new_ranges.append(new_range)
-            new_renderer = QgsGraduatedSymbolRenderer(
-                self.targetField_base,
-                new_ranges
-            )
-            #new_renderer.setMode(renderer.mode())
-            layer.setRenderer(new_renderer)
-            layer.triggerRepaint()
-
-            layer.setCustomProperty("showFeatureCount", True)        
-            QTimer.singleShot(500, lambda: self.refresh_legend(layer))
-        
-    def get_render_DifferenceRegion(self):
-        layer = self.layer_clone
-        layer.loadNamedStyle(self.style_file)
     
-        renderer = layer.renderer()
-        ranges = renderer.ranges()
-        
-        new_max = self.round_up_to_nearest(self.max_abs_value)
-        new_min = -new_max
-        num_classes = 9
-
-        new_ranges = []
-        new_step = (new_max - new_min) / num_classes
-
-        start_color = ranges[0].symbol().color()
-        mid_color = ranges[len(ranges) // 2].symbol().color()
-        end_color = ranges[-1].symbol().color()
-        colors = self.generate_gradient(start_color, mid_color, end_color, num_classes)
-
-        for i in range(num_classes):
-            lower_value = new_min + i * new_step
-            upper_value = lower_value + new_step
-            if upper_value > new_max:
-                upper_value = new_max
-
-            symbol = ranges[i % len(ranges)].symbol().clone()
-            
-            # --- Настройка отсутствия рамки и цвета ---
-            if symbol.symbolLayerCount() > 0:
-                symbol_layer = symbol.symbolLayer(0)
-                symbol_layer.setFillColor(QColor(colors[i]))
-                symbol_layer.setStrokeStyle(Qt.NoPen) # Убираем рамку
-            # ------------------------------------------
-
-            label = f"{lower_value:.0f} - {upper_value:.0f}"
-            new_ranges.append(QgsRendererRange(lower_value, upper_value, symbol, label))
-
-        new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
-        #new_renderer.setMode(QgsGraduatedSymbolRenderer.EqualInterval)
-        new_renderer.setClassificationMethod(QgsClassificationEqualInterval())
-        new_renderer.setClassAttribute(self.targetField)
-    
-        return new_renderer
     
     def slyle_Region(self):
 

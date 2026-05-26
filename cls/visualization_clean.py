@@ -17,7 +17,7 @@ class TaskSignals(QObject):
     log = pyqtSignal(str)
     progress = pyqtSignal(int)
     set_message = pyqtSignal(str)    
-    save_log = pyqtSignal(bool, str)
+    save_log = pyqtSignal(bool, bool, str)
     add_layers = pyqtSignal(list) 
     change_button_status = pyqtSignal(bool) 
 
@@ -39,7 +39,7 @@ class cls_clean_visualization(QgsTask):
         base_path = os.path.join(self.folder_name, f"{self.name}_vis_layers.gpkg")
         self.main_gpkg_path = get_unique_path(base_path)
 
-        self.voronoi_gpkg_path = get_unique_path(os.path.join(self.folder_name, f"{self.name}_voronoi.gpkg"))
+        self.voronoi_gpkg_path = get_unique_path(os.path.join(self.folder_name, f"{self.name}_vor_viz.gpkg"))
 
     def save_voronoi_to_gpkg(self, qgs_layer, layer_name):
         suffix = self._extract_suffix(self.voronoi_gpkg_path)
@@ -132,8 +132,7 @@ class cls_clean_visualization(QgsTask):
             return True
         except Exception as e:
             self.exception = e
-            QApplication.setOverrideCursor(Qt.ArrowCursor)
-            print (self.exception)
+            QApplication.setOverrideCursor(Qt.ArrowCursor)            
             self.signals.log.emit(f'<a>Error: {self.exception}</a>')
             self.signals.set_message.emit(f'<a>Error: {self.exception}</a>')
             return False
@@ -157,7 +156,7 @@ class cls_clean_visualization(QgsTask):
         buf = processing.run("native:buffer", {'INPUT': self.layer, 'DISTANCE': dist, 'DISSOLVE': True, 'OUTPUT': 'memory:'})['OUTPUT']
         clip = processing.run("native:clip", {'INPUT': vor, 'OVERLAY': buf, 'OUTPUT': 'memory:'})['OUTPUT']
 
-        self.save_voronoi_to_gpkg(clip, f"{self.name}_voronoi")
+        self.save_voronoi_to_gpkg(clip, f"{self.name}_vor_viz")
 
         # делаем слой прозрачным
         symbol = clip.renderer().symbol()
@@ -247,12 +246,14 @@ class cls_clean_visualization(QgsTask):
         duration_computation = after_computation_time - self.begin_computation_time
         duration_without_microseconds = str(duration_computation).split('.')[0]
         self.signals.log.emit(f'<a>Processing time: {duration_without_microseconds}</a>')
-        self.signals.log.emit(f"Saved hexogons layers to: {self.main_gpkg_path}")        
-        self.signals.save_log.emit(True, self.main_gpkg_path)
+        self.signals.log.emit(f"Saved hexogons layers to: {self.main_gpkg_path}")                
         if self.runVoronoi:
             self.signals.log.emit(f"Saved Voronoi to: {self.voronoi_gpkg_path}")
-            self.signals.save_log.emit(True, self.voronoi_gpkg_path)
-                
+            self.signals.save_log.emit(False,True, self.voronoi_gpkg_path)
+
+        need_save_log_gpkg = bool(self.spacing) 
+        self.signals.save_log.emit(True, need_save_log_gpkg, self.main_gpkg_path)
+        
         #for _, name_layer in self.list_layer:    
         #    self.signals.log.emit(f'- {name_layer}')
         

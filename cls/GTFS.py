@@ -92,6 +92,7 @@ class GTFS ():
 
 
         os.makedirs(self.__path_to_file, exist_ok=True)
+        self.layer_routes_to_add = None
     
 
     def change_time(self, time1_str):
@@ -624,7 +625,10 @@ class GTFS ():
             return 0
         
         self.insert_layer_on_top(self.layer_links_to_add)
-        self.insert_layer_on_top(self.layer_routes_to_add)
+        if self.layer_routes_to_add:
+            self.insert_layer_on_top(self.layer_routes_to_add)
+        else:
+            self.parent.textLog.append(f'<a><b><font color="green">Warning: shape.txt in missing in the GTFS folder, transit lines cannot be constructed</font> </b></a>')
         self.insert_layer_on_top(self.layer_stops_to_add)            
         return 1
 
@@ -890,6 +894,8 @@ class GTFS ():
         #QgsProject.instance().addMapLayer(gpkg_layer)
     
     def add_layer_routes(self, path_to_shapes, file_name_gpkg, table_name="routes"):
+
+        
         
         context = QgsCoordinateTransformContext()
         QgsProject.instance().setTransformContext(context)

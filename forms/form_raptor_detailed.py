@@ -129,8 +129,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.cmbLayers.installEventFilter(self)
         self.cmbLayersDest.installEventFilter(self)
         
-        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer)        
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer | QgsMapLayerProxyModel.PointLayer)
+        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer | QgsMapLayerProxyModel.PointLayer)
 
         self.dtStartTime.installEventFilter(self)
         self.dtEndTime.installEventFilter(self)
@@ -469,10 +469,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 highlight_widget(self.wgFileSave)
                 self.setMessage(f'The file "{self.file_name_gpkg}" is locked.')
                 return 0
-            
-
-        
-        
         
         self.saveParameters()
         self.readParameters()
@@ -500,8 +496,23 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         self.textLog.append("<a style='font-weight:bold;'>[Input Layers]</a>")        
         self.textLog.append(f"<a> Transit routing database folder: {self.config['Settings']['pathtopkl']}</a>")
-        self.textLog.append(f'<a> Layer of origins: {self.layer_path1} ({get_tablename(self.layer1)}) </a>')        
-        self.textLog.append(f'<a> Layer of destinations: {self.layer_path2} ({get_tablename(self.layer2)})</a>')
+
+        if self.roundtrip or self.mode == 2:
+            origins_layer = self.layer2
+            destinations_layer = self.layer1
+        else:
+            origins_layer = self.layer1
+            destinations_layer = self.layer2
+
+        self.textLog.append(
+            f'<a> Layer of origins: {os.path.normpath(origins_layer.dataProvider().dataSourceUri().split("|")[0])} '
+            f'({get_tablename(origins_layer)})</a>'
+        )
+        self.textLog.append(
+            f'<a> Layer of destinations: {os.path.normpath(destinations_layer.dataProvider().dataSourceUri().split("|")[0])} '
+            f'({get_tablename(destinations_layer)})</a>'
+        )
+
 
         if self.protocol_type == 1:  # MAP mode
             if self.config['Settings']['field_ch'] != "":
@@ -509,6 +520,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             else:
                 print_fields = "NONE"
             self.textLog.append(f"<a> Opportunities' fields: {print_fields}</a>")
+        
+        
 
         self.textLog.append("<a style='font-weight:bold;'>[Time Settings]</a>")
 
@@ -544,7 +557,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
             cycles_to   = floor((self.to_time_end   - self.to_time_start)   / self.time_delta_to)   + 1
             cycles_from = floor((self.from_time_end - self.from_time_start) / self.time_delta_from) + 1
-            self.total_cycles_roundtrip = cycles_to * cycles_from
+            self.total_cycles_roundtrip = cycles_to + cycles_from
 
             if self.timetable_mode:
                 text_add = "schedule-adjustment gap"
@@ -1086,7 +1099,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                         return 0
                     
                     D_TIME = START_TIME + i * self.time_delta_to 
-                    if D_TIME >= Tf: 
+                    if D_TIME > Tf: 
                         break
                                    
                 ###########################
@@ -1152,7 +1165,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                     i += 1
 
                     D_TIME = START_TIME + i * self.time_delta_from 
-                    if D_TIME >= Tf: 
+                    if D_TIME > Tf: 
                         break
                     
                 if not(self.break_on):

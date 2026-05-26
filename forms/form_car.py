@@ -117,8 +117,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.cmbLayersDest.installEventFilter(self)
         
 
-        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer|QgsMapLayerProxyModel.PointLayer)
+        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer|QgsMapLayerProxyModel.PointLayer)
         
         self.dtStartTime.installEventFilter(self)
 
@@ -434,8 +434,23 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Input Layers]</a>")
         
         self.textLog.append(f"<a> Car routing database folder: {self.config['Settings']['PathToPKL_car']}</a>")
-        self.textLog.append(f'<a> Layer of origins: {self.layer1_path} ({get_tablename(self.layer1)})</a>')
-        self.textLog.append(f"<a> Layer of destinations: {self.layer2_path} ({get_tablename(self.layer2)})</a>")
+        
+        if self.roundtrip or self.mode == 2:
+            origins_layer = self.layer2
+            destinations_layer = self.layer1
+        else:
+            origins_layer = self.layer1
+            destinations_layer = self.layer2
+
+        self.textLog.append(
+            f'<a> Layer of origins: {os.path.normpath(origins_layer.dataProvider().dataSourceUri().split("|")[0])} '
+            f'({get_tablename(origins_layer)})</a>'
+        )
+        self.textLog.append(
+            f'<a> Layer of destinations: {os.path.normpath(destinations_layer.dataProvider().dataSourceUri().split("|")[0])} '
+            f'({get_tablename(destinations_layer)})</a>'
+        )
+
         if self.protocol_type == 1:  # MAP mode
             if self.config['Settings']['field_ch_car'] != "":
                 print_fields = self.config['Settings']['field_ch_car']
@@ -465,7 +480,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
             cycles_to   = floor((self.to_time_end   - self.to_time_start)   / self.time_delta_to)   + 1
             cycles_from = floor((self.from_time_end - self.from_time_start) / self.time_delta_from) + 1
-            self.total_cycles_roundtrip = cycles_to * cycles_from
+            self.total_cycles_roundtrip = cycles_to + cycles_from
 
             str_to = f'<a> Arrive to destination between: {seconds_to_time(self.to_time_start)} and {seconds_to_time(self.to_time_end)} schedule-adjustment gap {self.time_delta_to_min} minutes</a>'
             self.textLog.append(str_to)

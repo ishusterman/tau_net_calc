@@ -257,9 +257,9 @@ class cls_clean_buildings(QgsTask):
 
         base, idx = self.split_name_and_index(self.layer_name_single_part)
         if idx:
-            voronoi_name = f"{base}_voronoi_{idx}"
+            voronoi_name = f"{base.rpartition("_")[0]}_vor_system_{idx}"
         else:
-            voronoi_name = f"{self.layer_name_single_part}_voronoi"        
+            voronoi_name = f"{self.layer_name_single_part.rpartition("_")[0]}_vor_system"        
         self.save_layer_to_gpkg(clip, voronoi_name)
 
         self.signals.progress.emit(1)   
