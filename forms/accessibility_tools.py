@@ -1,0 +1,353 @@
+# -*- coding: utf-8 -*-
+from qgis.PyQt.QtWidgets import (QApplication,
+                             QTreeWidget,
+                             QTreeWidgetItem,
+                             QVBoxLayout,
+                             QWidget,
+                             QMessageBox,
+                             QPushButton,
+                             )
+
+from qgis.PyQt.QtCore import Qt
+
+from qgis.PyQt.QtGui import QIcon, QFont
+import os
+import webbrowser
+from qgis.core import QgsProject
+
+from .form_raptor_detailed import RaptorDetailed
+from .form_raptor_summary import RaptorSummary
+from .form_car import CarAccessibility
+from .form_gtfs import form_gtfs
+from .form_pkl import form_pkl
+from .form_pkl_car import form_pkl_car
+from .form_relative import form_relative
+
+from .form_roads_clean import form_roads_clean
+from .form_visualization_clean import form_visualization_clean
+from .form_buildings_clean import form_buildings_clean
+
+class AccessibilityTools(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        layout = QVBoxLayout()
+        self.tree_widget = QTreeWidget()
+
+        self.path_to_pkl = ""
+        self.dict_footpath_b_b = {}
+        self.dict_footpath = {}
+
+        font = QFont()
+        font.setBold(True)
+
+        # change the setting to absolute paths if it is not already set.
+        project = QgsProject.instance()
+        is_absolute, _ = project.readBoolEntry("Paths", "Absolute")
+        
+        if not is_absolute:
+            project.writeEntry("Paths", "Absolute", True)
+            project.write()
+
+        self.tree_widget.setHeaderHidden(True)
+        group1 = QTreeWidgetItem(self.tree_widget, ['Data preprocessing'])
+        group1.setExpanded(True)
+        self.item2 = QTreeWidgetItem(group1, ['Clean road network'])
+        self.item20 = QTreeWidgetItem(group1, ['Clean layer of buildings'])
+        
+        group1_1 = QTreeWidgetItem(self.tree_widget, ['Prepare databases'])
+        group1_1.setExpanded(True)
+        self.item27 = QTreeWidgetItem(group1_1, ['Add lines to GTFS'])
+        self.item28 = QTreeWidgetItem(group1_1, ['Delete lines from GTFS'])
+        self.item3 = QTreeWidgetItem(group1_1, ['Build transit routing database'])
+        self.item17 = QTreeWidgetItem(group1_1, ['Build car routing database'])
+        self.item19 = QTreeWidgetItem(group1_1, ['Build visualisation layers'])
+        
+
+        group2 = QTreeWidgetItem(self.tree_widget, ['Transit accessibility'])
+        group2.setExpanded(True)
+        
+        group3 = QTreeWidgetItem(group2, ['Service area maps'])
+        self.item4 = QTreeWidgetItem(group3, ['fixed arrival/departure time'])
+        self.item5 = QTreeWidgetItem(group3, ['schedule-based arrival/departure time'])
+        group3.setExpanded(True)
+
+        group4 = QTreeWidgetItem(group2, ['Cumulative opportunities maps'])
+        self.item8 = QTreeWidgetItem(group4, ['fixed arrival/departure time'])
+        self.item9 = QTreeWidgetItem(group4, ['schedule-based arrival/departure time'])
+                
+        group4.setExpanded(True)
+
+        group5 = QTreeWidgetItem(self.tree_widget, ['Car accessibility'])
+        self.item12 = QTreeWidgetItem(group5, ['Service area maps'])
+        self.item14 = QTreeWidgetItem(group5, ['Cumulative opportunities maps'])
+        group5.setExpanded(True)
+
+        group7 = QTreeWidgetItem(self.tree_widget, ['Compare accessibility maps'])
+        self.item16 = QTreeWidgetItem(group7, ['Service areas maps'])
+        self.item18 = QTreeWidgetItem(group7, ['Cumulative opportunities maps'])
+        group7.setExpanded(True)
+
+        self.item1 = QTreeWidgetItem(self.tree_widget, ['Help and tutorial'])
+        self.itemTutorialData = QTreeWidgetItem(self.tree_widget, ['Tutorial data'])
+      
+        icon1 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'folder.png') # icon for groups
+        icon2 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'ring.png') # icon for elements 
+
+        for group_index in range(self.tree_widget.topLevelItemCount()):
+            group_item = self.tree_widget.topLevelItem(group_index)
+            group_item.setIcon(0, QIcon(icon1))
+
+            # process second-level elements
+            for child_index in range(group_item.childCount()):
+                child_item = group_item.child(child_index)
+
+                # if an element has child elements, we consider it a group
+                if child_item.childCount() > 0:
+                    # icon for a group (folder)
+                    child_item.setIcon(0, QIcon(icon1))
+
+                    # process third-level elements
+                    for item_index in range(child_item.childCount()):
+                        item = child_item.child(item_index)
+                        # icon for elements (ring)
+                        item.setIcon(0, QIcon(icon2))
+                else:
+                    # If it is not a group, but a regular element
+                    # icon for elements (ring)
+                    child_item.setIcon(0, QIcon(icon2))
+        
+        icon3 = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'help.png')
+        self.item1.setIcon(0, QIcon(icon3))
+
+        iconDownload = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'img', 'download.png')
+        self.itemTutorialData.setIcon(0, QIcon(iconDownload))
+       
+        layout.addWidget(self.tree_widget)
+
+        self.setLayout(layout)
+        self.tree_widget.itemDoubleClicked.connect(self.on_tree_item_clicked)
+
+        self.titles = ["Data preprocessing. Clean road network", 
+                       "Data preprocessing. Clean layer of buildings", 
+                       "Prepare databases. Build visualisation layers",
+                       "Prepare databases. Build transit routing database", 
+                       "Prepare databases. Add lines to GTFS", 
+                       "Prepare databases. Delete lines from GTFS", 
+                       "Prepare databases. Build car routing database", 
+
+                       "Transit accessibility. Service area map - fixed arrival/departure time",
+                       "Transit accessibility. Service area map - schedule-based arrival/departure time", 
+                       "Transit accessibility. Cumulative opportunities map - fixed arrival/departure time", 
+                       "Transit accessibility. Cumulative opportunities map - schedule-based arrival/departure time", 
+                       
+                       "Car accessibility. Service area maps", 
+                       "Car accessibility. Cumulative opportunities maps",
+                       
+                       "Compare accessibility. Service areas maps",
+                       "Compare accessibility. Cumulative opportunities maps",
+                   ]
+                
+    """ Проверяет, есть ли уже открытое окно с указанным заголовком. """
+    def get_existing_window(self, titles):
+        
+        for widget in QApplication.topLevelWidgets():
+            if widget.windowTitle() in self.titles:
+                if widget.isMinimized():
+                    widget.showNormal()
+                widget.raise_()
+                widget.activateWindow()
+                widget.show()
+                return widget
+        
+        return None
+    
+    def on_tree_item_clicked(self, item, column):
+
+        if item == self.item1:
+            
+            url = "https://geosimlab.github.io/accessibility-calculator-tutorial/introduction.html"
+            
+            webbrowser.open(url)
+
+        if item == self.itemTutorialData:
+            link_tama = "https://github.com/ishusterman/TAMA_QGIS_Project/archive/refs/heads/main.zip"
+            link_tlv = "https://github.com/ishusterman/TLV_QGIS_Project/archive/refs/heads/main.zip"
+
+            link_tama_cleaned = "https://github.com/ishusterman/TAMA_cleaned_QGIS_Project/archive/refs/heads/main.zip"
+            link_tlv_cleaned = "https://github.com/ishusterman/TLV_cleaned_QGIS_Project/archive/refs/heads/main.zip"
+            link_tama_tlv_cleaned = "https://github.com/ishusterman/TAMA-TLV_QGIS_Project/archive/refs/heads/main.zip"
+
+            link_gtfs_2018 = "https://drive.google.com/file/d/1gW-HG58Ijj0SI1Eh7GtO62oTMHYavOSn/view?usp=drive_link"
+            link_gtfs_2024 = "https://drive.google.com/file/d/1CeTu8X2Bz-Ges6fsG93VyuXrKcVGbepL/view?usp=drive_link"
+                        
+            message = (f"TAMA dataset before topological cleaning <a href='{link_tama}'>(47MB)</a><br>"
+                      f"TAMA dataset after topological cleaning  <a href='{link_tama_cleaned}'>(57MB)</a><br>"
+                      f"Tel Aviv dataset before topological cleaning <a href='{link_tlv}'>(5MB)</a><br>"
+                      f"Tel Aviv dataset after topological cleaning <a href='{link_tlv_cleaned}'>(6MB)</a><br>"
+                      f"Israel GTFS dataset (2018) <a href='{link_gtfs_2018}'>(102MB)</a><br>"
+                      f"Israel GTFS dataset (2024) <a href='{link_gtfs_2024}'>(142MB)</a><br>"
+                      #f"All datasets together <a href='{link_tama_tlv_cleaned}'>(115MB)</a>.<br>"  
+                      
+            )
+
+            msgBox = QMessageBox()
+            try:
+                rich_text = Qt.RichText                     # Qt5
+                text_browser_interaction = Qt.TextBrowserInteraction
+                icon_info = QMessageBox.Information
+                accept_role = QMessageBox.AcceptRole 
+            except AttributeError:
+                rich_text = Qt.TextFormat.RichText          # Qt6
+                text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
+                icon_info = QMessageBox.Icon.Information
+                accept_role = QMessageBox.ButtonRole.AcceptRole
+            msgBox.setTextFormat(rich_text)
+            msgBox.setTextInteractionFlags(text_browser_interaction)
+            msgBox.setIcon(icon_info)
+            msgBox.setWindowTitle("Tutorial data")
+            msgBox.setText(message)
+            
+            ok_button = QPushButton("Ok")
+            msgBox.addButton(ok_button, accept_role)
+            msgBox.exec() 
+            
+            
+        if item == self.item2:
+            title="Data preprocessing. Clean road network"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                roads_clean = form_roads_clean(title = title)
+                if hasattr(roads_clean, "exec_"):
+                    roads_clean.exec_()      # QGIS 3
+                else:
+                    roads_clean.exec()       # QGIS 4
+
+
+        if item == self.item20:
+            title="Data preprocessing. Clean layer of buildings"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                buildings_clean = form_buildings_clean( title = title)
+                if hasattr(buildings_clean, "exec_"):
+                    buildings_clean.exec_()      # QGIS 3 / Qt5
+                else:
+                    buildings_clean.exec()       # QGIS 4 / Qt6
+
+
+        if item == self.item19:
+            title="Prepare databases. Build visualisation layers"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                visualization_clean = form_visualization_clean(title = title)
+                if hasattr(visualization_clean, "exec_"):
+                    visualization_clean.exec_()      # QGIS 3 / Qt5
+                else:
+                    visualization_clean.exec()       # QGIS 4 / Qt6
+
+
+        if item == self.item27:
+            title="Prepare databases. Add lines to GTFS"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                gtfs = form_gtfs(title = title, mode = 1)
+                gtfs.show()
+        
+        if item == self.item28:
+            title="Prepare databases. Delete lines from GTFS"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                gtfs = form_gtfs(title = title, mode = 2)
+                gtfs.show()
+
+        if item == self.item3:
+            title="Prepare databases. Build transit routing database"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                pkl = form_pkl(title = title)
+                pkl.show()
+
+        if item == self.item17:
+            title="Prepare databases. Build car routing database"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                pkl_car = form_pkl_car(title = title)
+                pkl_car.show()
+
+        if item == self.item4:
+            title="Transit accessibility. Service area map - fixed arrival/departure time"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_detailed = RaptorDetailed(self, mode=2,
+                                             protocol_type=2,
+                                             title= title,
+                                             timetable_mode=False)
+                raptor_detailed.show()
+
+        if item == self.item5:
+            title="Transit accessibility. Service area map - schedule-based arrival/departure time"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_detailed = RaptorDetailed(self, mode=2,
+                                             protocol_type=2,
+                                             title=title,
+                                             timetable_mode=True)
+                raptor_detailed.show()
+
+        if item == self.item8:
+            title="Transit accessibility. Cumulative opportunities map - fixed arrival/departure time"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_summary = RaptorSummary(self, mode=2,
+                                           protocol_type=1,
+                                           title=title,
+                                           timetable_mode=False
+                                           )
+                raptor_summary.show()
+
+        if item == self.item9:
+            title="Transit accessibility. Cumulative opportunities map - schedule-based arrival/departure time"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                raptor_summary = RaptorSummary(self, mode=2,
+                                           protocol_type=1,
+                                           title=title,
+                                           timetable_mode=True)
+                raptor_summary.show()
+        
+        if item == self.item12:
+            title="Car accessibility. Service area maps"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=2,
+                                                 protocol_type=2,
+                                                 title=title)
+                car_accessibility.show()
+
+        if item == self.item14:
+            title="Car accessibility. Cumulative opportunities maps"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                car_accessibility = CarAccessibility(mode=2,
+                                                 protocol_type=1,
+                                                 title=title)
+                car_accessibility.show()
+        
+
+        if item == self.item16:
+            title="Compare accessibility. Service areas maps"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                self.relative = form_relative(
+                                        title=title, 
+                                        mode=1)
+                self.relative.show()
+
+        if item == self.item18:
+            title="Compare accessibility. Cumulative opportunities maps"
+            existing_window = self.get_existing_window(title)
+            if not (existing_window):
+                self.relative = form_relative(
+                                        title=title, 
+                                        mode=2)
+                self.relative.show()       

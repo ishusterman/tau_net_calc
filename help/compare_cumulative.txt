@@ -1,0 +1,6 @@
+<b>Compare Accessibility Maps, Cumulative Opportunities maps</b> <br /><br />
+<span style="color: grey;">
+The system evaluates the outputs of two different scenarios for a valid comparison.<br />
+•	For <b>Cumulative Opportunities</b>, the comparison proceeds if both maps evaluate regional accessibility, their spatial overlap is not empty, and their time bins are completely identical. If all three conditions are satisfied, the comparison is executed for the overlapping areas , and any non-overlapping sections are exported as additional layers.
+
+<span>

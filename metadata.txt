@@ -1,0 +1,55 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=Accessibility calculator
+qgisMinimumVersion=3.0
+qgisMaximumVersion=4.99
+description=Transport accessibility maps
+version=7.0.3
+
+author=Igor Shusterman, Aleksey Ogulenko, Itzhak Benenson
+email=ishusterman2011@gmail.com
+license=MIT
+
+about=Calculation of potential transit and car accessibility at a resolution of a single building.
+repository=https://github.com/geosimlab/tau_net_calc
+tracker=https://github.com/geosimlab/tau_net_calc 
+homepage=https://github.com/geosimlab/tau_net_calc 
+
+hasProcessingProvider=no
+# Uncomment the following line and add your changelog:
+changelog=
+  7.0
+    - New "Roundtrip" Approach to Accessibility Computations: A novel roundtrip methodology for accessibility computations is finalized.
+    - UI & UX Refresh: Restructured and clarified the main menu and dialog boxes for a more intuitive user experience.
+    -	JSON Integration: By leveraging GTFS datasets and the layers of road network and buildings layers, the transit and car routing databases are constructed to enable rapid data retrieval during accessibility computations. This integration replaces the pkl format used in previous versions, which was recently flagged as a security risk by QGIS.
+    - GeoPackage Integration: Computational outputs are now natively stored in the GeoPackage format for better data interoperability.
+    - Dynamic GTFS Editing: Added the ability to directly modify GTFS data by adding or deleting transit lines.
+    - Documentation: Updated the official tutorial to reflect all recent features and accumulated changes.
+    - Bug Fixes: Resolved minor bugs and improved general stability.
+  6.3 (experimental)
+    - Feature Update: Introduced Roundtrip accessibility analysis.
+  6.2
+    - Maintenance: Fixed minor bugs.
+  6.1
+    - Maintenance: Fixed minor bugs.
+  6.0
+    - UI Enhancements: Improved and clarified user interface layouts and dialog boxes.
+    - Streamlined Workflow: Restructured the processing pipeline by removing the standalone "Database Construction" menu section.
+    - Transit routing database construction is now integrated directly into the transit accessibility calculations block.
+    - Car routing database construction is now integrated directly into the car accessibility calculations block.
+    - Contextual Help: Added dedicated explanation panels to the right side of option dialogs to guide users.
+    - Global Testing: Tested and validated the software across multiple global GTFS datasets representing diverse international cities.
+    - Performance: Significantly optimized the execution speed of core computational procedures.
+    - Data Validation: Added a pre-construction validation check to test the availability and completeness of road layer attributes.
+
+
+tags=Transport accessibility, Transit accessibility, Car accessibility, Accessibility map, Transportation planning, Service area, Dijkstra algorithm, Raptor algorithm, GTFS, Public transport, Voronoi polygon, Hexagon
+icon=img/icon.png
+experimental=False
+deprecated=False
+category=Vector
+server=False
+

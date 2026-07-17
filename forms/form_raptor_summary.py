@@ -1,0 +1,109 @@
+import os
+import webbrowser
+
+from qgis.PyQt.QtCore import Qt
+from qgis.core import QgsProject
+
+
+try:
+    # QGIS 3
+    from qgis.PyQt.QtCore import QRegExp
+    from qgis.PyQt.QtGui import QRegExpValidator
+    RegExpClass = QRegExp
+    RegExpValidatorClass = QRegExpValidator
+except ImportError:
+    # QGIS 4
+    from qgis.PyQt.QtCore import QRegularExpression
+    from qgis.PyQt.QtGui import QRegularExpressionValidator
+    RegExpClass = QRegularExpression
+    RegExpValidatorClass = QRegularExpressionValidator
+
+
+from .form_raptor_detailed import RaptorDetailed
+
+
+class RaptorSummary(RaptorDetailed):
+    def __init__(self, parent,
+                 mode,
+                 protocol_type,
+                 title,
+                 timetable_mode,
+                 roundtrip = False
+                 ):
+        super().__init__(parent, mode, protocol_type, title, timetable_mode,roundtrip)
+        try:
+            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
+        except AttributeError:
+            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+
+        self.parent = parent
+        regex = RegExpClass(r"^([1-9]|[1-5][0-9]|60)$")
+        int_validator = RegExpValidatorClass(regex)
+        self.txtTimeInterval.setValidator(int_validator)
+
+        self.ParametrsShow()
+
+    def on_help_button_clicked(self):
+        
+        url = "https://geosimlab.github.io/accessibility-calculator-tutorial/raptor_area.html"
+        
+        if self.mode == 1 and not(self.timetable_mode):
+            section = "cumulative-number-of-accessible-opportunities-fixed-arrival-departure-time"
+        
+        if self.mode == 2 and not(self.timetable_mode):
+            section = "cumulative-number-of-accessible-opportunities-fixed-arrival-departure-time"
+
+        if self.timetable_mode:
+            section = "cumulative-number-of-accessible-opportunities-fixed-arrival-departure-time"
+                        
+        url = f'{url}#{section}'
+        webbrowser.open(url)
+    
+    
+
+    def saveParameters(self):
+
+        super().saveParameters()
+
+        project_directory = os.path.dirname(QgsProject.instance().fileName())
+        f = os.path.join(project_directory, 'parameters_accessibility.txt')
+
+        self.config.read(f)
+
+        try:
+            role_checkstate = Qt.CheckStateRole                 # Qt5
+            checked = Qt.Checked
+        except AttributeError:
+            role_checkstate = Qt.ItemDataRole.CheckStateRole    # Qt6
+            checked = Qt.CheckState.Checked
+        
+        selected_text = ', '.join(
+            self.cmbFields_ch.itemText(i)
+            for i in range(self.cmbFields_ch.count())
+            if self.cmbFields_ch.itemData(i, role=role_checkstate) == checked
+        )
+
+        self.config['Settings']['Field_ch'] = selected_text
+        self.config['Settings']['TimeInterval'] = self.txtTimeInterval.text()
+        with open(f, 'w') as configfile:
+            self.config.write(configfile)
+      
+
+    def show_info(self):
+
+            hlp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'help')
+
+            if self.timetable_mode:
+                help_filename = "transit_cumulative_schedule.txt"
+            else:
+                help_filename = "transit_cumulative_fixed.txt"
+            hlp_file = os.path.join(hlp_directory, help_filename)
+
+            if os.path.exists(hlp_file):
+                with open(hlp_file, 'r', encoding='utf-8') as f:
+                    html = f.read()
+
+            self.textInfo.setOpenExternalLinks(False)  
+            self.textInfo.setOpenLinks(False)          
+            self.textInfo.setHtml(html)
+            self.textInfo.anchorClicked.connect(lambda url: webbrowser.open(url.toString())) 
