@@ -22,8 +22,7 @@ try:
                     QgsVectorLayer,
                     QgsWkbTypes,
                     QgsFeature,
-                    QgsFields,
-                    QgsProject,
+                    QgsFields,                    
                     QgsField,
                     QgsLayerTreeLayer,
                     )
@@ -43,9 +42,6 @@ try:
     IN_QGIS = True
 except ImportError:
     IN_QGIS = False
-
-import pandas as pd
-
 
 def transform_log_to_dataframe(raw_text):
     """
@@ -346,7 +342,7 @@ def get_documents_path():
                             path_str = path_str.replace('$HOME', str(Path.home()))
                             return str(Path(path_str))
             except Exception:
-                pass  # fallback
+                return str(xdg_docs)
 
         return str(xdg_docs)
 
@@ -547,32 +543,6 @@ def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative=False)
             layer_options={'OVERWRITE': 'YES'}
         )
 
-"""
-def create_empty_gpkg(path):
-    # Создаём минимальный валидный GeoPackage
-    gdf = gpd.GeoDataFrame({"id": []}, geometry=[], crs="EPSG:4326")
-    gdf.to_file(path, layer="__init__", driver="GPKG")
-
-    conn = sqlite3.connect(path)
-    conn.execute("DELETE FROM gpkg_contents WHERE table_name='__init__'")
-    conn.execute("DROP TABLE IF EXISTS __init__")
-    conn.commit()
-    conn.close()
-"""
-
-"""
-def make_service_area_report_gpkg(all_frames, col_star, col_hash, mode = 1):
-    df_total = pd.concat(all_frames, ignore_index=True)
-    df_total['Duration'] = pd.to_numeric(df_total['Duration'], errors='coerce')
-    df_total[col_star] = pd.to_numeric(df_total[col_star], errors='coerce')
-    df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors='coerce')
-    df_min = df_total.loc[df_total.groupby(col_hash)['Duration'].idxmin()]
-    short_result = {
-        (int(row._asdict()[col_star]), int(row._asdict()[col_hash])): int(row.Duration)
-        for row in df_min.itertuples(index=False)
-    }
-    return df_min, short_result
-"""
 
 def make_service_area_report_gpkg(all_frames, col_star, col_hash):
     df_total = pd.concat(all_frames, ignore_index=True)
@@ -592,8 +562,6 @@ def make_service_area_report_gpkg(all_frames, col_star, col_hash):
     }
 
     return df_min, short_result
-
-
 
 def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=10):
     rows = [(h, s, d) for (h, s), d in all_frames.items()]
@@ -674,4 +642,6 @@ def get_tablename(layer):
         if part.startswith("layername="):
             return part.split("=", 1)[1]
     return None
+
+
 

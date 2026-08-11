@@ -42,7 +42,7 @@ class PKL ():
         self.building_id_field = building_id_field
 
         self.IN_QGIS = True
-        if self.parent == None:
+        if self.parent is None:
             self.IN_QGIS = False
 
     def build_list_stops(self):

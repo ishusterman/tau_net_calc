@@ -7,8 +7,6 @@ import configparser
 from datetime import datetime
 import math
 from math import floor
-import os
-
 
 from qgis.core import (QgsProject,
                        QgsMapLayerProxyModel
@@ -22,12 +20,19 @@ from qgis.PyQt.QtWidgets import (QDialogButtonBox,
                              )
 
 from qgis.PyQt.QtCore import (Qt,                          
-                          QDateTime,
+                          QTime,
                           QEvent,
-                          QVariant
+                          QVariant,
+                          QDate, 
+                          QDateTime,
                           )
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt import uic
+
+shift_mod = Qt.KeyboardModifier.ShiftModifier
+role_checkstate = Qt.ItemDataRole.CheckStateRole
+checked = Qt.CheckState.Checked
+unchecked = Qt.CheckState.Unchecked
 
 try:
     # QGIS 3
@@ -79,19 +84,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                  timetable_mode, 
                  roundtrip = False):
         super().__init__()
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self.setupUi(self)
         self.setModal(False)
-        try:
-            # QGIS 3 / Qt5
-            self.setWindowFlags(Qt.Window)
-        except AttributeError:
-            # QGIS 4 / Qt6
-            self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
 
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
@@ -102,10 +99,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.splitter.setSizes([int(self.width() * 0.75), int(self.width() * 0.25)])
 
         fm = self.txtMinTransfers.fontMetrics()
-        try:
-            char_width = fm.width("x")                 # Qt5
-        except AttributeError:
-            char_width = fm.horizontalAdvance("x")     # Qt6
+        char_width = fm.horizontalAdvance("x")
 
         self.fix_size  = 15 * char_width
         self.fix_size2 = 5  * char_width
@@ -121,7 +115,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtImbalance.setFixedWidth(self.fix_size2)
         self.txtMaxWaitTime.setFixedWidth(self.fix_size2)
         self.txtMaxWaitTimeTransfer.setFixedWidth(self.fix_size2)
-        
+
+        self.txt_rb_fast.setFixedWidth(self.fix_size2)
         
         self.fix_size2 = 7 * char_width
         self.txtMaxTimeTravel.setFixedWidth(self.fix_size2)
@@ -155,21 +150,16 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.cmbLayers.installEventFilter(self)
         self.cmbLayersDest.installEventFilter(self)
         
-        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer | QgsMapLayerProxyModel.PointLayer)
-        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer | QgsMapLayerProxyModel.PointLayer)
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer | QgsMapLayerProxyModel.Filter.PointLayer)
+        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer | QgsMapLayerProxyModel.Filter.PointLayer)
 
         self.dtStartTime.installEventFilter(self)
         self.dtEndTime.installEventFilter(self)
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        try:
-            role_action = QDialogButtonBox.ActionRole        # Qt5
-            role_reject = QDialogButtonBox.RejectRole
-            role_help = QDialogButtonBox.HelpRole
-        except AttributeError:
-            role_action = QDialogButtonBox.ButtonRole.ActionRole   # Qt6
-            role_reject = QDialogButtonBox.ButtonRole.RejectRole
-            role_help = QDialogButtonBox.ButtonRole.HelpRole
+        role_action = QDialogButtonBox.ButtonRole.ActionRole
+        role_reject = QDialogButtonBox.ButtonRole.RejectRole
+        role_help = QDialogButtonBox.ButtonRole.HelpRole
 
         self.run_button = self.buttonBox.addButton("Run", role_action)
         self.close_button = self.buttonBox.addButton("Close", role_reject)
@@ -192,6 +182,9 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         regex3 = RegExpClass(r"^\d+(\.\d{1,2})?$")
         int_validator3 = RegExpValidatorClass(regex3)
 
+        regex4 = RegExpClass(r"^[1-5]$")
+        int_validator4 = RegExpValidatorClass(regex4)
+
         self.txtMinTransfers.setValidator(int_validator2)
         self.txtMaxTransfers.setValidator(int_validator2)
         self.txtMaxWalkDist1.setValidator(int_validator1)
@@ -203,6 +196,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWaitTimeTransfer.setValidator(int_validator3)
         self.txtMaxTimeTravel.setValidator(int_validator3)
         self.txtImbalance.setValidator(int_validator3)
+
+        self.txt_rb_fast.setValidator(int_validator4)
         
         regex = RegExpClass(r"\d*")
         int_validator = RegExpValidatorClass(regex)
@@ -343,7 +338,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         try:
             fields = [field for field in layer.fields()]
-        except:
+        except Exception:
             return 0
 
         for field in fields:
@@ -353,18 +348,6 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             if field_type in (QVariant.Int, QVariant.Double, QVariant.LongLong):
                 if field_name.lower() not in ("fid", "osm_id", "id", "aid"):
                     self.cmbFields_ch.addItem(field_name)
-
-        try:
-            shift_mod = Qt.ShiftModifier                     # Qt5
-            checked = Qt.Checked
-            unchecked = Qt.Unchecked
-            role_checkstate = Qt.CheckStateRole   
-        except AttributeError:
-            shift_mod = Qt.KeyboardModifier.ShiftModifier    # Qt6
-            checked = Qt.CheckState.Checked
-            unchecked = Qt.CheckState.Unchecked
-            role_checkstate = Qt.ItemDataRole.CheckStateRole
-
                     
 
         if QApplication.keyboardModifiers() & shift_mod:        
@@ -421,6 +404,8 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.lblStartTime3.setVisible(self.timetable_mode and not self.roundtrip)
         self.lblStartTime4.setVisible(self.timetable_mode and not self.roundtrip)
         self.txtMaxExtraTime.setVisible(self.timetable_mode and not self.roundtrip)
+
+        self.gb_type_schedule.setVisible(self.timetable_mode)
 
         self.default_alias = getDateTime()
         
@@ -632,6 +617,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             self.textLog.append(f"<a> Maximum lag imbalance ratio (k): {self.config['Settings']['PT_imbalance']}</a>")
         
         self.textLog.append("<a style='font-weight:bold;'>[Output]</a>")
+
+        if self.timetable_mode:
+                if self.config['Settings']['type_schedule']=='fast':
+                    text = f"Fast calculations using {self.config['Settings']['type_schedule_delta']}-minute intervals"
+                else:
+                    text = f"Exact calculations"                
+        self.textLog.append(f"<a> Calculation mode: {text}</a>")
+
         self.textLog.append(f"<a> Output file: {self.config['Settings']['pathtoprotocols']}</a>")
         if self.protocol_type == 1:  # MAP mode
             self.textLog.append(f"<a> Save time bin: {self.config['Settings']['timeinterval']} min</a>")        
@@ -749,6 +742,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
         if 'PT_imbalance' not in self.config['Settings']:
             self.config['Settings']['PT_imbalance'] = '2'
+        
+        value = self.config['Settings'].get('type_schedule') 
+        if not value:
+            self.config['Settings']['type_schedule'] = "fast"
     
     def saveParameters(self):
 
@@ -768,9 +765,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 
         self.config['Settings']['MaxWalkDist1'] = self.txtMaxWalkDist1.text()
         self.config['Settings']['MaxWalkDist2'] = self.txtMaxWalkDist2.text()
-        self.config['Settings']['MaxWalkDist3'] = self.txtMaxWalkDist3.text()
-        self.config['Settings']['TIME'] = self.dtStartTime.dateTime().toString("HH:mm:ss")
-        self.config['Settings']['EndTIME'] = self.dtEndTime.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['MaxWalkDist3'] = self.txtMaxWalkDist3.text()        
+        self.config['Settings']['TIME'] = self.dtStartTime.time().toString("HH:mm:ss")
+
+        self.config['Settings']['EndTIME'] = self.dtEndTime.time().toString("HH:mm:ss")
         self.config['Settings']['Speed'] = self.txtSpeed.text()
         if not self.timetable_mode:
             self.config['Settings']['MaxWaitTime'] = self.txtMaxWaitTime.text()
@@ -778,10 +776,10 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.config['Settings']['MaxTimeTravel'] = self.txtMaxTimeTravel.text()
         self.config['Settings']['MaxExtraTime'] = self.txtMaxExtraTime.text()
         
-        self.config['Settings']['to_time_start'] = self.dtRoundtripStartTime1.dateTime().toString("HH:mm:ss")
-        self.config['Settings']['to_time_end'] = self.dtRoundtripStartTime2.dateTime().toString("HH:mm:ss")
-        self.config['Settings']['from_time_start'] = self.dtRoundtripStartTime3.dateTime().toString("HH:mm:ss")
-        self.config['Settings']['from_time_end'] = self.dtRoundtripStartTime4.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['to_time_start'] = self.dtRoundtripStartTime1.time().toString("HH:mm:ss")
+        self.config['Settings']['to_time_end'] = self.dtRoundtripStartTime2.time().toString("HH:mm:ss")
+        self.config['Settings']['from_time_start'] = self.dtRoundtripStartTime3.time().toString("HH:mm:ss")
+        self.config['Settings']['from_time_end'] = self.dtRoundtripStartTime4.time().toString("HH:mm:ss")
         self.config['Settings']['time_delta_to'] = self.txtRountrip_timedelta1.text()
         self.config['Settings']['time_delta_from'] = self.txtRountrip_timedelta2.text()
 
@@ -793,6 +791,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             rb_state = "round"
         
         self.config['Settings']['radio_button_type'] = rb_state
+
+        if self.rb_detailed.isChecked():
+            rb_state = "detailed"
+        else:
+            rb_state = "fast"
+        self.config['Settings']['type_schedule'] = rb_state
+
+        self.config['Settings']['type_schedule_delta'] = self.txt_rb_fast.text()
 
         self.config['Settings']['PT_imbalance'] = self.txtImbalance.text()
         
@@ -807,11 +813,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         
         self.wgFileSave.setFilePath(os.path.join(os.path.dirname(self.config['Settings']['PathToProtocols']), f"{self.default_alias}.gpkg"))
         self.wgPathPKL.setFilePath(os.path.normpath(self.config['Settings']['PathToPKL']))
-                
-        try:
-            shift_mod = Qt.ShiftModifier                     # Qt5
-        except AttributeError:
-            shift_mod = Qt.KeyboardModifier.ShiftModifier    # Qt6
+        
 
         if QApplication.keyboardModifiers() & shift_mod:
             self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer']))
@@ -827,11 +829,14 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtMaxWalkDist2.setText(self.config['Settings']['MaxWalkDist2'])
         self.txtMaxWalkDist3.setText(self.config['Settings']['MaxWalkDist3'])
 
-        datetime = QDateTime.fromString(self.config['Settings']['TIME'], "HH:mm:ss")
-        self.dtStartTime.setDateTime(datetime)
+        datetime = QTime.fromString(self.config['Settings']['TIME'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtStartTime.setDateTime(dt)
 
-        datetime = QDateTime.fromString(self.config['Settings']['EndTIME'], "HH:mm:ss")
-        self.dtEndTime.setDateTime(datetime)
+        
+        datetime = QTime.fromString(self.config['Settings']['EndTIME'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtEndTime.setDateTime(dt)
 
         self.txtSpeed.setText(self.config['Settings']['Speed'])
         if not self.timetable_mode:
@@ -844,14 +849,18 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         self.txtRountrip_timedelta1.setText(self.config['Settings']['time_delta_to'])
         self.txtRountrip_timedelta2.setText(self.config['Settings']['time_delta_from'])
 
-        datetime = QDateTime.fromString(self.config['Settings']['to_time_start'], "HH:mm:ss")
-        self.dtRoundtripStartTime1.setDateTime(datetime)
-        datetime = QDateTime.fromString(self.config['Settings']['to_time_end'], "HH:mm:ss")
-        self.dtRoundtripStartTime2.setDateTime(datetime)
-        datetime = QDateTime.fromString(self.config['Settings']['from_time_start'], "HH:mm:ss")
-        self.dtRoundtripStartTime3.setDateTime(datetime)
-        datetime = QDateTime.fromString(self.config['Settings']['from_time_end'], "HH:mm:ss")
-        self.dtRoundtripStartTime4.setDateTime(datetime)
+        datetime = QTime.fromString(self.config['Settings']['to_time_start'], "HH:mm:ss")        
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime1.setDateTime(dt)
+        datetime = QTime.fromString(self.config['Settings']['to_time_end'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime2.setDateTime(dt)
+        datetime = QTime.fromString(self.config['Settings']['from_time_start'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime3.setDateTime(dt)
+        datetime = QTime.fromString(self.config['Settings']['from_time_end'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime4.setDateTime(dt)
 
         radio_button_type_state = self.config['Settings']['radio_button_type']
         self.roundtrip = False
@@ -864,17 +873,13 @@ class RaptorDetailed(QDialog, FORM_CLASS):
         if radio_button_type_state == "round":
             self.roundtrip = True
             self.rbRound.setChecked(True)
+        
+        radio_button_type_state = self.config['Settings']['type_schedule']
+        if radio_button_type_state == "detailed":
+            self.rb_detailed.setChecked(True)
+        else: 
+            self.rb_fast.setChecked(True)
 
-        try:
-            shift_mod = Qt.ShiftModifier                     # Qt5
-            checked = Qt.Checked
-            unchecked = Qt.Unchecked
-            role_checkstate = Qt.CheckStateRole   
-        except AttributeError:
-            shift_mod = Qt.KeyboardModifier.ShiftModifier    # Qt6
-            checked = Qt.CheckState.Checked
-            unchecked = Qt.CheckState.Unchecked
-            role_checkstate = Qt.ItemDataRole.CheckStateRole
         if QApplication.keyboardModifiers() & shift_mod:
             if self.protocol_type == 1:
                 if 'Field_ch' not in self.config['Settings']:
@@ -899,17 +904,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
             highlight_widget (self.txtImbalance)
 
             msgBox = QMessageBox()
-            try:
-                rich_text = Qt.RichText                     # Qt5
-                text_browser_interaction = Qt.TextBrowserInteraction 
-                icon_question = QMessageBox.Question
-                btn_ok = QMessageBox.Ok 
-                
-            except AttributeError:
-                rich_text = Qt.TextFormat.RichText          # Qt6
-                text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
-                icon_question = QMessageBox.Icon.Question
-                btn_ok = QMessageBox.StandardButton.Ok
+            rich_text = Qt.TextFormat.RichText
+            text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
+            icon_question = QMessageBox.Icon.Question
+            btn_ok = QMessageBox.StandardButton.Ok
+
             msgBox.setIcon(icon_question)           
             msgBox.setTextFormat(rich_text)
             msgBox.setTextInteractionFlags(text_browser_interaction)
@@ -938,17 +937,11 @@ class RaptorDetailed(QDialog, FORM_CLASS):
                 self.txtMaxWalkDist3.setText(str(self.UpperBoundMaxWalkDist)) 
 
             msgBox = QMessageBox()
-            try:
-                rich_text = Qt.RichText                     # Qt5
-                text_browser_interaction = Qt.TextBrowserInteraction 
-                icon_question = QMessageBox.Question
-                btn_ok = QMessageBox.Ok 
-                
-            except AttributeError:
-                rich_text = Qt.TextFormat.RichText          # Qt6
-                text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
-                icon_question = QMessageBox.Icon.Question
-                btn_ok = QMessageBox.StandardButton.Ok
+            rich_text = Qt.TextFormat.RichText
+            text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
+            icon_question = QMessageBox.Icon.Question
+            btn_ok = QMessageBox.StandardButton.Ok
+
 
             msgBox.setIcon(icon_question)           
                 
@@ -1373,10 +1366,7 @@ class RaptorDetailed(QDialog, FORM_CLASS):
 
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
-        try:
-            wheel_type = QEvent.Wheel              # Qt5 (QGIS 3)
-        except AttributeError:
-            wheel_type = QEvent.Type.Wheel         # Qt6 (QGIS 4)
+        wheel_type = QEvent.Type.Wheel
 
         if event.type() == wheel_type:
             if obj.hasFocus():

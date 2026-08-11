@@ -4,10 +4,10 @@
 
 [general]
 name=Accessibility calculator
-qgisMinimumVersion=3.0
-qgisMaximumVersion=4.99
+qgisMinimumVersion=3.1.0
+qgisMaximumVersion=4.99.0
 description=Transport accessibility maps
-version=7.0.3
+version=7.1.1
 
 author=Igor Shusterman, Aleksey Ogulenko, Itzhak Benenson
 email=ishusterman2011@gmail.com
@@ -21,10 +21,12 @@ homepage=https://github.com/geosimlab/tau_net_calc
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
 changelog=
+  7.1
+    - Maximum lag imbalance ratio (k) is included into the ROUNDTRIP UI dialog
   7.0
     - New "Roundtrip" Approach to Accessibility Computations: A novel roundtrip methodology for accessibility computations is finalized.
     - UI & UX Refresh: Restructured and clarified the main menu and dialog boxes for a more intuitive user experience.
-    -	JSON Integration: By leveraging GTFS datasets and the layers of road network and buildings layers, the transit and car routing databases are constructed to enable rapid data retrieval during accessibility computations. This integration replaces the pkl format used in previous versions, which was recently flagged as a security risk by QGIS.
+    - JSON Integration: By leveraging GTFS datasets and the layers of road network and buildings layers, the transit and car routing databases are constructed to enable rapid data retrieval during accessibility computations. This integration replaces the pkl format used in previous versions, which was recently flagged as a security risk by QGIS.
     - GeoPackage Integration: Computational outputs are now natively stored in the GeoPackage format for better data interoperability.
     - Dynamic GTFS Editing: Added the ability to directly modify GTFS data by adding or deleting transit lines.
     - Documentation: Updated the official tutorial to reflect all recent features and accumulated changes.

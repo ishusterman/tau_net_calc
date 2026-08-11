@@ -164,7 +164,7 @@ class car_accessibility:
             try:
                 v = float(v)
                 return max(v, 3.6)  # минимум 3.6 км/ч
-            except:
+            except (ValueError, TypeError):
                 return None
 
         # ---------------------------------------------------------

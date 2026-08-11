@@ -61,15 +61,10 @@ class cls_footpath_on_projection:
         self.layer_links = QgsVectorLayer(f"LineString?crs={crs_link.authid()}", f'{prefix}_projection_on_road', "memory")
 
         self.links_provider = self.layer_links.dataProvider()
-
-        try:
-            int_type = QMetaType.Int
-            double_type = QMetaType.Double
-            string_type = QMetaType.QString
-        except AttributeError:
-            int_type = QVariant.Int
-            double_type = QVariant.Double
-            string_type = QVariant.String
+        
+        int_type = getattr(QMetaType, "Int", QVariant.Int)
+        double_type = getattr(QMetaType, "Double", QVariant.Double)
+        string_type = getattr(QMetaType, "QString", QVariant.String)
 
         self.links_provider.addAttributes([
                 QgsField("id", int_type),

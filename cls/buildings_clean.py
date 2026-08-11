@@ -186,7 +186,7 @@ class cls_clean_buildings(QgsTask):
             self.signals.set_message.emit(f'')
             self.break_on = True
             super().cancel()
-        except:
+        except Exception:
             return
         
     def save_layer_single_part(self, layer_single_part):
@@ -205,7 +205,7 @@ class cls_clean_buildings(QgsTask):
         options.fileEncoding = "UTF-8"
         options.layerName = layer_name
         # важно: если файл уже есть — создаём/перезаписываем слой, а не файл
-        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
+        options.actionOnExistingFile = QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
 
         QgsVectorFileWriter.writeAsVectorFormatV3(
             layer_single_part,
@@ -224,7 +224,7 @@ class cls_clean_buildings(QgsTask):
         options.driverName = "GPKG"
         options.fileEncoding = "UTF-8"
         options.layerName = layer_name        
-        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer
+        options.actionOnExistingFile = QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteLayer
 
         QgsVectorFileWriter.writeAsVectorFormatV3(
             layer,

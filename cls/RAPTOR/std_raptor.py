@@ -1,8 +1,7 @@
-from RAPTOR.raptor_functions import *
+from RAPTOR.raptor_functions import initialize_raptor, get_latest_trip_new, post_processingAll
 from qgis.PyQt.QtWidgets import QApplication
 import numpy as np
-from common import seconds_to_time
-
+from collections import deque
 
 def raptor(SOURCE,
            D_TIME,
@@ -133,7 +132,7 @@ def raptor(SOURCE,
             # may by stop exist in layer but not exist in PKL
             try:
                 routes_serving_p = routes_by_stop_dict[p]
-            except:
+            except KeyError as e:
                 continue
             
             for route in routes_serving_p:
@@ -152,6 +151,7 @@ def raptor(SOURCE,
             QApplication.processEvents()
             boarding_time, boarding_point = -1, -1
             current_trip_t = -1
+            tid = None
 
             if not stops_dict.get(route):
                 continue
@@ -166,8 +166,7 @@ def raptor(SOURCE,
                  
                     try:
                         arr_by_t_at_pi = current_trip_t[current_stopindex_by_route - 1][1]
-                    except:
-
+                    except KeyError as e:
                         continue
                     
                     if max_time < arr_by_t_at_pi:
@@ -321,7 +320,7 @@ def process_walking_stage(max_time,
 
             try:
                 pi_label_k_p_dash = pi_label[k][p_dash]
-            except:
+            except (KeyError, IndexError, TypeError):
                 pi_label_k_p_dash = -1
 
             # this line is "don't rewrite founded bus trip to footleg"

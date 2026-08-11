@@ -258,7 +258,8 @@ class pkl_car ():
                 direction = QgsVectorLayerDirector.DirectionForward
         """
 
-        direction = QgsVectorLayerDirector.DirectionBoth
+        direction = QgsVectorLayerDirector.Direction.DirectionBoth
+
         
         director = QgsVectorLayerDirector(self.layer_roads_mod,
                                           self.parent.idx_field_direction,
@@ -549,10 +550,11 @@ class pkl_car ():
 
             geom = feature.geometry()
 
-            if geom.type() == QgsWkbTypes.PointGeometry:
+            if geom.type() == QgsWkbTypes.GeometryType.PointGeometry:
                 point = geom.asPoint()
-            elif geom.type() == QgsWkbTypes.PolygonGeometry:
+            elif geom.type() == QgsWkbTypes.GeometryType.PolygonGeometry:
                 point = geom.centroid().asPoint()
+
             points.append((
                           feature[self.parent.layer_buildings_field],
                           QgsPointXY(point.x(), point.y())

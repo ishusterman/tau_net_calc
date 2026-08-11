@@ -110,10 +110,10 @@ class visualization:
         voronoi_layer_name = None
 
         for i in range(layer_count):
-            l = ds.GetLayerByIndex(i)
-            if l is None:
+            item = ds.GetLayerByIndex(i)
+            if item is None:
                 continue
-            lname = l.GetName()
+            lname = item.GetName()
             if "_vor_" in lname.lower():
                 voronoi_layer_name = lname
                 break  # берём первый найденный
@@ -309,10 +309,8 @@ class visualization:
             num_classes = len(colors)
             quantiles = self.compute_quantiles(self.protocol_layer, num_classes)
             ranges = []
-            try:
-                no_pen = Qt.NoPen                       # Qt5
-            except AttributeError:
-                no_pen = Qt.PenStyle.NoPen              # Qt6
+            no_pen = Qt.PenStyle.NoPen
+
             for i, (low, up) in enumerate(quantiles):
                 sym = QgsSymbol.defaultSymbol(self.layer_clone.geometryType())
 
@@ -329,7 +327,7 @@ class visualization:
                 up = float(f"{up:.3f}")
                 ranges.append(QgsRendererRange(low, up, sym, label))
             renderer = QgsGraduatedSymbolRenderer(self.targetField_base, ranges)
-            renderer.setMode(QgsGraduatedSymbolRenderer.Custom)
+            renderer.setMode(QgsGraduatedSymbolRenderer.Mode.Custom)
 
             layer = self.layer_clone
             layer.setRenderer(renderer)
@@ -360,7 +358,8 @@ class visualization:
                 self.targetField_base,
                 new_ranges
             )
-            new_renderer.setMode(QgsGraduatedSymbolRenderer.Custom)
+            new_renderer.setMode(QgsGraduatedSymbolRenderer.Mode.Custom)
+
 
             layer.setRenderer(new_renderer)
             layer.triggerRepaint()
@@ -383,11 +382,9 @@ class visualization:
 
         new_ranges = []
         new_step = (new_max - old_min) / num_classes
+        
+        no_pen = Qt.PenStyle.NoPen
 
-        try:
-            no_pen = Qt.NoPen                       # Qt5
-        except AttributeError:
-            no_pen = Qt.PenStyle.NoPen              # Qt6
 
         for i in range(num_classes):
             lower_value = old_min + i * new_step
@@ -445,11 +442,7 @@ class visualization:
         colors = self.generate_gradient(start_color, mid_color, end_color, num_classes)
 
         new_ranges = []
-
-        try:
-            no_pen = Qt.NoPen                       # Qt5
-        except AttributeError:
-            no_pen = Qt.PenStyle.NoPen              # Qt6
+        no_pen = Qt.PenStyle.NoPen
 
         for i in range(num_classes):
             low = old_min + i * old_step
@@ -515,7 +508,7 @@ class visualization:
             if v is not None:
                 try:
                     values.append(float(v))
-                except:
+                except (TypeError, ValueError) as e:
                    pass
 
         values.sort()

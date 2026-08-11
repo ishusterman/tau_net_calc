@@ -993,7 +993,8 @@ class GTFS ():
         options.driverName = "GPKG"
         options.layerName = table_name
         options.fileEncoding = "UTF-8"
-        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer
+        options.actionOnExistingFile = QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteLayer
+
 
         err, msg = QgsVectorFileWriter.writeAsVectorFormatV2(
             final_layer,

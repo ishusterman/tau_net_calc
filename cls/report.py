@@ -363,7 +363,7 @@ def make_protocol_detailed(raptor_mode,
                 sthird_arrive_stop = ""
                 
                 # last_bus_leg - last leg of current jorney
-                if not last_bus_leg is None:                    
+                if last_bus_leg is not None:
                     sfirst_boarding_stop = f'{stop_symbol}{first_boarding_stop}'
                     sfirst_arrive_stop = f'{stop_symbol}{first_bus_arrive_stop}'
 

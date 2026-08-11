@@ -10,13 +10,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QDockWidget, QAction
 from qgis.core import QgsProject
 
-try:
-    # QGIS 3 / Qt5
-    dock_area = Qt.RightDockWidgetArea
-except AttributeError:
-    # QGIS 4 / Qt6
-    dock_area = Qt.DockWidgetArea.RightDockWidgetArea
-
+dock_area = getattr(Qt.DockWidgetArea, "RightDockWidgetArea", Qt.DockWidgetArea.RightDockWidgetArea)
 
 from .forms.accessibility_tools import AccessibilityTools
 

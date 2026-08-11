@@ -57,19 +57,11 @@ FORM_CLASS, _ = uic.loadUiType(
 class form_pkl(QDialog, FORM_CLASS):
     def __init__(self, title):
         super().__init__()
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self.setupUi(self)
         self.setModal(False)
-        try:
-            # QGIS 3 / Qt5
-            self.setWindowFlags(Qt.Window)
-        except AttributeError:
-            # QGIS 4 / Qt6
-            self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
 
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
@@ -81,10 +73,7 @@ class form_pkl(QDialog, FORM_CLASS):
         
 
         fm = self.txtMaxPathRoad.fontMetrics()
-        try:
-            char_width = fm.width("x")                     # Qt5
-        except AttributeError:
-            char_width = fm.horizontalAdvance("x")         # Qt6
+        char_width = fm.horizontalAdvance("x")
 
         fix_size = 20 * char_width
 
@@ -114,22 +103,17 @@ class form_pkl(QDialog, FORM_CLASS):
         self.txtPathToGTFS.textChanged.connect(self.on_PathToGTFS_changed)
 
         self.cmbLayers.installEventFilter(self)
-        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer)
         self.cbRoads.installEventFilter(self)
-        self.cbRoads.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.cbRoads.setFilters(QgsMapLayerProxyModel.Filter.LineLayer)
 
         self.calendar.installEventFilter(self)
         
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        try:
-            role_action = QDialogButtonBox.ActionRole        # Qt5
-            role_reject = QDialogButtonBox.RejectRole
-            role_help = QDialogButtonBox.HelpRole
-        except AttributeError:
-            role_action = QDialogButtonBox.ButtonRole.ActionRole   # Qt6
-            role_reject = QDialogButtonBox.ButtonRole.RejectRole
-            role_help = QDialogButtonBox.ButtonRole.HelpRole
+        role_action = QDialogButtonBox.ButtonRole.ActionRole
+        role_reject = QDialogButtonBox.ButtonRole.RejectRole
+        role_help = QDialogButtonBox.ButtonRole.HelpRole
 
         self.run_button = self.buttonBox.addButton("Run", role_action)
         self.close_button = self.buttonBox.addButton("Close", role_reject)
@@ -176,11 +160,8 @@ class form_pkl(QDialog, FORM_CLASS):
         self.close_button.setEnabled(True)
 
     def on_run_button_clicked(self):
-        
-        try:
-            shift_mod = Qt.ShiftModifier                     # Qt5
-        except AttributeError:
-            shift_mod = Qt.KeyboardModifier.ShiftModifier    # Qt6
+
+        shift_mod = Qt.KeyboardModifier.ShiftModifier
 
         if QApplication.keyboardModifiers() & shift_mod:
             self.to_delete_gtfs = False
@@ -376,14 +357,11 @@ class form_pkl(QDialog, FORM_CLASS):
         file_path_prefix = os.path.join(path, f"{prefix}_stoptimes.json")
         if  os.path.isfile(file_path) or os.path.isfile(file_path_prefix):
             msgBox = QMessageBox()
-            try:
-                icon_question = QMessageBox.Question
-                btn_yes = QMessageBox.Yes
-                btn_no = QMessageBox.No
-            except AttributeError:
-                icon_question = QMessageBox.Icon.Question
-                btn_yes = QMessageBox.StandardButton.Yes
-                btn_no = QMessageBox.StandardButton.No
+                        
+            icon_question = QMessageBox.Icon.Question
+            btn_yes = QMessageBox.StandardButton.Yes
+            btn_no = QMessageBox.StandardButton.No
+
 
             msgBox.setIcon(icon_question)
             msgBox.setWindowTitle("Confirm")
@@ -495,10 +473,7 @@ class form_pkl(QDialog, FORM_CLASS):
 
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
-        try:
-            wheel_type = QEvent.Wheel              # Qt5 (QGIS 3)
-        except AttributeError:
-            wheel_type = QEvent.Type.Wheel         # Qt6 (QGIS 4)
+        wheel_type = QEvent.Type.Wheel
 
         if event.type() == wheel_type:
             if obj.hasFocus():

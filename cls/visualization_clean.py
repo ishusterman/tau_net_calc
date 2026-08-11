@@ -48,7 +48,9 @@ class cls_clean_visualization(QgsTask):
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = "GPKG"
         options.layerName = layer_name
-        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
+        
+        options.actionOnExistingFile = QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
+
 
         QgsVectorFileWriter.writeAsVectorFormatV3(
             qgs_layer,
@@ -68,7 +70,13 @@ class cls_clean_visualization(QgsTask):
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = "GPKG"
         options.layerName = layer_name
-        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer if os.path.exists(self.main_gpkg_path) else QgsVectorFileWriter.CreateOrOverwriteFile
+        
+        options.actionOnExistingFile = (
+                QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteLayer
+                if os.path.exists(self.main_gpkg_path)
+                else QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
+            )
+
         
         QgsVectorFileWriter.writeAsVectorFormatV3(qgs_layer, self.main_gpkg_path, QgsProject.instance().transformContext(), options)
         layer_source = f"{self.main_gpkg_path}|layername={layer_name}"
@@ -132,11 +140,7 @@ class cls_clean_visualization(QgsTask):
             return True
         except Exception as e:
             self.exception = e
-            try:
-                cursor_arrow = Qt.ArrowCursor                 # Qt5 / QGIS 3
-            except AttributeError:
-                cursor_arrow = Qt.CursorShape.ArrowCursor     # Qt6 / QGIS 4
-
+            cursor_arrow = Qt.CursorShape.ArrowCursor
             QApplication.setOverrideCursor(cursor_arrow)
 
             self.signals.log.emit(f'<a>Error: {self.exception}</a>')

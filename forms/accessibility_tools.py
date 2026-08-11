@@ -192,16 +192,11 @@ class AccessibilityTools(QWidget):
             )
 
             msgBox = QMessageBox()
-            try:
-                rich_text = Qt.RichText                     # Qt5
-                text_browser_interaction = Qt.TextBrowserInteraction
-                icon_info = QMessageBox.Information
-                accept_role = QMessageBox.AcceptRole 
-            except AttributeError:
-                rich_text = Qt.TextFormat.RichText          # Qt6
-                text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
-                icon_info = QMessageBox.Icon.Information
-                accept_role = QMessageBox.ButtonRole.AcceptRole
+            rich_text = Qt.TextFormat.RichText
+            text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
+            icon_info = QMessageBox.Icon.Information
+            accept_role = QMessageBox.ButtonRole.AcceptRole
+
             msgBox.setTextFormat(rich_text)
             msgBox.setTextInteractionFlags(text_browser_interaction)
             msgBox.setIcon(icon_info)
@@ -218,10 +213,7 @@ class AccessibilityTools(QWidget):
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 roads_clean = form_roads_clean(title = title)
-                if hasattr(roads_clean, "exec_"):
-                    roads_clean.exec_()      # QGIS 3
-                else:
-                    roads_clean.exec()       # QGIS 4
+                roads_clean.exec()       # QGIS 4
 
 
         if item == self.item20:
@@ -229,10 +221,7 @@ class AccessibilityTools(QWidget):
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 buildings_clean = form_buildings_clean( title = title)
-                if hasattr(buildings_clean, "exec_"):
-                    buildings_clean.exec_()      # QGIS 3 / Qt5
-                else:
-                    buildings_clean.exec()       # QGIS 4 / Qt6
+                buildings_clean.exec()       # QGIS 4 / Qt6
 
 
         if item == self.item19:
@@ -240,10 +229,7 @@ class AccessibilityTools(QWidget):
             existing_window = self.get_existing_window(title)
             if not (existing_window):
                 visualization_clean = form_visualization_clean(title = title)
-                if hasattr(visualization_clean, "exec_"):
-                    visualization_clean.exec_()      # QGIS 3 / Qt5
-                else:
-                    visualization_clean.exec()       # QGIS 4 / Qt6
+                visualization_clean.exec()       # QGIS 4 / Qt6
 
 
         if item == self.item27:

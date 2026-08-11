@@ -57,20 +57,11 @@ class form_pkl_car(QDialog, FORM_CLASS):
                  title,
                  ):
         super().__init__()
-        
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)        
 
         self.setupUi(self)
         self.setModal(False)
-        try:
-            # QGIS 3 / Qt5
-            self.setWindowFlags(Qt.Window)
-        except AttributeError:
-            # QGIS 4 / Qt6
-            self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
 
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
@@ -78,10 +69,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.setWindowTitle(title)
 
         fm = self.txtSpeed.fontMetrics()
-        try:
-            char_width = fm.width("x")                 # Qt5
-        except AttributeError:
-            char_width = fm.horizontalAdvance("x")     # Qt6
+        char_width = fm.horizontalAdvance("x")
 
         fix_size  = 15 * char_width
         fix_size2 = 22 * char_width
@@ -115,8 +103,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
         
         self.cmbLayers_buildings.installEventFilter(self)
         self.cbRoads.installEventFilter(self)
-        self.cmbLayers_buildings.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-        self.cbRoads.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.cmbLayers_buildings.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer)
+        self.cbRoads.setFilters(QgsMapLayerProxyModel.Filter.LineLayer)
 
 
         self.cmbFieldsSpeed.installEventFilter(self)
@@ -124,17 +112,9 @@ class form_pkl_car(QDialog, FORM_CLASS):
                 
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        
-        
-
-        try:
-            role_action = QDialogButtonBox.ActionRole        # Qt5
-            role_reject = QDialogButtonBox.RejectRole
-            role_help = QDialogButtonBox.HelpRole
-        except AttributeError:
-            role_action = QDialogButtonBox.ButtonRole.ActionRole   # Qt6
-            role_reject = QDialogButtonBox.ButtonRole.RejectRole
-            role_help = QDialogButtonBox.ButtonRole.HelpRole
+        role_action = QDialogButtonBox.ButtonRole.ActionRole
+        role_reject = QDialogButtonBox.ButtonRole.RejectRole
+        role_help = QDialogButtonBox.ButtonRole.HelpRole
 
         self.run_button = self.buttonBox.addButton("Run", role_action)
         self.run_button.setEnabled(False)       
@@ -158,14 +138,9 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.ParametrsShow()
         self.onLayerRoadChanged()
         self.cbRoads.currentIndexChanged.connect(self.onLayerRoadChanged)
-
-        try:
-            no_edit = QTableWidget.NoEditTriggers
-        except AttributeError:
-            no_edit = QAbstractItemView.EditTrigger.NoEditTriggers
-
-        self.table1.setEditTriggers(no_edit)
-        self.table2.setEditTriggers(no_edit)
+       
+        self.table1.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table2.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         self.table1.setColumnCount(2) 
         self.table1.setHorizontalHeaderLabels(['Link Type', 'Speed km/h'])
@@ -184,8 +159,9 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
         self.lblOSMInfo.setText("")       
 
-        self.cmbFieldsDirection.setFilters(QgsFieldProxyModel.String)
-        self.cmbFieldsSpeed.setFilters(QgsFieldProxyModel.Numeric)
+        self.cmbFieldsDirection.setFilters(QgsFieldProxyModel.Filter.String)
+        self.cmbFieldsSpeed.setFilters(QgsFieldProxyModel.Filter.Numeric)
+
         self.cmbFieldsDirection.fieldChanged.connect(self.on_field_changed)
         self.cmbFieldsSpeed.fieldChanged.connect(self.on_field_changed)
 
@@ -572,14 +548,9 @@ class form_pkl_car(QDialog, FORM_CLASS):
         file_path_prefix = os.path.join(path, f"{prefix}_graph.json")
         if  os.path.isfile(file_path) or os.path.isfile(file_path_prefix):
             msgBox = QMessageBox()
-            try:
-                icon_question = QMessageBox.Question
-                btn_yes = QMessageBox.Yes
-                btn_no = QMessageBox.No
-            except AttributeError:
-                icon_question = QMessageBox.Icon.Question
-                btn_yes = QMessageBox.StandardButton.Yes
-                btn_no = QMessageBox.StandardButton.No
+            icon_question = QMessageBox.Icon.Question
+            btn_yes = QMessageBox.StandardButton.Yes
+            btn_no = QMessageBox.StandardButton.No
 
             msgBox.setIcon(icon_question)
             msgBox.setWindowTitle("Confirm")
@@ -630,10 +601,7 @@ class form_pkl_car(QDialog, FORM_CLASS):
 
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
-        try:
-            wheel_type = QEvent.Wheel              # Qt5 (QGIS 3)
-        except AttributeError:
-            wheel_type = QEvent.Type.Wheel         # Qt6 (QGIS 4)
+        wheel_type = QEvent.Type.Wheel
 
         if event.type() == wheel_type:
             if obj.hasFocus():
@@ -655,14 +623,10 @@ class form_pkl_car(QDialog, FORM_CLASS):
             
         table.setRowCount(0)
 
-        try:
-            align_right = Qt.AlignRight
-            align_vcenter = Qt.AlignVCenter
-            resize_to_contents = QHeaderView.ResizeToContents
-        except AttributeError:
-            align_right = Qt.AlignmentFlag.AlignRight
-            align_vcenter = Qt.AlignmentFlag.AlignVCenter
-            resize_to_contents = QHeaderView.ResizeMode.ResizeToContents
+        align_right = Qt.AlignmentFlag.AlignRight
+        align_vcenter = Qt.AlignmentFlag.AlignVCenter
+        resize_to_contents = QHeaderView.ResizeMode.ResizeToContents
+
 
         for i, (field1, field2) in enumerate(data):
             table.insertRow(i)

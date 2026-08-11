@@ -265,11 +265,7 @@ class cls_clean_roads(QgsTask):
 
         except Exception as e:
             self.exception = e
-            try:
-                cursor_arrow = Qt.ArrowCursor                 # Qt5 / QGIS 3
-            except AttributeError:
-                cursor_arrow = Qt.CursorShape.ArrowCursor     # Qt6 / QGIS 4
-
+            cursor_arrow = Qt.CursorShape.ArrowCursor
             QApplication.setOverrideCursor(cursor_arrow)
 
             print (self.exception)

@@ -187,14 +187,11 @@ class RoadLayerProcessor ():
         self.parent.progressBar.setValue(0)
         #self.parent.run_button.setEnabled(True)
         msgBox = QMessageBox()
-        try:
-            rich_text = Qt.RichText                     # Qt5
-            text_browser_interaction = Qt.TextBrowserInteraction
-            icon_info = QMessageBox.Information 
-        except AttributeError:
-            rich_text = Qt.TextFormat.RichText          # Qt6
-            text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
-            icon_info = QMessageBox.Icon.Information
+        
+        rich_text = Qt.TextFormat.RichText
+        text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
+        icon_info = QMessageBox.Icon.Information
+
         msgBox.setTextFormat(rich_text)
         msgBox.setTextInteractionFlags(text_browser_interaction)
         msgBox.setIcon(icon_info)
@@ -205,8 +202,8 @@ class RoadLayerProcessor ():
                 pass
         else:                
                 msgBox.setText(message)                
-                stop_button = QPushButton("Cancel")
-                msgBox.addButton(stop_button, QMessageBox.AcceptRole)
+                stop_button = QPushButton("Cancel")                
+                msgBox.addButton(stop_button, QMessageBox.ButtonRole.AcceptRole)
                 msgBox.exec()
                 if msgBox.clickedButton() == stop_button:
                     result = False

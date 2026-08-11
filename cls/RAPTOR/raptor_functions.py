@@ -2,7 +2,6 @@
 Module contains function related to RAPTOR, rRAPTOR
 """
 from collections import deque as deque
-from common import seconds_to_time
 
 def initialize_raptor(routes_by_stop_dict,
                       SOURCE,
@@ -277,10 +276,10 @@ def post_processingAll(
                                      )
         
 
-        if pareto_set == None:
+        if pareto_set is None:
             continue
         
-        if pareto_set != None and len(pareto_set) > 0:
+        if not(pareto_set is None) and len(pareto_set) > 0:
             # Just one journey with minimal end time will be in pareto set
             optimal_duration = get_optimal_journeys(pareto_set)            
             duration, transfers, end_time, journey = optimal_duration

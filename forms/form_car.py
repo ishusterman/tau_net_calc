@@ -20,11 +20,18 @@ from qgis.PyQt.QtWidgets import (
 from qgis.PyQt.QtCore import (Qt,                          
                           QEvent,
                           QVariant,
-                          QDateTime
+                          QTime,
+                          QDate, 
+                          QDateTime,
                           )
 
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt import uic
+
+shift_mod = Qt.KeyboardModifier.ShiftModifier
+role_checkstate = Qt.ItemDataRole.CheckStateRole
+checked = Qt.CheckState.Checked
+unchecked = Qt.CheckState.Unchecked
 
 try:
     # QGIS 3
@@ -73,19 +80,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
                  roundtrip = False
                  ):
         super().__init__()
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self.setupUi(self)
         self.setModal(False)
-        try:
-            # QGIS 3 / Qt5
-            self.setWindowFlags(Qt.Window)
-        except AttributeError:
-            # QGIS 4 / Qt6
-            self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
 
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
@@ -98,10 +97,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.splitter.setSizes([int(self.width() * 0.75), int(self.width() * 0.25)])
 
         fm = self.txtTimeInterval.fontMetrics()
-        try:
-            char_width = fm.width("x")                 # Qt5
-        except AttributeError:
-            char_width = fm.horizontalAdvance("x")     # Qt6
+        
+        char_width = fm.horizontalAdvance("x")
 
         fix_size  = 15 * char_width
         fix_size2 = 5  * char_width
@@ -137,21 +134,16 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.cmbLayers.installEventFilter(self)
         self.cmbLayersDest.installEventFilter(self)        
 
-        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer|QgsMapLayerProxyModel.PointLayer)
-        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.PolygonLayer|QgsMapLayerProxyModel.PointLayer)
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer|QgsMapLayerProxyModel.Filter.PointLayer)
+        self.cmbLayersDest.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer|QgsMapLayerProxyModel.Filter.PointLayer)
         
         self.dtStartTime.installEventFilter(self)
 
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        try:
-            role_action = QDialogButtonBox.ActionRole        # Qt5
-            role_reject = QDialogButtonBox.RejectRole
-            role_help = QDialogButtonBox.HelpRole
-        except AttributeError:
-            role_action = QDialogButtonBox.ButtonRole.ActionRole   # Qt6
-            role_reject = QDialogButtonBox.ButtonRole.RejectRole
-            role_help = QDialogButtonBox.ButtonRole.HelpRole
+        role_action = QDialogButtonBox.ButtonRole.ActionRole
+        role_reject = QDialogButtonBox.ButtonRole.RejectRole
+        role_help = QDialogButtonBox.ButtonRole.HelpRole
 
         self.run_button = self.buttonBox.addButton("Run", role_action)
         self.close_button = self.buttonBox.addButton("Close", role_reject)
@@ -340,7 +332,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         try:
             fields = [field for field in layer.fields()]
-        except:
+        except Exception:
             return 0
         
         for field in fields:
@@ -351,16 +343,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
                 if field_name.lower() not in ("fid", "osm_id", "id", "aid"):
                     self.cmbFields_ch.addItem(field_name)
 
-        try:
-            shift_mod = Qt.ShiftModifier                     # Qt5
-            role_checkstate = Qt.CheckStateRole                 # Qt5
-            checked = Qt.Checked
-            unchecked = Qt.Unchecked                            # Qt5
-        except AttributeError:
-            shift_mod = Qt.KeyboardModifier.ShiftModifier    # Qt6
-            role_checkstate = Qt.ItemDataRole.CheckStateRole    # Qt6
-            checked = Qt.CheckState.Checked
-            unchecked = Qt.CheckState.Unchecked                 # Qt6
             
         if QApplication.keyboardModifiers() & shift_mod:
             if 'Field_ch_car' not in self.config['Settings']:
@@ -671,13 +653,6 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
         self.config.read(f)
 
-        try:
-            role_checkstate = Qt.CheckStateRole                 # Qt5
-            checked = Qt.Checked                                # Qt5
-        except AttributeError:
-            role_checkstate = Qt.ItemDataRole.CheckStateRole    # Qt6
-            checked = Qt.CheckState.Checked                     # Qt6
-
         selected_text = ', '.join(
             self.cmbFields_ch.itemText(i)
             for i in range(self.cmbFields_ch.count())
@@ -703,10 +678,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.config['Settings']['Walking_speed_car'] = self.txtWalkingSpeed.text()
         self.config['Settings']['Minimal_distance_car'] = self.txtMinimalDistance.text()
 
-        self.config['Settings']['to_time_start'] = self.dtRoundtripStartTime1.dateTime().toString("HH:mm:ss")
-        self.config['Settings']['to_time_end'] = self.dtRoundtripStartTime2.dateTime().toString("HH:mm:ss")
-        self.config['Settings']['from_time_start'] = self.dtRoundtripStartTime3.dateTime().toString("HH:mm:ss")
-        self.config['Settings']['from_time_end'] = self.dtRoundtripStartTime4.dateTime().toString("HH:mm:ss")
+        self.config['Settings']['Start_time_car'] = self.dtStartTime.time().toString("HH:mm:ss")        
+        self.config['Settings']['to_time_start'] = self.dtRoundtripStartTime1.time().toString("HH:mm:ss")
+        self.config['Settings']['to_time_end'] = self.dtRoundtripStartTime2.time().toString("HH:mm:ss")
+        self.config['Settings']['from_time_start'] = self.dtRoundtripStartTime3.time().toString("HH:mm:ss")
+        self.config['Settings']['from_time_end'] = self.dtRoundtripStartTime4.time().toString("HH:mm:ss")
         self.config['Settings']['time_delta_to'] = self.txtRountrip_timedelta1.text()
         self.config['Settings']['time_delta_from'] = self.txtRountrip_timedelta2.text()
 
@@ -737,12 +713,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
         
         self.wgFileSave.setFilePath(os.path.join(os.path.dirname(self.config['Settings']['PathToProtocols_car']), f"{self.default_alias}.gpkg"))
         self.wgPathPKL.setFilePath(os.path.normpath(self.config['Settings']['PathToPKL_car']))
-
-        
-        try:
-            shift_mod = Qt.ShiftModifier                     # Qt5
-        except AttributeError:
-            shift_mod = Qt.KeyboardModifier.ShiftModifier    # Qt6
+       
 
         if QApplication.keyboardModifiers() & shift_mod:
             self.cmbLayers.setLayer(QgsProject.instance().mapLayer(self.config['Settings']['Layer_car']))
@@ -753,17 +724,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.cmbLayersDest.setCurrentIndex(0)       
         
         self.txtTimeInterval.setText(self.config['Settings']['TimeInterval_car'])
-        
-        try:
-            shift_mod = Qt.ShiftModifier                     # Qt5
-            role_checkstate = Qt.CheckStateRole              
-            checked = Qt.Checked
-            unchecked = Qt.Unchecked                         
-        except AttributeError:
-            shift_mod = Qt.KeyboardModifier.ShiftModifier    # Qt6
-            role_checkstate = Qt.ItemDataRole.CheckStateRole 
-            checked = Qt.CheckState.Checked
-            unchecked = Qt.CheckState.Unchecked              
+                          
         if QApplication.keyboardModifiers() & shift_mod:
             if 'Field_ch_car' not in self.config['Settings']:
                 self.config['Settings']['Field_ch_car'] = ''
@@ -780,20 +741,25 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.txtWalkingSpeed.setText(self.config['Settings']['Walking_speed_car'])
         self.txtMinimalDistance.setText(self.config['Settings']['Minimal_distance_car'])
 
-        datetime = QDateTime.fromString(self.config['Settings']['Start_time_car'], "HH:mm:ss")
-        self.dtStartTime.setDateTime(datetime)
+        datetime = QTime.fromString(self.config['Settings']['Start_time_car'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtStartTime.setDateTime(dt)
 
         self.txtRountrip_timedelta1.setText(self.config['Settings']['time_delta_to'])
         self.txtRountrip_timedelta2.setText(self.config['Settings']['time_delta_from'])
 
-        datetime = QDateTime.fromString(self.config['Settings']['to_time_start'], "HH:mm:ss")
-        self.dtRoundtripStartTime1.setDateTime(datetime)
-        datetime = QDateTime.fromString(self.config['Settings']['to_time_end'], "HH:mm:ss")
-        self.dtRoundtripStartTime2.setDateTime(datetime)
-        datetime = QDateTime.fromString(self.config['Settings']['from_time_start'], "HH:mm:ss")
-        self.dtRoundtripStartTime3.setDateTime(datetime)
-        datetime = QDateTime.fromString(self.config['Settings']['from_time_end'], "HH:mm:ss")
-        self.dtRoundtripStartTime4.setDateTime(datetime)
+        datetime = QTime.fromString(self.config['Settings']['to_time_start'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime1.setDateTime(dt)
+        datetime = QTime.fromString(self.config['Settings']['to_time_end'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime2.setDateTime(dt)
+        datetime = QTime.fromString(self.config['Settings']['from_time_start'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime3.setDateTime(dt)
+        datetime = QTime.fromString(self.config['Settings']['from_time_end'], "HH:mm:ss")
+        dt = QDateTime(QDate(2000, 1, 1), datetime, Qt.TimeSpec.UTC)
+        self.dtRoundtripStartTime4.setDateTime(dt)
 
         radio_button_type_state = self.config['Settings']['radio_button_type_car']
         self.roundtrip = False
@@ -817,17 +783,11 @@ class CarAccessibility(QDialog, FORM_CLASS):
             highlight_widget (self.txtImbalance)
 
             msgBox = QMessageBox()
-            try:
-                rich_text = Qt.RichText                     # Qt5
-                text_browser_interaction = Qt.TextBrowserInteraction 
-                icon_question = QMessageBox.Question
-                btn_ok = QMessageBox.Ok 
-                
-            except AttributeError:
-                rich_text = Qt.TextFormat.RichText          # Qt6
-                text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
-                icon_question = QMessageBox.Icon.Question
-                btn_ok = QMessageBox.StandardButton.Ok
+            rich_text = Qt.TextFormat.RichText
+            text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
+            icon_question = QMessageBox.Icon.Question
+            btn_ok = QMessageBox.StandardButton.Ok
+
             msgBox.setIcon(icon_question)           
             msgBox.setTextFormat(rich_text)
             msgBox.setTextInteractionFlags(text_browser_interaction)
@@ -928,9 +888,8 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.walk_time_finish = round(self.walk_on_finish_m/self.walk_speed_m_s)
 
         self.MinimalDistance = int(self.config['Settings']['Minimal_Distance_car'])
-        start_time = QDateTime.fromString(self.config['Settings']['Start_time_car'], "HH:mm:ss")
-        
-        self.hour = start_time.time().hour()
+        start_time = QTime.fromString(self.config['Settings']['Start_time_car'], "HH:mm:ss")        
+        self.hour = start_time.hour()
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -1176,10 +1135,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
 
     # If the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
-        try:
-            wheel_type = QEvent.Wheel              # Qt5 (QGIS 3)
-        except AttributeError:
-            wheel_type = QEvent.Type.Wheel         # Qt6 (QGIS 4)
+        wheel_type = QEvent.Type.Wheel
 
         if event.type() == wheel_type:
             if obj.hasFocus():

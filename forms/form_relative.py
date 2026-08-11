@@ -30,8 +30,7 @@ from visualization import visualization
 from common import (getDateTime, 
                     get_qgis_info,                      
                     check_file_parameters_accessibility,
-                    get_name_columns,
-                    FIELD_ID,
+                    get_name_columns,                    
                     check_layer,                    
                     fast_write_gpkg,
                     highlight_empty_fields,
@@ -46,19 +45,12 @@ class form_relative(QDialog, FORM_CLASS):
     def __init__(self, title, mode):
       
         super().__init__()
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self.setupUi(self)
-        self.setModal(False)
-        try:
-            # QGIS 3 / Qt5
-            self.setWindowFlags(Qt.Window)
-        except AttributeError:
-            # QGIS 4 / Qt6
-            self.setWindowFlags(Qt.WindowType.Window)
+        self.setModal(False)        
+        self.setWindowFlags(Qt.WindowType.Window)
+
 
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
@@ -67,10 +59,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.splitter.setSizes([int(self.width() * 0.6), int(self.width() * 0.4)])
 
         fm = self.wgFileSave.fontMetrics()
-        try:
-            char_width = fm.width("x")                 # Qt5
-        except AttributeError:
-            char_width = fm.horizontalAdvance("x")     # Qt6
+        char_width = fm.horizontalAdvance("x")
 
         self.fix_size = 35 * char_width
 
@@ -89,15 +78,11 @@ class form_relative(QDialog, FORM_CLASS):
         self.textLog.setOpenLinks(False)
         self.textLog.anchorClicked.connect(self.openFolder)
                 
-        self.btnBreakOn.clicked.connect(self.set_break_on)
-        try:
-            role_action = QDialogButtonBox.ActionRole        # Qt5
-            role_reject = QDialogButtonBox.RejectRole
-            role_help = QDialogButtonBox.HelpRole
-        except AttributeError:
-            role_action = QDialogButtonBox.ButtonRole.ActionRole   # Qt6
-            role_reject = QDialogButtonBox.ButtonRole.RejectRole
-            role_help = QDialogButtonBox.ButtonRole.HelpRole
+        self.btnBreakOn.clicked.connect(self.set_break_on)        
+
+        role_action = QDialogButtonBox.ButtonRole.ActionRole
+        role_reject = QDialogButtonBox.ButtonRole.RejectRole
+        role_help = QDialogButtonBox.ButtonRole.HelpRole
 
         self.run_button = self.buttonBox.addButton("Run", role_action)
         self.close_button = self.buttonBox.addButton("Close", role_reject)
@@ -108,12 +93,12 @@ class form_relative(QDialog, FORM_CLASS):
         self.help_button.clicked.connect(self.on_help_button_clicked)
 
         self.cbVisLayers.installEventFilter(self)
-        self.cbVisLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cbVisLayers.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer)
 
         self.default_aliase = f'{getDateTime()}'
 
-        self.widget_result1.setStorageMode(QgsFileWidget.GetFile)
-        self.widget_result2.setStorageMode(QgsFileWidget.GetFile)
+        self.widget_result1.setStorageMode(QgsFileWidget.StorageMode.GetFile)
+        self.widget_result2.setStorageMode(QgsFileWidget.StorageMode.GetFile)
         self.widget_result1.setFilter("GeoPackage (*.gpkg)")
         self.widget_result2.setFilter("GeoPackage (*.gpkg)")
         
@@ -852,10 +837,7 @@ class form_relative(QDialog, FORM_CLASS):
        
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
-        try:
-            wheel_type = QEvent.Wheel              # Qt5 (QGIS 3)
-        except AttributeError:
-            wheel_type = QEvent.Type.Wheel         # Qt6 (QGIS 4)
+        wheel_type = QEvent.Type.Wheel
 
         if event.type() == wheel_type:
             if obj.hasFocus():

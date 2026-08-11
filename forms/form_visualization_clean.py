@@ -4,6 +4,7 @@ import configparser
 from datetime import datetime
 import glob
 import math
+import secrets
 
 from random import choice
 from matplotlib.colors import CSS4_COLORS
@@ -64,20 +65,12 @@ FORM_CLASS, _ = uic.loadUiType(
 
 class form_visualization_clean(QDialog, FORM_CLASS):
     def __init__(self, title):
-        super().__init__()
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        super().__init__()        
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self.setupUi(self)
         self.setModal(False)
-        try:
-            # QGIS 3 / Qt5
-            self.setWindowFlags(Qt.Window)
-        except AttributeError:
-            # QGIS 4 / Qt6
-            self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
 
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
@@ -89,10 +82,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.splitter.setSizes([int(self.width() * 0.6), int(self.width() * 0.4)])
 
         fm = self.txtAddHex.fontMetrics()
-        try:
-            char_width = fm.width("x")                 # Qt5
-        except AttributeError:
-            char_width = fm.horizontalAdvance("x")     # Qt6
+        char_width = fm.horizontalAdvance("x")
 
         fix_size = 10 * char_width
 
@@ -118,18 +108,13 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.textLog.anchorClicked.connect(self.openFolder)
 
         self.cmbLayers.installEventFilter(self)
-        self.cmbLayers.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbLayers.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer)
         
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        try:
-            role_action = QDialogButtonBox.ActionRole        # Qt5
-            role_reject = QDialogButtonBox.RejectRole
-            role_help = QDialogButtonBox.HelpRole
-        except AttributeError:
-            role_action = QDialogButtonBox.ButtonRole.ActionRole   # Qt6
-            role_reject = QDialogButtonBox.ButtonRole.RejectRole
-            role_help = QDialogButtonBox.ButtonRole.HelpRole
+        role_action = QDialogButtonBox.ButtonRole.ActionRole
+        role_reject = QDialogButtonBox.ButtonRole.RejectRole
+        role_help = QDialogButtonBox.ButtonRole.HelpRole
 
         self.run_button = self.buttonBox.addButton("Run", role_action)
         self.close_button = self.buttonBox.addButton("Close", role_reject)
@@ -167,13 +152,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
                 self.textLog.append(f'<a><b><font color="red">Process is interrupted by user</font> </b></a>')
                 self.already_show_info = True
             self.setMessage("")
-        
-
-        try:
-            cursor_arrow = Qt.ArrowCursor                 # Qt5 / QGIS 3
-        except AttributeError:
-            cursor_arrow = Qt.CursorShape.ArrowCursor     # Qt6 / QGIS 4
-
+        cursor_arrow = Qt.CursorShape.ArrowCursor
         QApplication.setOverrideCursor(cursor_arrow)
 
 
@@ -267,11 +246,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             progress_max += 1
         self.progressBar.setMaximum(progress_max)
 
-             
-        try:
-            cursor_wait = Qt.WaitCursor                     # Qt5 / QGIS 3
-        except AttributeError:
-            cursor_wait = Qt.CursorShape.WaitCursor         # Qt6 / QGIS 4
+        cursor_wait = Qt.CursorShape.WaitCursor
 
         QApplication.setOverrideCursor(cursor_wait)
 
@@ -324,11 +299,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             fast_write_gpkg(file_name_gpkg, table_name, text)        
     
     def save_project(self):
-        try:
-            cursor_arrow = Qt.ArrowCursor                 # Qt5 / QGIS 3
-        except AttributeError:
-            cursor_arrow = Qt.CursorShape.ArrowCursor     # Qt6 / QGIS 4
-
+        cursor_arrow = Qt.CursorShape.ArrowCursor
         QApplication.setOverrideCursor(cursor_arrow)
 
         
@@ -418,14 +389,9 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*_vis_layers*.gpkg"))
         if shp_files:
             msgBox = QMessageBox()
-            try:
-                icon_question = QMessageBox.Question
-                btn_yes = QMessageBox.Yes
-                btn_no = QMessageBox.No
-            except AttributeError:
-                icon_question = QMessageBox.Icon.Question
-                btn_yes = QMessageBox.StandardButton.Yes
-                btn_no = QMessageBox.StandardButton.No
+            icon_question = QMessageBox.Icon.Question
+            btn_yes = QMessageBox.StandardButton.Yes
+            btn_no = QMessageBox.StandardButton.No
 
             msgBox.setIcon(icon_question)
             msgBox.setWindowTitle("Confirm")
@@ -441,10 +407,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
 
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
-        try:
-            wheel_type = QEvent.Wheel              # Qt5 (QGIS 3)
-        except AttributeError:
-            wheel_type = QEvent.Type.Wheel         # Qt6 (QGIS 4)
+        wheel_type = QEvent.Type.Wheel
 
         if event.type() == wheel_type:
             if obj.hasFocus():
@@ -477,7 +440,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         from tempfile import NamedTemporaryFile
         
         color_list = [color for color in CSS4_COLORS.values() if color.lower() != '#ffffff']
-        random_color = choice(color_list)
+        random_color = secrets.choice(color_list)
         
         if layer.geometryType() == 2:
 

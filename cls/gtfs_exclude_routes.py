@@ -28,7 +28,7 @@ class GTFSExcludeRoutes:
         self.already_display_break = False
 
         self.IN_QGIS = True
-        if self.parent == None:
+        if self.parent is None:
             self.IN_QGIS = False
 
     

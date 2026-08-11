@@ -41,19 +41,11 @@ FORM_CLASS, _ = uic.loadUiType(
 class form_gtfs(QDialog, FORM_CLASS):
     def __init__(self, title, mode):
         super().__init__()
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self.setupUi(self)
         self.setModal(False)
-        try:
-            # QGIS 3 / Qt5
-            self.setWindowFlags(Qt.Window)
-        except AttributeError:
-            # QGIS 4 / Qt6
-            self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
 
         self.user_home = os.path.expanduser("~")
         check_file_parameters_accessibility()
@@ -82,14 +74,10 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.break_on = False
         self.btnBreakOn.clicked.connect(self.set_break_on)
 
-        try:
-            role_action = QDialogButtonBox.ActionRole        # Qt5
-            role_reject = QDialogButtonBox.RejectRole
-            role_help = QDialogButtonBox.HelpRole
-        except AttributeError:
-            role_action = QDialogButtonBox.ButtonRole.ActionRole   # Qt6
-            role_reject = QDialogButtonBox.ButtonRole.RejectRole
-            role_help = QDialogButtonBox.ButtonRole.HelpRole
+        role_action = QDialogButtonBox.ButtonRole.ActionRole
+        role_reject = QDialogButtonBox.ButtonRole.RejectRole
+        role_help = QDialogButtonBox.ButtonRole.HelpRole
+
 
         self.run_button = self.buttonBox.addButton("Run", role_action)
         self.close_button = self.buttonBox.addButton("Close", role_reject)
@@ -102,27 +90,17 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.ParametrsShow()
         self.show_info()
         
-        try:
-            behavior_select_rows = QTableWidget.SelectRows
-        except AttributeError:
-            behavior_select_rows = QAbstractItemView.SelectionBehavior.SelectRows
+        self.table1.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table2.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
-        self.table1.setSelectionBehavior(behavior_select_rows)
-        self.table2.setSelectionBehavior(behavior_select_rows)
 
         self.btnSearch.clicked.connect(self.btnSearch_on_click)
         
         self.btnAdd.clicked.connect(self.btnAdd_on_click) 
         self.btnRemove.clicked.connect(self.btnRemove_on_click)
-        
-        try:
-            no_edit = QTableWidget.NoEditTriggers
-        except AttributeError:
-            no_edit = QAbstractItemView.EditTrigger.NoEditTriggers
 
-        self.table1.setEditTriggers(no_edit)
-        self.table2.setEditTriggers(no_edit)
-
+        self.table1.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table2.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
     
         self.txtPathToGTFS.textChanged.connect(self.on_PathToGTFS_changed)
 
@@ -311,29 +289,16 @@ class form_gtfs(QDialog, FORM_CLASS):
 
     def apply_table_style(self, table):
         
-        try:
-            behavior_select_rows = QTableWidget.SelectRows          # Qt5
-        except AttributeError:
-            behavior_select_rows = QAbstractItemView.SelectionBehavior.SelectRows  # Qt6
-        table.setSelectionBehavior(behavior_select_rows)
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+                
+        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
-        try:
-            no_edit = QTableWidget.NoEditTriggers
-        except AttributeError:
-            no_edit = QAbstractItemView.EditTrigger.NoEditTriggers
-        table.setEditTriggers(no_edit)
-        
-
         table.setWordWrap(True)
         table.setColumnHidden(0, True) # Прячем ID
         
         header = table.horizontalHeader()
-        try:
-            resize_to_contents = QHeaderView.ResizeToContents        # Qt5
-            stretch_mode = QHeaderView.Stretch
-        except AttributeError:
-            resize_to_contents = QHeaderView.ResizeMode.ResizeToContents   # Qt6
-            stretch_mode = QHeaderView.ResizeMode.Stretch
+        resize_to_contents = QHeaderView.ResizeMode.ResizeToContents
+        stretch_mode = QHeaderView.ResizeMode.Stretch
         header.setSectionResizeMode(0, resize_to_contents)
         header.setSectionResizeMode(1, resize_to_contents)
         header.setSectionResizeMode(2, stretch_mode)
@@ -344,14 +309,6 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.table1.setColumnCount(3)
         self.table1.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
         self.apply_table_style(self.table1)
-
-    def InitTable2(self):
-        self.table2.clear()
-        self.table2.setRowCount(0)
-        self.table2.setColumnCount(3)
-        self.table2.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
-        self.apply_table_style(self.table2)
-
         
     def InitTable2(self):
         self.table2.clear()
@@ -360,21 +317,14 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.table2.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
         self.table2.setColumnHidden(0, True)        
 
-        try:
-            behavior_select_rows = QTableWidget.SelectRows          # Qt5
-        except AttributeError:
-            behavior_select_rows = QAbstractItemView.SelectionBehavior.SelectRows  # Qt6
-        self.table2.setSelectionBehavior(behavior_select_rows)
+        self.table2.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
         self.table2.setWordWrap(True)
         header = self.table2.horizontalHeader()
 
-        try:
-            resize_to_contents = QHeaderView.ResizeToContents        # Qt5
-            stretch_mode = QHeaderView.Stretch
-        except AttributeError:
-            resize_to_contents = QHeaderView.ResizeMode.ResizeToContents   # Qt6
-            stretch_mode = QHeaderView.ResizeMode.Stretch
+        resize_to_contents = QHeaderView.ResizeMode.ResizeToContents
+        stretch_mode = QHeaderView.ResizeMode.Stretch
+
         header.setSectionResizeMode(0, resize_to_contents)
         header.setSectionResizeMode(1, resize_to_contents)
         header.setSectionResizeMode(2, stretch_mode)
@@ -423,15 +373,9 @@ class form_gtfs(QDialog, FORM_CLASS):
         path = self.txtPathToProtocols.text().strip()
         if os.listdir(path):
             msgBox = QMessageBox()
-
-            try:
-                icon_question = QMessageBox.Question
-                btn_yes = QMessageBox.Yes
-                btn_no = QMessageBox.No
-            except AttributeError:
-                icon_question = QMessageBox.Icon.Question
-                btn_yes = QMessageBox.StandardButton.Yes
-                btn_no = QMessageBox.StandardButton.No
+            icon_question = QMessageBox.Icon.Question
+            btn_yes = QMessageBox.StandardButton.Yes
+            btn_no = QMessageBox.StandardButton.No            
 
             msgBox.setIcon(icon_question) 
             msgBox.setWindowTitle("Confirm") 
@@ -722,10 +666,7 @@ class form_gtfs(QDialog, FORM_CLASS):
 
     # if the combobox is in focus, we ignore the mouse wheel scroll event
     def eventFilter(self, obj, event):
-        try:
-            wheel_type = QEvent.Wheel              # Qt5 (QGIS 3)
-        except AttributeError:
-            wheel_type = QEvent.Type.Wheel         # Qt6 (QGIS 4)
+        wheel_type = QEvent.Type.Wheel
 
         if event.type() == wheel_type:
             if obj.hasFocus():

@@ -1,17 +1,15 @@
 
 from qgis.PyQt.QtWidgets import QApplication
-from RAPTOR.raptor_functions import *
+from RAPTOR.raptor_functions import post_processingAll, initialize_rev_raptor, get_earliest_trip_new
 import numpy as np
-
-filename = r"c:\doc\Igor\GIS\prg\log20260412.csv"
+from collections import deque
 
 def seconds_to_time(total_seconds):
-        
+       
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
 
 def rev_raptor(SOURCE,
                D_TIME,
@@ -157,7 +155,7 @@ def rev_raptor(SOURCE,
             # may by stop exist in layer but not exist in PKL
             try:
                 routes_serving_p = routes_by_stop_dict[p]
-            except:
+            except (KeyError, TypeError, AttributeError):
                 continue
 
             for route in routes_serving_p:
@@ -175,6 +173,7 @@ def rev_raptor(SOURCE,
             QApplication.processEvents()
             boarding_time, boarding_point = -1, -1
             current_trip_t = -1
+            tid = None
 
             if not stops_dict.get(route):
                 continue
@@ -187,10 +186,8 @@ def rev_raptor(SOURCE,
 
                     try:
                         arr_by_t_at_pi = current_trip_t[current_stopindex_by_route-1][1]
-                    except: 
-
+                    except (IndexError, TypeError, KeyError): 
                         continue
-
 
                     if min_time > arr_by_t_at_pi:
                         to_process = False
@@ -361,7 +358,7 @@ def process_walking_stage(min_time,
 
             try:
                 pi_label_k_p_dash = pi_label[k][p_dash]
-            except:
+            except (KeyError, IndexError, TypeError):
                 pi_label_k_p_dash = -1
 
             # this line is "don't rewrite founded bus trip to footleg"

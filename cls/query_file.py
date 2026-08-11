@@ -4,8 +4,6 @@ import pandas as pd
 from collections import defaultdict
 import json
 
-import gc
-
 import cProfile
 import pstats
 #from collections import Counter
@@ -373,9 +371,9 @@ def runRaptorWithProtocol(self,
     else:
         name = 'destination' 
 
+    MaxTimeTravel_copy = MaxTimeTravel
     
-    if timetable_mode:
-        MaxTimeTravel = MaxTimeTravel + MaxExtraTime 
+    MaxTimeTravel = MaxTimeTravel_copy + MaxExtraTime 
     
     time_estimate_start = datetime.now()
     total_tasks = count * roundtrip_cycle_all
@@ -406,45 +404,10 @@ def runRaptorWithProtocol(self,
             QApplication.processEvents()
         SOURCE = source
 
-
-        ##########################################
-        # experiment
-        """
-        trans_info = footpath_dict.get(str(SOURCE), [])
-        trans_info = [(stop_id, walk_time) for stop_id, walk_time in trans_info if walk_time <= MaxWalkDist1]
-        time_start = D_TIME 
-        stop_times_index = preprocess_stop_times(stoptimes_dict)
-        min_time = 600
-        max_time = 900
-                        
-        available_boardings = get_available_boardings(time_start,
-                                                          min_time, 
-                                                          max_time, 
-                                                          trans_info, 
-                                                          stop_times_index                                                          
-                                                          )
-        
-        print ("available_boardings")
-        processed_boardings = [
-            (item[0], item[1], seconds_to_time(item[2]), item[3]) 
-            if isinstance(item[2], (int, float)) else item 
-            for item in available_boardings
-        ]
-
-        for row in processed_boardings:
-            print(", ".join(map(str, row)))
-        """
-        ##########################################
-
-
         if verify_break(self):
             return 0, 0
-
-            
         
         nearby_buildings_from_start = footpath_on_projection.get_nearby(str(SOURCE), graph_projection, dict_osm_vertex, dict_vertex_osm, mode="b")
-
-        #print (f'nearby_buildings_from_start {nearby_buildings_from_start}')
 
         SOURCE = str(SOURCE)
         D_TIME_copy = D_TIME
@@ -498,70 +461,53 @@ def runRaptorWithProtocol(self,
                                 steps_to_buildings  =  nearby_buildings_from_start                                                                                                
                                 )
             
-                    
+        
         if  timetable_mode:
-                        
-            final_output_duration = {}  
-            
-            
-            time_curr = D_TIME
-            time_delta = 5 * 60             
-            count_steps = max(1, MaxExtraTime // time_delta)
-            step = 0
 
-            MaxWaitTime = 10*60     
-                                                            
-            while step < count_steps:
+            fast = (self.config['Settings']['type_schedule']=='fast')
+            if fast:
+
+                delta = int (self.config['Settings']['type_schedule_delta'])
+                MaxExtraTime_copy = MaxExtraTime
                 
-                step += 1
-
-                if raptor_mode == 1:
-                    time_curr = D_TIME + (step-1) * time_delta
-                else:
-                    time_curr = D_TIME - (step-1) * time_delta
-
+                            
+                final_output_duration = {}  
                 
-                if verify_break(self):
-                    return 0, 0
-                                    
                 
-                if hasattr(self, 'setMessage'):
-                        
-                        if raptor_mode == 1:
-                            self.setMessage(f'Calculating №{i} of {count} (checking time {seconds_to_time(time_curr)})')
-                        else:
-                            self.setMessage(f'Calculating №{i} of {count} (checking time {seconds_to_time(time_curr+MaxExtraTime)})')
-                        QApplication.processEvents()
+                time_curr = D_TIME
+                time_delta = delta * 60             
+                count_steps = max(1, MaxExtraTime // time_delta)
+                step = 0
 
-                if raptor_mode == 1:
+                MaxWaitTime = 10*60     
+                                                                
+                while step <= count_steps:
+                    #print (f'MaxExtraTime={seconds_to_time(MaxExtraTime)}')                
+                    MaxTimeTravel = MaxTimeTravel_copy + MaxExtraTime 
+                    step += 1
 
-                                         
-                    output_duration = raptor(SOURCE,
-                            time_curr,
-                            MAX_TRANSFER,
-                            MIN_TRANSFER,
-                            CHANGE_TIME_SEC,
-                            routes_by_stop_dict,
-                            stops_dict,
-                            stoptimes_dict,
-                            footpath_dict,
+                    if raptor_mode == 1:
+                        time_curr = D_TIME + (step-1) * time_delta
+                    else:
+                        time_curr = D_TIME - (step-1) * time_delta
 
-                            idx_by_route_stop_dict,
-                            MaxTimeTravel,
-                            MaxWalkDist1,
-                            MaxWalkDist2,
-                            MaxWalkDist3,
-                            MaxWaitTime,
-                            MaxWaitTimeTransfer,
-                            timetable_mode,
-                            MaxExtraTime,
-                            steps_to_buildings  =  nearby_buildings_from_start                            
-                            )
                     
+                    if verify_break(self):
+                        return 0, 0
+                                        
                     
-                else:
-                    
-                    output_duration = rev_raptor(SOURCE,
+                    if hasattr(self, 'setMessage'):
+                            
+                            if raptor_mode == 1:
+                                self.setMessage(f'Calculating №{i} of {count} (checking time {seconds_to_time(time_curr)})')
+                            else:
+                                self.setMessage(f'Calculating №{i} of {count} (checking time {seconds_to_time(time_curr+MaxExtraTime_copy)})')
+                            QApplication.processEvents()
+
+                    if raptor_mode == 1:
+
+                                            
+                        output_duration = raptor(SOURCE,
                                 time_curr,
                                 MAX_TRANSFER,
                                 MIN_TRANSFER,
@@ -580,21 +526,181 @@ def runRaptorWithProtocol(self,
                                 MaxWaitTimeTransfer,
                                 timetable_mode,
                                 MaxExtraTime,
-                                D_TIME_copy = D_TIME_copy,
-                                steps_to_buildings  =  nearby_buildings_from_start                             
+                                steps_to_buildings  =  nearby_buildings_from_start                            
                                 )
-                
-                for p_i in output_duration.keys():
-                
-                    # Обновляем словарь duration
-                    data_duration = output_duration[p_i]
-                    duration = data_duration[1]                                
-                    #if duration <= MaxTimeTravel_copy:
-                    if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
-                            final_output_duration[p_i] = data_duration
-                               
-            output_duration = final_output_duration
+                        
+                        
+                    else:
+                        
+                        output_duration = rev_raptor(SOURCE,
+                                    time_curr,
+                                    MAX_TRANSFER,
+                                    MIN_TRANSFER,
+                                    CHANGE_TIME_SEC,
+                                    routes_by_stop_dict,
+                                    stops_dict,
+                                    stoptimes_dict,
+                                    footpath_dict,
 
+                                    idx_by_route_stop_dict,
+                                    MaxTimeTravel,
+                                    MaxWalkDist1,
+                                    MaxWalkDist2,
+                                    MaxWalkDist3,
+                                    MaxWaitTime,
+                                    MaxWaitTimeTransfer,
+                                    timetable_mode,
+                                    MaxExtraTime,
+                                    D_TIME_copy = D_TIME_copy,
+                                    steps_to_buildings  =  nearby_buildings_from_start                             
+                                    )
+                    
+                    if raptor_mode == 1:
+                        MaxExtraTime = MaxExtraTime - time_delta
+
+                    for p_i in output_duration.keys():
+                    
+                        # Обновляем словарь duration
+                        data_duration = output_duration[p_i]
+                        duration = data_duration[1]                                
+                        #if duration <= MaxTimeTravel_copy:
+                        if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
+                                final_output_duration[p_i] = data_duration
+                                
+                output_duration = final_output_duration
+        
+        
+        
+            if  not fast:
+            
+                final_output_duration = {}              
+                MaxWaitTime_copy = MaxWaitTime  
+                MaxTimeTravel = MaxTimeTravel_copy + MaxExtraTime           
+                trans_info = footpath_dict.get(SOURCE, [])
+                trans_info = [(stop_id, walk_time) for stop_id, walk_time in trans_info if walk_time <= MaxWalkDist1]
+                if raptor_mode == 2: 
+                    time_start = D_TIME #- MaxExtraTime
+                else: 
+                    time_start = D_TIME
+
+                
+                available_boardings = get_available_boardings(time_start, 
+                                                            MaxExtraTime, 
+                                                            trans_info, 
+                                                            stop_times_index,
+                                                            raptor_mode,                                                          
+                                                            )
+                
+                #print (f'len available_boardings {len (available_boardings)}')
+                #print (f'available_boardings {available_boardings}')
+
+                # !!!!!! exp
+                #target_stop = '48415'
+                #target_time = 34799
+
+                #filtered = [
+                #    (stop_id, time_departure, dist)
+                #    for (stop_id, time_departure, dist) in available_boardings
+                #    if stop_id == target_stop and time_departure == target_time
+                #]
+                #available_boardings = filtered
+                # !!!!!! exp
+
+                #print (f'len available_boardings {len (available_boardings)}')
+                            
+                for step in available_boardings:
+                    (stop_id, time_departure, dist) = step
+
+                    if verify_break(self):
+                        return 0, 0
+                                        
+                    
+                    if hasattr(self, 'setMessage'):
+                        if stop_id == "xxx":
+                            self.setMessage(f'Calculating №{i} of {count}')
+                        else:
+                            self.setMessage(f'Calculating №{i} of {count} (checking stop {stop_id} time {seconds_to_time(time_departure)})')
+                        QApplication.processEvents()
+
+                    if stop_id == "xxx":
+                        D_TIME = D_TIME_copy
+                        firts_step = None
+                        MaxWaitTime = MaxWaitTime_copy
+                    else:
+                        MaxWaitTime = 1
+
+
+                    if raptor_mode == 1:
+                        if stop_id != "xxx":
+                            time_departure -= 1
+                            D_TIME = time_departure - dist
+                            firts_step = (stop_id, time_departure, dist)
+                                                
+                        output_duration = raptor(SOURCE,
+                                D_TIME,
+                                MAX_TRANSFER,
+                                MIN_TRANSFER,
+                                CHANGE_TIME_SEC,
+                                routes_by_stop_dict,
+                                stops_dict,
+                                stoptimes_dict,
+                                footpath_dict,
+
+                                idx_by_route_stop_dict,
+                                MaxTimeTravel,
+                                MaxWalkDist1,
+                                MaxWalkDist2,
+                                MaxWalkDist3,
+                                MaxWaitTime,
+                                MaxWaitTimeTransfer,
+                                timetable_mode,
+                                MaxExtraTime,
+                                first_step = firts_step,                            
+                                steps_to_buildings  =  nearby_buildings_from_start
+                                )
+                        
+                    else:
+                        
+                        if stop_id != "xxx":
+                            time_departure += 1
+                            D_TIME = time_departure + dist
+                            firts_step = (stop_id, time_departure, dist)
+                        
+                        output_duration = rev_raptor(SOURCE,
+                                    D_TIME,
+                                    MAX_TRANSFER,
+                                    MIN_TRANSFER,
+                                    CHANGE_TIME_SEC,
+                                    routes_by_stop_dict,
+                                    stops_dict,
+                                    stoptimes_dict,
+                                    footpath_dict,
+
+                                    idx_by_route_stop_dict,
+                                    MaxTimeTravel,
+                                    MaxWalkDist1,
+                                    MaxWalkDist2,
+                                    MaxWalkDist3,
+                                    MaxWaitTime,
+                                    MaxWaitTimeTransfer,
+                                    timetable_mode,
+                                    MaxExtraTime,
+                                    first_step= firts_step,
+                                    D_TIME_copy = D_TIME_copy,
+                                    steps_to_buildings  =  nearby_buildings_from_start
+                                    )
+                    
+                    for p_i in output_duration.keys():                
+                        # Обновляем словарь duration
+                        data_duration = output_duration[p_i]
+                        duration = data_duration[1]                                
+                        #if duration <= MaxTimeTravel_copy:
+                        if p_i not in final_output_duration or duration < final_output_duration[p_i][1]:
+                                final_output_duration[p_i] = data_duration
+                                
+                output_duration = final_output_duration
+        
+        
         if protocol_type == 1:
             
             if len(fields_ok) > 0:
@@ -634,16 +740,10 @@ def runRaptorWithProtocol(self,
             #if not roundtrip_mode:
             df_current_min_duration = pd.DataFrame(data_body, columns=header_list)
             df_min_duration_all.append(df_current_min_duration)
-                
-            """
-                if len(sources) == 1:                     
-                    table_name = f'{file_name}_fastest_trip'
-                    table_name_list.append(table_name)
-                    fast_write_gpkg(file_name_gpkg, table_name, df_current_min_duration)
-            """
+            
                             
-            QApplication.processEvents()
-
+            QApplication.processEvents()    
+        
     if protocol_type == 1 and not roundtrip_mode:
     
             for field, list_of_dfs in df_min_duration_all_dict.items():
@@ -715,6 +815,7 @@ def runRaptorWithProtocol(self,
 
     return short_result
 
+"""
 def preprocess_stop_times(stop_times):
    
     stop_index = {}
@@ -732,12 +833,34 @@ def preprocess_stop_times(stop_times):
     
     return stop_index
 """
+
+def preprocess_stop_times(stop_times):
+    """
+    stop_times структура: {route_id: {trip_id: [(stop_id, stop_seconds), ...]}}
+    """
+    stop_index = {}
+    for route_id, trips in stop_times.items():
+        for trip_id, stops in trips.items():
+            for stop_id, stop_seconds in stops:  # Исправлено: распаковываем реальный stop_id
+                stop_id_str = str(stop_id)
+                if stop_id_str not in stop_index:
+                    stop_index[stop_id_str] = []
+                stop_index[stop_id_str].append((route_id, trip_id, stop_seconds))
+    
+    # Сортируем по времени (stop_seconds) для бинарного поиска
+    for stop_id in stop_index:
+        stop_index[stop_id].sort(key=lambda x: x[2])
+        
+    return stop_index
+
+
+
 def get_available_boardings(start_time_seconds, 
                             max_delta_seconds, 
                             trans_info, 
                             stop_times_index, 
-                            mode, 
-                            express_mode = True):
+                            mode 
+                            ):
     
     available_departures = []
     
@@ -751,7 +874,11 @@ def get_available_boardings(start_time_seconds,
         else:
             arrival_time = start_time_seconds - walk_time
             max_time = start_time_seconds + max_delta_seconds - walk_time
-        
+
+        #if stop_id == '48415':
+        #    print (f'stop_id == 48415 arrival_time={arrival_time} max_time={max_time} target_time = 34799')
+        #    print (f'mode={mode} start_time_seconds={start_time_seconds} max_delta_seconds= {max_delta_seconds} walk_time={walk_time}') 
+                    
         if arrival_time > max_time:
             continue
         
@@ -760,41 +887,16 @@ def get_available_boardings(start_time_seconds,
             
                 route_key = (stop_id, route_id)  # Создаем ключ из сочетания
             
-                if route_key in used_routes:
-                   continue
+                #if route_key in used_routes:
+                #   continue
+                #if stop_id == '48415':
+                #    print (f'stop_id == 48415 stop_seconds={stop_seconds}')
             
                 if arrival_time <= stop_seconds <= max_time:
             
-                    available_departures.append((stop_id, route_id, stop_seconds, walk_time))
+                    #available_departures.append((stop_id, route_id, stop_seconds, walk_time))
+                    available_departures.append((stop_id, stop_seconds, walk_time))
                     used_routes.add(route_key)
-    
-    available_departures.append(("xxx", "xxx", "xxx"))
-    return sorted(available_departures, key=lambda x: (x[0], x[1]))
-"""
-
-# experiment
-def get_available_boardings(start_time_seconds, 
-                            min_delta_seconds,
-                            max_delta_seconds, 
-                            trans_info, 
-                            stop_times_index):
-    
-    available_departures = []
-    for stop_id, walk_time in trans_info:
-    
-        min_time = start_time_seconds + min_delta_seconds
-        max_time = start_time_seconds + max_delta_seconds 
-
-        if min_time > max_time:
-            continue
-        
-        if stop_id in stop_times_index:
-            for route_id, trip_id, stop_seconds in stop_times_index[stop_id]:
-                if min_time <= stop_seconds <= max_time:
-                    if stop_seconds < start_time_seconds+ walk_time:
-                        continue
-                    available_departures.append((stop_id, route_id, stop_seconds, walk_time))
-        
     
     available_departures.append(("xxx", "xxx", "xxx"))
     return sorted(available_departures, key=lambda x: (x[0], x[1]))
@@ -808,8 +910,6 @@ def write_info(self,
                shift_mode = False,
                add_thematic_map = True,
                ):
-    
-    
 
     if shift_mode:
         return 0

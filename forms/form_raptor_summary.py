@@ -4,6 +4,11 @@ import webbrowser
 from qgis.PyQt.QtCore import Qt
 from qgis.core import QgsProject
 
+shift_mod = Qt.KeyboardModifier.ShiftModifier
+role_checkstate = Qt.ItemDataRole.CheckStateRole
+checked = Qt.CheckState.Checked
+unchecked = Qt.CheckState.Unchecked
+
 
 try:
     # QGIS 3
@@ -31,10 +36,7 @@ class RaptorSummary(RaptorDetailed):
                  roundtrip = False
                  ):
         super().__init__(parent, mode, protocol_type, title, timetable_mode,roundtrip)
-        try:
-            self.setAttribute(Qt.WA_DeleteOnClose)  # Qt5
-        except AttributeError:
-            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Qt6
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self.parent = parent
         regex = RegExpClass(r"^([1-9]|[1-5][0-9]|60)$")
@@ -69,14 +71,7 @@ class RaptorSummary(RaptorDetailed):
         f = os.path.join(project_directory, 'parameters_accessibility.txt')
 
         self.config.read(f)
-
-        try:
-            role_checkstate = Qt.CheckStateRole                 # Qt5
-            checked = Qt.Checked
-        except AttributeError:
-            role_checkstate = Qt.ItemDataRole.CheckStateRole    # Qt6
-            checked = Qt.CheckState.Checked
-        
+                
         selected_text = ', '.join(
             self.cmbFields_ch.itemText(i)
             for i in range(self.cmbFields_ch.count())
