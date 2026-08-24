@@ -6,6 +6,7 @@ import json
 
 import cProfile
 import pstats
+from pathlib import Path
 #from collections import Counter
 from report import (make_protocol_detailed, 
                     make_protocol_summary                  
@@ -181,14 +182,7 @@ def runRaptorWithProtocol(self,
     df_min_duration_all_dict = defaultdict(list)
     df_min_endtime_all_dict = defaultdict(list)
 
-    #file_name = Path(file_name_gpkg).stem
-
-    file_name = get_prefix_alias(True, 
-                                protocol_type, 
-                                raptor_mode, 
-                                timetable_mode,
-                                roundtrip_mode 
-                                )
+    file_name = Path(file_name_gpkg).stem
     
     count = len(sources)
     if hasattr(self, 'progressBar'):
@@ -749,7 +743,7 @@ def runRaptorWithProtocol(self,
             for field, list_of_dfs in df_min_duration_all_dict.items():
                 if list_of_dfs:  
                     df_final = pd.concat(list_of_dfs, ignore_index=True)
-                    table_name = f'{file_name}_stat_{field}_fastest_trip'
+                    table_name = f'{file_name}_stat_{field}_triptime'
                     table_name_list.append(table_name)
                     fast_write_gpkg(file_name_gpkg, table_name, df_final)
 
@@ -760,7 +754,7 @@ def runRaptorWithProtocol(self,
     # создаем pivot если не roundtrip, данные не свернутые
     if not roundtrip_mode:
        df_pivot = make_pivot_gpkg (short_result, col_star, col_hash)              
-       table_name = f'{file_name}_fastest_by_{name}s'
+       table_name = f'{file_name}_triptime_by_{name}s'
        fast_write_gpkg(file_name_gpkg, table_name, df_pivot)        
 
     # данные сворачиваем если SA и количество больше 1
@@ -773,7 +767,7 @@ def runRaptorWithProtocol(self,
     # если SA и не roundtrip - сохраняем данные
     if protocol_type == 2 and not roundtrip_mode: 
         table_name_list = []                
-        table_name = f'{file_name}_fastest_trip'
+        table_name = f'{file_name}_triptime'
         table_name_list.append(table_name)
         fast_write_gpkg(file_name_gpkg, table_name, df_min_duration)       
     

@@ -4,6 +4,7 @@ from datetime import datetime
 import configparser
 import math
 from math import floor
+from pathlib import Path
 
 from qgis.core import (QgsProject, 
                        QgsMapLayerProxyModel,
@@ -64,7 +65,10 @@ from common import (get_qgis_info,
                     highlight_empty_fields,
                     highlight_widget,
                     highlight_widget_no,
-                    get_tablename
+                    get_tablename,
+                    get_ids_from_voronoi,
+                    get_ids_from_layer,
+                    check_ids_match
                     )
 
 from AnalyzerFromTo_incremental import roundtrip_analyzer
@@ -298,7 +302,13 @@ class CarAccessibility(QDialog, FORM_CLASS):
         self.lblStartTime.setVisible(not self.roundtrip)
         self.dtStartTime.setVisible(not self.roundtrip)
 
-        self.default_alias = getDateTime()
+        prefix = get_prefix_alias(False, 
+                                self.protocol_type, 
+                                self.mode,
+                                False,                                
+                                self.roundtrip 
+                                )
+        self.default_alias = f'{prefix}_{getDateTime()}'
                 
         self.wgFileSave.setFilePath(os.path.join(os.path.dirname(self.wgFileSave.filePath()), f"{self.default_alias}.gpkg"))
         to_origin = (self.mode == 2) or self.roundtrip
@@ -436,6 +446,30 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.setMessage(text)
             return 0
         
+        if self.mode == 2 or self.roundtrip:
+            ids_vor = get_ids_from_voronoi (self.cmbLayers.currentLayer())
+            ids = get_ids_from_layer (self.cmbLayersDest.currentLayer())
+        else: 
+            ids_vor = get_ids_from_voronoi (self.cmbLayersDest.currentLayer())
+            ids = get_ids_from_layer (self.cmbLayers.currentLayer())
+                
+        result, text = check_ids_match (ids, ids_vor, self.mode)        
+        if not result:
+            msgBox = QMessageBox()
+            rich_text = Qt.TextFormat.RichText
+            text_browser_interaction = Qt.TextInteractionFlag.TextBrowserInteraction
+            icon_question = QMessageBox.Icon.Question
+            btn_ok = QMessageBox.StandardButton.Ok
+            msgBox.setIcon(icon_question)           
+            msgBox.setTextFormat(rich_text)
+            msgBox.setTextInteractionFlags(text_browser_interaction)
+            msgBox.setWindowTitle("Warning")
+            msgBox.setText(text)
+            msgBox.setStandardButtons(btn_ok )
+            msgBox.exec()            
+            self.run_button.setEnabled(True)            
+            return 0
+        
         self.saveParameters()
         self.readParameters()
 
@@ -507,7 +541,7 @@ class CarAccessibility(QDialog, FORM_CLASS):
             self.time_delta_from  = self.time_delta_from_min * 60
 
             cycles_to   = floor((self.to_time_end   - self.to_time_start)   / self.time_delta_to)   + 1
-            cycles_from = floor((self.from_time_end - self.from_time_start) / self.time_delta_from) + 1
+            cycles_from = floor((self.from_time_end - self.from_time_start) / self.time_delta_from) + 1            
             self.total_cycles_roundtrip = cycles_to + cycles_from
 
             str_to = f'<a> Arrive to destination between: {seconds_to_time(self.to_time_start)} and {seconds_to_time(self.to_time_end)} schedule-adjustment gap {self.time_delta_to_min} minutes</a>'
@@ -709,7 +743,13 @@ class CarAccessibility(QDialog, FORM_CLASS):
     def ParametrsShow(self):
         self.readParameters()
 
-        self.default_alias = getDateTime()
+        prefix = get_prefix_alias(False, 
+                                self.protocol_type, 
+                                self.mode,
+                                False,                                
+                                self.roundtrip 
+                                )        
+        self.default_alias = f'{prefix}_{getDateTime()}'
         
         self.wgFileSave.setFilePath(os.path.join(os.path.dirname(self.config['Settings']['PathToProtocols_car']), f"{self.default_alias}.gpkg"))
         self.wgPathPKL.setFilePath(os.path.normpath(self.config['Settings']['PathToPKL_car']))
@@ -909,16 +949,10 @@ class CarAccessibility(QDialog, FORM_CLASS):
                                 list_fields_aggregate                                
                                 )
         
-        self.setMessage("Loading pkl...")
+        self.setMessage("Loading dictionary...")
         QApplication.processEvents()
-
-        #file_name = Path(self.file_name_gpkg).stem
-        file_name = get_prefix_alias(False, 
-                                self.protocol_type, 
-                                self.mode,
-                                False,                                
-                                self.roundtrip 
-                                )
+        
+        file_name = Path(self.file_name_gpkg).stem
 
         if not (self.roundtrip):
             
@@ -1057,23 +1091,25 @@ class CarAccessibility(QDialog, FORM_CLASS):
             if not(self.break_on):
                     
                     df_rows_std, _, header, pivot = analyzer.run_finalize_all()                    
-                    
-                    table_name1 = f'{file_name}_fastest_trip_all'
-                    df_rows_std.columns = header
-                    fast_write_gpkg(self.file_name_gpkg, table_name1, df_rows_std)
 
-                    table_name2 = f'{file_name}_fastest_trip_by_destinations'                    
-                    fast_write_gpkg(self.file_name_gpkg, table_name2, pivot)
-                    
-                    vis = visualization(self, 
-                            self.layer_visualization,
-                            mode = self.protocol_type, # service area
-                            fieldname_layer = self.layer_vis_field, 
-                            from_to = 1, # to
-                            roundtrip = True if self.protocol_type == 2 else False,
-                            prefix = file_name                            
-                            )
-                    vis.add_thematic_map_gpkg(self.file_name_gpkg, table_name1, table_name1)
+                    if header is not None:
+
+                        df_rows_std.columns = header
+                        table_name1 = f'{file_name}_triptime_all'
+                        fast_write_gpkg(self.file_name_gpkg, table_name1, df_rows_std)
+
+                        table_name2 = f'{file_name}_triptime_by_destinations'                    
+                        fast_write_gpkg(self.file_name_gpkg, table_name2, pivot)
+                        
+                        vis = visualization(self, 
+                                self.layer_visualization,
+                                mode = self.protocol_type, # service area
+                                fieldname_layer = self.layer_vis_field, 
+                                from_to = 1, # to
+                                roundtrip = True if self.protocol_type == 2 else False,
+                                prefix = file_name                            
+                                )
+                        vis.add_thematic_map_gpkg(self.file_name_gpkg, table_name1, table_name1)
                     self.lblEstimateTime.setText("")
                     after_computation_time = datetime.now()
                     after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')

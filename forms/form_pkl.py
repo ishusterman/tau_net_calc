@@ -237,11 +237,7 @@ class form_pkl(QDialog, FORM_CLASS):
     def on_close_button_clicked(self):
         self.reject()
 
-    def on_help_button_clicked(self):
-        #current_dir = os.path.dirname(os.path.abspath(__file__))
-        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        #file = os.path.join(module_path, 'building_pkl.html')
-        #webbrowser.open(f'file:///{file}')
+    def on_help_button_clicked(self):        
         url = "https://geosimlab.github.io/accessibility-calculator-tutorial/prepare_database.html#building-a-database-for-transit-accessibility-computations"
         webbrowser.open(url)
     
@@ -455,12 +451,12 @@ class form_pkl(QDialog, FORM_CLASS):
             text = transform_log_to_csv_text(self.textLog.toPlainText())
             postfix = getDateTime()
             
-            filelog_name = os.path.join(path_to_PKL, f'log_pkl_pt_{postfix}.csv')
+            filelog_name = os.path.join(path_to_PKL, f'log_json_pt_{postfix}.csv')
             with open(filelog_name, "w") as file:
                 file.write(text)
 
         if run_ok :
-                self.textLog.append(f'<a href="file:///{path_to_PKL}" target="_blank" >pkl in folder</a>')
+                self.textLog.append(f'<a href="file:///{path_to_PKL}" target="_blank" >dictionary in folder</a>')
 
                 self.setMessage(f'Finished')
 

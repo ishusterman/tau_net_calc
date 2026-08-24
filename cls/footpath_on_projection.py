@@ -671,6 +671,7 @@ class cls_footpath_on_projection:
 
 #########################
 
+    """
     def construct_dict_near_buildings_for_origin_vertex(self,
                                                     graph_origin,
                                                     graph,
@@ -718,23 +719,74 @@ class cls_footpath_on_projection:
             #for building_id, dist in dist_buildings.items():
             #    rows.append([vertex_id, building_id, dist])
 
-        # --- запись файла ---
-        """
-        with open(path_to_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(rows)
-        """
-
         return result
 
+    """
+
+    def construct_dict_near_buildings_stream_json(
+        self,
+        graph_origin,
+        graph,
+        dict_vertex_osm,
+        coord_to_vertex_id,
+        filename):
+
+        out_path = filename
+
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write("{\n")  # начало JSON-словаря
+
+            first = True
+            nodes = list(graph_origin.nodes())
+            count = len(nodes)
+
+            for i, vertex_xy in enumerate(nodes):
+
+                if i % 500 == 0:
+                    if self.parent is not None:
+                        self.parent.setMessage(
+                            f'Constructing walk routes from origin nodes {i} of {count}...')
+                        QApplication.processEvents()
+                    if self.verify_break():
+                        return None
+
+                dist_buildings = self.get_nearby_buildings_from_vertex(
+                    vertex_xy,
+                    graph,
+                    dict_vertex_osm
+                )
+
+                vertex_id = coord_to_vertex_id.get(vertex_xy)
+                if vertex_id is None:
+                    continue
+
+                # формируем запись как обычный JSON-словарь
+                entry = json.dumps(
+                    {vertex_id: [(b_id, dist) for b_id, dist in dist_buildings.items()]},
+                    ensure_ascii=False
+                )
+
+                # удаляем внешние {} чтобы не было вложенного словаря
+                entry = entry[1:-1]
+
+                # ставим запятую между элементами
+                if not first:
+                    f.write(",\n")
+                first = False
+
+                f.write(entry)
+
+            f.write("\n}\n")  # конец JSON-словаря
+
+        return out_path
 
     
     def construct_dict_nearest_origin_vertex_for_buildings(self,
                                                        graph_origin,
                                                        graph,
                                                        dict_osm_vertex,
-                                                       coord_to_vertex_id,
-                                                       path_to_file):
+                                                       coord_to_vertex_id
+                                                       ):
 
         #path_to_file = os.path.join(path_to_file, 'nearest_origin_vertex_for_buildings.txt')
 
@@ -838,7 +890,7 @@ class cls_footpath_on_projection:
         lengths = nx.single_source_dijkstra_path_length(
             graph,
             vertex_proj,
-            cutoff=self.MaxPath,
+            cutoff= 400, #self.MaxPath,
             weight='weight'
         )
 
@@ -855,10 +907,11 @@ class cls_footpath_on_projection:
             if total < best_dist:
                 best_dist = total
                 best_vertex = node
-
-        best_dist = round (best_dist)
-
-        return best_vertex, best_dist
+        
+        if best_vertex is None or not math.isfinite(best_dist):
+            return None, None
+        
+        return best_vertex, round(best_dist)
     
     def get_nearby_buildings_from_vertex(self, vertex_id, graph, dict_vertex_osm):
         max_dist = self.MaxPath

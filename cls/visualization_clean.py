@@ -109,7 +109,7 @@ class cls_clean_visualization(QgsTask):
                 
                 curr_s = float(s_val)
                 s_info = round(curr_s / math.sqrt(3))
-                self.signals.set_message.emit(f'Hexagons {s_info}m...')
+                self.signals.set_message.emit(f'Generating hexagons of {s_info}m side...')                
 
                 h_s, v_s = curr_s, curr_s
                 if crs_grad:
@@ -148,6 +148,8 @@ class cls_clean_visualization(QgsTask):
             return False
 
     def process_voronoi(self, centroids, dist):
+
+        self.signals.set_message.emit(f'Generating Voronoi polygon layer from building centroids...')
         ext = centroids.extent()
         b = ext.width() * 0.05
         rect = QgsRectangle(ext.xMinimum()-b, ext.yMinimum()-b, ext.xMaximum()+b, ext.yMaximum()+b)

@@ -215,6 +215,10 @@ class visualization:
         self.protocol_layer = QgsVectorLayer(uri, aliase, "ogr")
         
         fields = self.protocol_layer.fields()
+
+        if len(fields) == 0:
+            self.parent.textLog.append(f'<a><b><font color="red">Protocol {self.file_name} is empty. Visualization skipped.</font></b></a>'            )
+            return
         
         self.targetField_base = fields[-1].name()
         if self.roundtrip:

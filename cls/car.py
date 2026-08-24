@@ -5,8 +5,6 @@ import pandas as pd
 from pathlib import Path
 from collections import defaultdict
 
-from qgis.utils import iface
-
 from qgis.analysis import QgsGraphAnalyzer
 
 from qgis.PyQt.QtWidgets import QApplication
@@ -357,6 +355,7 @@ class car_accessibility:
 
         time_estimate_start = datetime.now()
         total_tasks = count * self.roundtrip_cycle_all
+
         
         for source in self.parent.points:
             QApplication.processEvents()
@@ -372,7 +371,7 @@ class car_accessibility:
                 tasks_remaining = total_tasks - tasks_done                
                 # 5. Итоговое время            
                 remaining_duration = avg_time_per_task * tasks_remaining                            
-                display_time = str(remaining_duration).split('.')[0]            
+                display_time = str(remaining_duration).split('.')[0]                
                 self.parent.lblEstimateTime.setText(f'Time remaining: {display_time}')
 
 
@@ -397,20 +396,6 @@ class car_accessibility:
                 data_body = self.makeProtocolArea()
                 df_current = pd.DataFrame(data_body, columns=self.table_header_list)
                 self.df_all.append(df_current)
-
-                ######!!!
-                """
-                if self.parent.mode == 1:
-                    name = 'origin'
-                else:
-                    name = 'destination' 
-                
-                
-                if len(self.parent.points) == 1:
-                    table_name = f'{self.file_name}_fastest_trip'                
-                    self.table_name_list.append(table_name)
-                    fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_current)
-                """
 
             else:
 
@@ -668,15 +653,10 @@ class car_accessibility:
             table_header = f'{self.cols["hash"]},{self.cols["star"]},Veh_legs,Duration\n'
         
         self.table_header_list = table_header.strip().split(',')
-               
-      
         
-        #file_name = Path(self.parent.file_name_gpkg).stem
-        self.file_name = get_prefix_alias(False, 
-                                self.parent.protocol_type, 
-                                self.parent.mode,                                
-                                self.parent.roundtrip 
-                                )
+        
+        
+        self.file_name = Path(self.parent.file_name_gpkg).stem        
         self.find_car_accessibility()
 
         if self.parent.mode == 1:
@@ -687,7 +667,7 @@ class car_accessibility:
         # создаем pivot если не roundtrip, данные не свернутые
         if not self.parent.roundtrip:
             df_pivot = make_pivot_gpkg (self.short_result, self.cols["star"], self.cols["hash"])
-            table_name = f'{self.file_name}_fastest_by_{name}s'
+            table_name = f'{self.file_name}_triptime_by_{name}s'
             fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_pivot)
 
         # данные сворачиваем если SA 
@@ -696,7 +676,7 @@ class car_accessibility:
 
         # если SA и не roundtrip - сохраняем данные
         if self.parent.protocol_type == 2 and not self.parent.roundtrip:
-            table_name = f'{self.file_name}_fastest_trip'
+            table_name = f'{self.file_name}_triptime'
             self.table_name_list.append(table_name)            
             fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_min_duration)
         
@@ -705,7 +685,7 @@ class car_accessibility:
             for field, list_of_dfs in self.df_all_dict.items():
                 if list_of_dfs:  
                     df_final = pd.concat(list_of_dfs, ignore_index=True)
-                    table_name = f'{self.file_name}_stat_{field}_fastest_trip'
+                    table_name = f'{self.file_name}_stat_{field}_triptime'
                     self.table_name_list.append(table_name)
                     fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_final)
 

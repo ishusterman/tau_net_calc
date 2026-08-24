@@ -146,15 +146,16 @@ class pkl_car ():
         self.parent.progressBar.setValue(8)
 
         # 6. Расчёт расстояний
-        dict_vertex_buildings = footpath_on_projection_car.construct_dict_near_buildings_for_origin_vertex(
+        
+        footpath_on_projection_car.construct_dict_near_buildings_stream_json(
             graph_origin,
             graph,
             dict_vertex_osm,
             coord_to_vertex_id,
-            path_to_file=r"c:\doc\Igor\GIS\temp"
+            self.get_full_filename("dict_vertex_buildings.json")
         )
 
-        self.save_pkl (dict_vertex_buildings,"dict_vertex_buildings.json")
+        #self.save_pkl (dict_vertex_buildings,"dict_vertex_buildings.json")
         if self.verify_break():
             return 0
         self.parent.progressBar.setValue(9)
@@ -163,8 +164,7 @@ class pkl_car ():
             graph_origin,
             graph,
             dict_osm_vertex,
-            coord_to_vertex_id,
-            path_to_file=r"c:\doc\Igor\GIS\temp"
+            coord_to_vertex_id            
         )
         
         self.save_pkl (dict_building_vertex, "dict_building_vertex.json")
@@ -183,7 +183,7 @@ class pkl_car ():
 
         text = transform_log_to_csv_text(self.parent.textLog.toPlainText())
         postfix = getDateTime()
-        filelog_name = f'{self.parent.path_to_protocol}//log_pkl_car_{postfix}.csv'
+        filelog_name = f'{self.parent.path_to_protocol}//log_json_car_{postfix}.csv'
         with open(filelog_name, "w") as file:
             file.write(text)
 
@@ -514,6 +514,13 @@ class pkl_car ():
             self.parent.progressBar.setValue(0)
             return True
         return False
+    
+    def get_full_filename (self, filename):
+        self.prefix = os.path.basename(self.parent.path_to_protocol)
+        path = os.path.join(self.parent.path_to_protocol, f"{self.prefix}_{filename}")
+
+        return path
+        
 
     def save_pkl(self, data, filename):
         self.prefix = os.path.basename(self.parent.path_to_protocol)

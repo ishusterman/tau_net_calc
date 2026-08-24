@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>883</width>
-    <height>694</height>
+    <height>717</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -51,10 +51,10 @@
           <widget class="QWidget" name="scrollAreaWidgetContents_2">
            <property name="geometry">
             <rect>
-             <x>0</x>
-             <y>-362</y>
-             <width>837</width>
-             <height>791</height>
+             <x>-300</x>
+             <y>-421</y>
+             <width>849</width>
+             <height>783</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -498,96 +498,90 @@ QGroupBox::title {
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_output">
                    <item>
-                    <layout class="QVBoxLayout" name="verticalLayout_4">
-                     <item>
-                      <widget class="QGroupBox" name="gb_type_schedule">
-                       <property name="styleSheet">
-                        <string notr="true">QGroupBox { border: none; padding: 0px; margin: 0px; }    </string>
+                    <layout class="QGridLayout" name="gridLayout_output" columnstretch="1,1,1,1,1,1,1,1,1">
+                     <property name="horizontalSpacing">
+                      <number>7</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>5</number>
+                     </property>
+                     <item row="0" column="2">
+                      <widget class="QWidget" name="empty_cell_1" native="true"/>
+                     </item>
+                     <item row="0" column="3">
+                      <widget class="QRadioButton" name="rb_detailed">
+                       <property name="text">
+                        <string>Exact</string>
                        </property>
-                       <property name="title">
-                        <string/>
+                       <property name="checked">
+                        <bool>true</bool>
                        </property>
-                       <layout class="QHBoxLayout" name="layout_type_schedule">
-                        <property name="spacing">
-                         <number>0</number>
-                        </property>
-                        <property name="leftMargin">
-                         <number>0</number>
-                        </property>
-                        <property name="topMargin">
-                         <number>0</number>
-                        </property>
-                        <property name="rightMargin">
-                         <number>0</number>
-                        </property>
-                        <property name="bottomMargin">
-                         <number>0</number>
-                        </property>
-                        <item>
-                         <widget class="QLabel" name="lbl_calculation_mode">
-                          <property name="text">
-                           <string>Calculation mode </string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QRadioButton" name="rb_detailed">
-                          <property name="text">
-                           <string>Exact calculations</string>
-                          </property>
-                          <property name="checked">
-                           <bool>true</bool>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QRadioButton" name="rb_fast">
-                          <property name="sizePolicy">
-                           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                            <horstretch>0</horstretch>
-                            <verstretch>0</verstretch>
-                           </sizepolicy>
-                          </property>
-                          <property name="text">
-                           <string>Fast calculations using</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLineEdit" name="txt_rb_fast">
-                          <property name="sizePolicy">
-                           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                            <horstretch>0</horstretch>
-                            <verstretch>0</verstretch>
-                           </sizepolicy>
-                          </property>
-                          <property name="text">
-                           <string>5</string>
-                          </property>
-                          <property name="alignment">
-                           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="lbl_rb_fast">
-                          <property name="text">
-                           <string>-minute intervals</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QWidget" name="widget_2" native="true">
-                          <property name="sizePolicy">
-                           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                            <horstretch>0</horstretch>
-                            <verstretch>0</verstretch>
-                           </sizepolicy>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
                       </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLabel" name="label">
+                       <property name="text">
+                        <string>                                 </string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="4">
+                      <widget class="QLabel" name="label_2">
+                       <property name="text">
+                        <string>                 </string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="lbl_calculation_mode">
+                       <property name="text">
+                        <string>Computation mode                        </string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="8">
+                      <layout class="QHBoxLayout" name="layout_fast_mode"/>
+                     </item>
+                     <item row="0" column="5">
+                      <widget class="QWidget" name="empty_cell_2" native="true"/>
+                     </item>
+                     <item row="0" column="6">
+                      <layout class="QHBoxLayout" name="horizontalLayout_7">
+                       <item>
+                        <widget class="QRadioButton" name="rb_fast">
+                         <property name="text">
+                          <string>Fast, using</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="txt_rb_fast">
+                         <property name="text">
+                          <string>3</string>
+                         </property>
+                         <property name="alignment">
+                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="lbl_rb_fast">
+                         <property name="text">
+                          <string>-minute intervals</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QWidget" name="widget_3" native="true">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
                      </item>
                     </layout>
                    </item>

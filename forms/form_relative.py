@@ -163,9 +163,9 @@ class form_relative(QDialog, FORM_CLASS):
             name = layer.GetName()
 
             # Условия:
-            # 1) имя содержит "_fastest_" и НЕ содержит "_by_"
-            # 3) или содержит "_stat_all"
-            if ("_fastest_" in name and "_by_" not in name):
+            # 1) имя содержит "_triptime" и НЕ содержит "_by_"
+            
+            if ("_triptime" in name or "_fastest_" in name) and "_by_" not in name:
                 return name  
 
         return None
@@ -238,7 +238,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.file1 = self.widget_result1.filePath()
 
         if not (os.path.isfile(self.file1) and self.file1.lower().endswith(".gpkg")):
-            self.setMessage('Select the correct file "Result_1"')
+            self.setMessage('Select correct "Result_1"')
             self.run_button.setEnabled(True)
             return 0
         
@@ -246,7 +246,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.file2 = self.widget_result2.filePath()
 
         if not (os.path.isfile(self.file2) and self.file2.lower().endswith(".gpkg")):
-            self.setMessage('Select the correct file "Result_2"')
+            self.setMessage('Select correct "Result_2"')
             self.run_button.setEnabled(True)
             return 0
         
@@ -259,18 +259,18 @@ class form_relative(QDialog, FORM_CLASS):
             self.table1 = self.getTableName(self.file1)
             self.table2 = self.getTableName(self.file2)
         
-        prefix_result = f"{self.table1[:4]}_{self.table2[:4]}"
-
         if not self.table1:
-            self.setMessage('Select the correct file "Result_1"')
+            self.setMessage('Select correct "Result_1"')
             self.run_button.setEnabled(True)
             return 0
         
         if not self.table2:
-            self.setMessage('Select the correct file "Result_2"')
+            self.setMessage('Select correct "Result_2"')
             self.run_button.setEnabled(True)
             return 0
         
+        prefix_result = f"{self.table1[:4]}_{self.table2[:4]}"
+
         cols_dict = get_name_columns()
         mode_first, self.mode_roundtrip_first, self.MAP_first, AccessibilityText_first = self.check_log_gpkg(self.file1)
 
@@ -288,12 +288,12 @@ class form_relative(QDialog, FORM_CLASS):
         mode_second, self.mode_roundtrip_second, self.MAP_second, AccessibilityText_second = self.check_log_gpkg(self.file2)
 
         if AccessibilityText_first == "error":
-            self.setMessage('Select the correct file "Result_1"')
+            self.setMessage('Select correct "Result_1"')
             self.run_button.setEnabled(True)
             return 0
         
         if AccessibilityText_second == "error":
-            self.setMessage('Select the correct file "Result_2"')
+            self.setMessage('Select correct "Result_2"')
             self.run_button.setEnabled(True)
             return 0        
         
@@ -441,7 +441,7 @@ class form_relative(QDialog, FORM_CLASS):
         self.alias = Path(self.file_name_gpkg).stem
         if self.cb_ratio.isChecked():
             self.mode_calc = "ratio"
-            self.table_name = f'ratio_{self.file1_short}_{self.table1}_{self.file2_short}_{self.table2}'
+            self.table_name = f'RATIO_{self.table1}_VERSUS_{self.table2}'
             self.prepare()
             type_compare = "RatioRelative"
             vis.add_thematic_map_gpkg(self.file_name_gpkg, self.table_name, self.table_name,type_compare = type_compare)            
@@ -450,7 +450,7 @@ class form_relative(QDialog, FORM_CLASS):
         QApplication.processEvents()
         if self.cb_difference.isChecked():
             self.mode_calc = "difference"
-            self.table_name = f'diff_{self.file1_short}_{self.table1}_{self.file2_short}_{self.table2}'
+            self.table_name = f'DIFF_{self.table1}_VERSUS_{self.table2}'
             self.prepare()
             if self.MAP_first:
                 type_compare = "DifferenceRegion"
@@ -463,7 +463,7 @@ class form_relative(QDialog, FORM_CLASS):
         QApplication.processEvents()
         if self.cb_relative_difference.isChecked():
             self.mode_calc = "relative_difference"
-            self.table_name = f'rel_diff_{self.file1_short}_{self.table1}_{self.file2_short}_{self.table2}'
+            self.table_name = f'REL_DIFF_{self.table1}_VERSUS_{self.table2}'
             self.prepare()            
             type_compare = "Rel_difference"
             
@@ -505,7 +505,7 @@ class form_relative(QDialog, FORM_CLASS):
             cols_to_save1 = [c for c in [self.first_col_star, self.first_col_hash, "Duration", "Duration_ave"] if c in self.df1.columns]
             df1_only = df1_only[cols_to_save1]
         # Сохранение и карта для DF1
-        table = f'{self.file1_short}_{self.table1}_only'
+        table = f'ONLY_{self.table1}'
         fast_write_gpkg(self.file_name_gpkg, table, df1_only )        
         vis2.add_thematic_map_gpkg(self.file_name_gpkg, table, table, type_compare = "CompareFirstOnly")        
         
@@ -529,7 +529,7 @@ class form_relative(QDialog, FORM_CLASS):
             cols_to_save2 = [c for c in [self.first_col_star, self.first_col_hash, "Duration", "Duration_ave"] if c in self.df2.columns]        
             df2_only = df2_only[cols_to_save2]
         # Сохранение и карта для DF2
-        table = f'{self.file2_short}_{self.table2}_only'
+        table = f'ONLY_{self.table2}'
         fast_write_gpkg(self.file_name_gpkg, table, df2_only )        
         vis3.add_thematic_map_gpkg(self.file_name_gpkg, table, table, type_compare = "CompareSecondOnly")
         

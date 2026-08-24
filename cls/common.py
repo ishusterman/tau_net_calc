@@ -12,6 +12,7 @@ import shutil
 import csv
 import geopandas as gpd
 from pathlib import Path
+from osgeo import ogr
 
 
 try:
@@ -366,9 +367,9 @@ def get_initial_directory(input_path: str) -> str:
 
 
 def find_pkl_subfolder(base_dir: Path):
-    """Ищет первую подпапку, содержащую 'pkl' или 'PKL' в имени."""
+    """Ищет первую подпапку, содержащую 'json' или 'json' в имени."""
     for subdir in base_dir.iterdir():
-        if subdir.is_dir() and 'pkl' in subdir.name.lower():
+        if subdir.is_dir() and 'json' in subdir.name.lower():
             return subdir
     return None
 
@@ -519,6 +520,10 @@ def get_existing_path(folder_path, filename):
 
 
 def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative=False):
+
+    if df_current is None or df_current.empty:    
+        return
+    
     # Подготовка данных (числовой формат)
     if not mode_relative and not df_current.empty:
         last_col_name = df_current.columns[-1]
@@ -545,6 +550,10 @@ def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative=False)
 
 
 def make_service_area_report_gpkg(all_frames, col_star, col_hash):
+
+    if not all_frames:
+        return pd.DataFrame(), {}
+
     df_total = pd.concat(all_frames, ignore_index=True)
 
     df_total['Duration'] = pd.to_numeric(df_total['Duration'], errors='coerce')
@@ -580,8 +589,6 @@ def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=10):
     new_cols = [pivot.columns[0]] + [f"Duration_{c}" for c in pivot.columns[1:]]
     pivot.columns = new_cols
     return pivot
-
-
 
 def is_child_of(child, parent):
     while child is not None:
@@ -642,6 +649,104 @@ def get_tablename(layer):
         if part.startswith("layername="):
             return part.split("=", 1)[1]
     return None
+
+def get_ids_from_layer(qgs_layer):
+        return {
+            f[FIELD_ID]
+            for f in qgs_layer.getFeatures()
+            if FIELD_ID in f.fields().names()
+        }
+
+def get_ids_from_voronoi(layer):
+    """
+    Возвращает множество значений FIELD_ID.
+    
+    Логика:
+    1) Если слой не подходит под условия поиска слоя вороного — возвращаем FIELD_ID из текущего слоя.
+    2) Если GPKG не открылся — возвращаем FIELD_ID из текущего слоя.
+    3) Если слой вороного найден — возвращаем FIELD_ID из слоя вороного.
+    4) Если слой вороного найден, но не загрузился — возвращаем FIELD_ID из текущего слоя.
+    """
+
+    # --- helper: получить множество FIELD_ID из любого слоя ---
+    
+
+    # --- проверяем, что слой из GPKG ---
+    src = layer.dataProvider().dataSourceUri()
+    if ".gpkg" not in src.lower():
+        return get_ids_from_layer(layer)
+
+    layer_name = layer.name()
+
+    # --- проверяем условия, при которых НЕ ищем слой вороного ---
+    if "_cleaned" not in layer_name:
+        return get_ids_from_layer(layer)
+
+    if "_hex" in layer_name or "_vor_" in layer_name:
+        return get_ids_from_layer(layer)
+
+    # --- путь к GPKG ---
+    gpkg_path = src.split("|")[0]
+
+    # --- пытаемся открыть GPKG ---
+    ds = ogr.Open(gpkg_path)
+    if ds is None:
+        return get_ids_from_layer(layer)
+
+    # --- ищем первый слой вороного ---
+    voronoi_layer_name = None
+    for i in range(ds.GetLayerCount()):
+        item = ds.GetLayerByIndex(i)
+        if item is None:
+            continue
+        lname = item.GetName()
+        if "_vor_" in lname.lower():
+            voronoi_layer_name = lname
+            break
+
+    # --- если слой вороного не найден ---
+    if voronoi_layer_name is None:
+        ds = None
+        return get_ids_from_layer(layer)
+
+    # --- загружаем слой вороного ---
+    uri_voronoi = f"{gpkg_path}|layername={voronoi_layer_name}"
+    test_layer = QgsVectorLayer(uri_voronoi, voronoi_layer_name, "ogr")
+
+    if test_layer.isValid():        
+        result = get_ids_from_layer(test_layer)
+        ds = None
+        return result
+
+    # --- fallback: слой найден, но не загрузился ---
+    ds = None
+    return get_ids_from_layer(layer)
+
+
+def check_ids_match(ids, ids_vor, type = 1):
+    """
+    Проверяет соответствие aid между origins/destinations и слоем вороного.
+    Возвращает:
+        (True, "") если всё корректно
+        (False, текст) если есть несоответствия
+    """
+    missing = ids - ids_vor    
+
+    # Если всё совпадает — возвращаем True
+    if not missing and not missing:
+        return True, ""
+    
+    msg1, msg2 = ("origins", "destinations") if type == 1 else ("destinations", "origins")
+
+    msg = (
+        f"Some features in the {msg1} layer are missing from the {msg2} layer.<br>"
+        f"Please verify that the aid attribute values match across both layers."
+        )
+    
+    return False, msg
+
+
+
 
 
 

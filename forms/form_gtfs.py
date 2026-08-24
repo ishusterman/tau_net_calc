@@ -421,11 +421,7 @@ class form_gtfs(QDialog, FORM_CLASS):
     def on_close_button_clicked(self):
         self.reject()
 
-    def on_help_button_clicked(self):
-        #current_dir = os.path.dirname(os.path.abspath(__file__))
-        #module_path = os.path.join(current_dir, 'help', 'build', 'html')
-        #file = os.path.join(module_path, 'building_pkl.html')
-        #webbrowser.open(f'file:///{file}')
+    def on_help_button_clicked(self):        
         if self.mode == 1:
             url = "https://geosimlab.github.io/accessibility-calculator-tutorial/prepare_database.html#add-lines-to-gtfs"
         else:

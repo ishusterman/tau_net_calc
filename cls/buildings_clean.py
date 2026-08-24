@@ -49,91 +49,94 @@ class cls_clean_buildings(QgsTask):
 
     def run(self):
 
-        uri = self.layer.dataProvider().dataSourceUri()
-        input_layer_path = uri.split("|")[0] if "|" in uri else uri
-        file_name = os.path.basename(input_layer_path)
-        self.name, self.ext = os.path.splitext(file_name)
-        #input_layer = QgsVectorLayer(input_layer_path, "Layer Name", "ogr")
-
-        input_layer = self.layer
-
-        ################################
-        self.signals.set_message.emit('Deleting holes ...')
-        deleteholes_result = processing.run("qgis:deleteholes", {
-            'INPUT': input_layer,
-            'OUTPUT': 'TEMPORARY_OUTPUT'
-        })
-        layer_deleteholes = deleteholes_result['OUTPUT']
-        if self.break_on:
-            return 0
-        self.signals.progress.emit(1)
-        ###############################
-
-        self.signals.set_message.emit('Removing null geometries ...')
-        empty_geometry_features = []
-
-        for feature in layer_deleteholes.getFeatures():
-            if feature.geometry().isNull():
-                empty_geometry_features.append(feature)
-
-        if empty_geometry_features:
-            with edit(layer_deleteholes):
-                for feature in empty_geometry_features:
-                    layer_deleteholes.deleteFeature(feature.id())
-
-        if self.break_on:
-            return 0
-        self.signals.progress.emit(2)
-        ##############################
-
-        self.signals.set_message.emit('Converting multipart to singlepart ...')
-        singlepart_result = processing.run("native:multiparttosingleparts", {
-            'INPUT': layer_deleteholes,
-            'OUTPUT': 'memory:'
-        })
-        layer_singlepart = singlepart_result['OUTPUT']
-        if self.break_on:
-            return 0
-        self.signals.progress.emit(3)
-
-        ############################################
-
-        self.signals.set_message.emit('Renumbering duplicated id ...')
-
-        layer_singlepart  = create_and_check_field(layer_singlepart, self.osm_id_field, type = 'bldg')
         
-        if self.break_on:
-            return 0
-        self.signals.progress.emit(4)
+            uri = self.layer.dataProvider().dataSourceUri()
+            input_layer_path = uri.split("|")[0] if "|" in uri else uri
+            file_name = os.path.basename(input_layer_path)
+            self.name, self.ext = os.path.splitext(file_name)
+            #input_layer = QgsVectorLayer(input_layer_path, "Layer Name", "ogr")
 
-        removed_count = self.remove_duplicate_centroids(layer_singlepart)
-        
-        self.layer_name_single_part =  self.save_layer_single_part (layer_singlepart)
+            input_layer = self.layer
 
-        ##############
-        # 1. Вороной
+            ################################
+            self.signals.set_message.emit('Deleting holes ...')
+            deleteholes_result = processing.run("qgis:deleteholes", {
+                'INPUT': input_layer,
+                'OUTPUT': 'TEMPORARY_OUTPUT'
+            })
+            layer_deleteholes = deleteholes_result['OUTPUT']
+            if self.break_on:
+                return 0
+            self.signals.progress.emit(1)
+            ###############################
 
-        self.layer = layer_singlepart
+            self.signals.set_message.emit('Removing null geometries ...')
+            empty_geometry_features = []
 
-        units = self.layer.crs().mapUnits()
-        crs_grad = (units == 6)        
-        # Точка для расчета искажений проекции
-        first_feat = next(self.layer.getFeatures(), None)        
-        if not first_feat: return False
-        ref_point = first_feat.geometry().centroid().asPoint()        
+            for feature in layer_deleteholes.getFeatures():
+                if feature.geometry().isNull():
+                    empty_geometry_features.append(feature)
+
+            if empty_geometry_features:
+                with edit(layer_deleteholes):
+                    for feature in empty_geometry_features:
+                        layer_deleteholes.deleteFeature(feature.id())
+
+            if self.break_on:
+                return 0
+            self.signals.progress.emit(2)
+            ##############################
+
+            self.signals.set_message.emit('Converting multipart to singlepart ...')
+            singlepart_result = processing.run("native:multiparttosingleparts", {
+                'INPUT': layer_deleteholes,
+                'OUTPUT': 'memory:'
+            })
+            layer_singlepart = singlepart_result['OUTPUT']
+            if self.break_on:
+                return 0
+            self.signals.progress.emit(3)
+
+            ############################################
+
+            self.signals.set_message.emit('Renumbering duplicated id ...')
+
+            layer_singlepart  = create_and_check_field(layer_singlepart, self.osm_id_field, type = 'bldg')
             
-        v_dist = self.dist_buffer
-        if crs_grad: v_dist = convert_meters_to_degrees(self.dist_buffer, ref_point.y())        
-        centroids_layer = self.make_centroids(self.layer)        
-        self.process_voronoi(centroids_layer, v_dist)
+            if self.break_on:
+                return 0
+            self.signals.progress.emit(4)
+
+            removed_count = self.remove_duplicate_centroids(layer_singlepart)
+            self.signals.progress.emit(5)
+            
+            self.layer_name_single_part =  self.save_layer_single_part (layer_singlepart)
+            self.signals.progress.emit(6)
+
+            ##############
+            # 1. Вороной
+
+            self.layer = layer_singlepart
+
+            units = self.layer.crs().mapUnits()
+            crs_grad = (units == 6)        
+            # Точка для расчета искажений проекции
+            first_feat = next(self.layer.getFeatures(), None)        
+            if not first_feat: return False
+            ref_point = first_feat.geometry().centroid().asPoint()        
+                
+            v_dist = self.dist_buffer
+            if crs_grad: v_dist = convert_meters_to_degrees(self.dist_buffer, ref_point.y())        
+            centroids_layer = self.make_centroids(self.layer)        
+            self.process_voronoi(centroids_layer, v_dist)
+            
+            ##############
+            self.write_finish_info()
+            self.signals.change_button_status.emit(True)
+            self.signals.progress.emit(10)
+            self.signals.set_message.emit('Finished')
         
-        ##############
-        self.write_finish_info()
-        self.signals.change_button_status.emit(True)
-        self.signals.progress.emit(5)
-        self.signals.set_message.emit('Finished')
-        
-        return True
+            return True
     
     def remove_duplicate_centroids(self, layer: QgsVectorLayer, precision: int = 6) -> int:
         """
@@ -236,7 +239,7 @@ class cls_clean_buildings(QgsTask):
 
     def process_voronoi(self, centroids, dist):
 
-        self.signals.set_message.emit('Voronoi ...')
+        self.signals.set_message.emit('Generating Voronoi polygon layer from building centroids ...')
         ext = centroids.extent()
         b = ext.width() * 0.05
         rect = QgsRectangle(ext.xMinimum()-b, ext.yMinimum()-b, ext.xMaximum()+b, ext.yMaximum()+b)
@@ -252,8 +255,11 @@ class cls_clean_buildings(QgsTask):
         mem.dataProvider().addFeatures(feats)
 
         vor = processing.run("native:voronoipolygons", {'INPUT': mem, 'OUTPUT': 'memory:'})['OUTPUT']
+        self.signals.progress.emit(7)
         buf = processing.run("native:buffer", {'INPUT': self.layer, 'DISTANCE': dist, 'DISSOLVE': True, 'OUTPUT': 'memory:'})['OUTPUT']                
-        clip = processing.run("native:clip", {'INPUT': vor, 'OVERLAY': buf, 'OUTPUT': 'memory:'})['OUTPUT']
+        self.signals.progress.emit(8)
+        clip = processing.run("native:clip", {'INPUT': vor, 'OVERLAY': buf, 'OUTPUT': 'memory:'})['OUTPUT']        
+        self.signals.progress.emit(9)
 
         base, idx = self.split_name_and_index(self.layer_name_single_part)
         if idx:
@@ -262,7 +268,7 @@ class cls_clean_buildings(QgsTask):
             voronoi_name = f"{self.layer_name_single_part.rpartition("_")[0]}_vor_system"        
         self.save_layer_to_gpkg(clip, voronoi_name)
 
-        self.signals.progress.emit(1)   
+        self.signals.progress.emit(10)   
 
     def make_centroids(self, lyr):
         return processing.run("native:centroids", {'INPUT': lyr, 'OUTPUT': 'memory:'})['OUTPUT']

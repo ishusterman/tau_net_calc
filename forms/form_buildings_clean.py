@@ -66,7 +66,7 @@ class form_buildings_clean(QDialog, FORM_CLASS):
 
         self.title = title
 
-        self.progressBar.setMaximum(5)
+        self.progressBar.setMaximum(10)
         self.progressBar.setValue(0)
 
         self.toolButton_protocol.clicked.connect(lambda: self.showFoldersDialog(self.txtPathToProtocols))
