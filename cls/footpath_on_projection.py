@@ -16,8 +16,7 @@ from qgis.core import (
     QgsDistanceArea,
     QgsCoordinateTransformContext,
     QgsProject,    
-    QgsWkbTypes,
-    QgsVectorFileWriter,
+    QgsWkbTypes,    
     NULL
     )
 
@@ -25,7 +24,7 @@ from qgis.PyQt.QtWidgets import QApplication
 
 from qgis.PyQt.QtCore import QMetaType, QVariant
 
-from common import get_existing_path
+from tau_net_calc.cls.common import get_existing_path
 
 class cls_footpath_on_projection:
     def __init__(
@@ -203,6 +202,8 @@ class cls_footpath_on_projection:
             layer = QgsVectorLayer(uri, "links_to_roads", "ogr")
             """
             #QgsProject.instance().addMapLayer(self.layer_links)
+
+        
         
         return self.cloned_layer, self.layer_links
 
@@ -242,6 +243,7 @@ class cls_footpath_on_projection:
                 # get the coordinates of the segment's ends
                 start_vertex = line_geom.vertexAt(start_vertex_index)
                 end_vertex = line_geom.vertexAt(end_vertex_index)
+                best_attr = attributes
                 
         # add two segments to the cloned layer
         if nearest_point: 
@@ -269,7 +271,7 @@ class cls_footpath_on_projection:
                 feat1 = QgsFeature()
                 feat1.setGeometry(QgsGeometry.fromPolylineXY(
                     [nearest_point, QgsPointXY(start_vertex.x(), start_vertex.y())]))
-                feat1.setAttributes(attributes)
+                feat1.setAttributes(best_attr)
                 # setting the osm_id value
                 feat1.setAttribute(self.osm_id_index, str_osm_id)
                 # setting the distance value 
@@ -282,7 +284,7 @@ class cls_footpath_on_projection:
                 feat2 = QgsFeature()
                 feat2.setGeometry(QgsGeometry.fromPolylineXY(
                     [nearest_point, QgsPointXY(end_vertex.x(), end_vertex.y())]))
-                feat2.setAttributes(attributes)
+                feat2.setAttributes(best_attr)
                 # setting the osm_id value
                 feat2.setAttribute(self.osm_id_index, str_osm_id)
                 # setting the distance value 
@@ -406,9 +408,6 @@ class cls_footpath_on_projection:
         with open(graph_path, "w", encoding="utf-8") as f:
             json.dump(graph_data, f, ensure_ascii=False)
 
-
-
-
     def load_graph(self, file_path):
         graph_path = get_existing_path(file_path, "graph_projection.json")
 
@@ -430,59 +429,6 @@ class cls_footpath_on_projection:
             )
 
         return nx_graph
-
-
-        """        
-        # === визуализация ===
-        crs = "EPSG:3857"
-
-        # узлы
-        node_layer = QgsVectorLayer(f"Point?crs={crs}", "graph_nodes", "memory")
-        node_provider = node_layer.dataProvider()
-        node_provider.addAttributes([
-            QgsField("id", QMetaType.QString),
-            QgsField("kind", QMetaType.QString)
-        ])
-        node_layer.updateFields()
-
-        feats = []
-        for node_id, data in nx_graph.nodes(data=True):
-            x, y = node_id
-            feat = QgsFeature()
-            feat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(x, y)))
-            feat.setAttributes([str(node_id), data.get("kind", "")])
-            feats.append(feat)
-
-        node_provider.addFeatures(feats)
-        QgsProject.instance().addMapLayer(node_layer)
-
-        # рёбра
-        edge_layer = QgsVectorLayer(f"LineString?crs={crs}", "graph_edges", "memory")
-        edge_provider = edge_layer.dataProvider()
-        edge_provider.addAttributes([QgsField("weight", QMetaType.Double)])
-        edge_layer.updateFields()
-
-        feats = []
-        for u, v, data in nx_graph.edges(data=True):
-            geom_coords = data.get("geometry")
-            feat = QgsFeature()
-
-            if geom_coords:
-                qpoints = [QgsPointXY(x, y) for x, y in geom_coords]
-                feat.setGeometry(QgsGeometry.fromPolylineXY(qpoints))
-            else:
-                feat.setGeometry(QgsGeometry.fromPolylineXY([
-                    QgsPointXY(*u), QgsPointXY(*v)
-                ]))
-
-            feat.setAttributes([float(data.get("weight", 0))])
-            feats.append(feat)
-
-        edge_provider.addFeatures(feats)
-        QgsProject.instance().addMapLayer(edge_layer)
-        """
-        
-        
     
     def load_dict_osm_vertex(self, file_path):
         if self.parent:
@@ -520,8 +466,6 @@ class cls_footpath_on_projection:
 
         return result
 
-    
-    
     def construct_dict_transfers_projections(self,
                                          graph,
                                          dict_osm_vertex,
@@ -664,282 +608,3 @@ class cls_footpath_on_projection:
             return str(int(float(val)))
         except (ValueError, TypeError):
             return str(val).strip()
-
-#########################
-
-# FOR CAR 
-
-#########################
-
-    """
-    def construct_dict_near_buildings_for_origin_vertex(self,
-                                                    graph_origin,
-                                                    graph,
-                                                    dict_vertex_osm,
-                                                    coord_to_vertex_id,
-                                                    path_to_file):
-
-        #path_to_file = os.path.join(path_to_file, 'near_buildings_for_origin_vertex.txt')
-
-        result = {}   # ключ = vertex_id (QGIS), значение = {building_id: dist}
-
-        rows = []
-        rows.append(['origin_vertex_id', 'building_id', 'min_distance'])
-
-        nodes = list(graph_origin.nodes())
-        count = len(nodes)
-
-        for i, vertex_xy in enumerate(nodes):
-
-            if i % 500 == 0:
-                if self.parent is not None:
-                    self.parent.setMessage(
-                        f'Constructing walk routes from origin nodes {i} of {count}...')
-                    QApplication.processEvents()
-                if self.verify_break():
-                    return None
-
-            # --- расстояния до зданий ---
-            dist_buildings = self.get_nearby_buildings_from_vertex(
-                vertex_xy,
-                graph,
-                dict_vertex_osm
-            )
-
-            # --- перевод координаты → ID вершины QGIS ---
-            vertex_id = coord_to_vertex_id.get(vertex_xy)
-            if vertex_id is None:
-                continue
-
-            # --- сохраняем в словарь ---
-            result[vertex_id] = [(building_id, dist) for building_id, dist in dist_buildings.items()]
-
-
-            # --- сохраняем в файл ---
-            #for building_id, dist in dist_buildings.items():
-            #    rows.append([vertex_id, building_id, dist])
-
-        return result
-
-    """
-
-    def construct_dict_near_buildings_stream_json(
-        self,
-        graph_origin,
-        graph,
-        dict_vertex_osm,
-        coord_to_vertex_id,
-        filename):
-
-        out_path = filename
-
-        with open(out_path, "w", encoding="utf-8") as f:
-            f.write("{\n")  # начало JSON-словаря
-
-            first = True
-            nodes = list(graph_origin.nodes())
-            count = len(nodes)
-
-            for i, vertex_xy in enumerate(nodes):
-
-                if i % 500 == 0:
-                    if self.parent is not None:
-                        self.parent.setMessage(
-                            f'Constructing walk routes from origin nodes {i} of {count}...')
-                        QApplication.processEvents()
-                    if self.verify_break():
-                        return None
-
-                dist_buildings = self.get_nearby_buildings_from_vertex(
-                    vertex_xy,
-                    graph,
-                    dict_vertex_osm
-                )
-
-                vertex_id = coord_to_vertex_id.get(vertex_xy)
-                if vertex_id is None:
-                    continue
-
-                # формируем запись как обычный JSON-словарь
-                entry = json.dumps(
-                    {vertex_id: [(b_id, dist) for b_id, dist in dist_buildings.items()]},
-                    ensure_ascii=False
-                )
-
-                # удаляем внешние {} чтобы не было вложенного словаря
-                entry = entry[1:-1]
-
-                # ставим запятую между элементами
-                if not first:
-                    f.write(",\n")
-                first = False
-
-                f.write(entry)
-
-            f.write("\n}\n")  # конец JSON-словаря
-
-        return out_path
-
-    
-    def construct_dict_nearest_origin_vertex_for_buildings(self,
-                                                       graph_origin,
-                                                       graph,
-                                                       dict_osm_vertex,
-                                                       coord_to_vertex_id
-                                                       ):
-
-        #path_to_file = os.path.join(path_to_file, 'nearest_origin_vertex_for_buildings.txt')
-
-        result = {}   # ключ = building_id, значение = (vertex_id, dist)
-
-        rows = []
-        rows.append(['building_id', 'origin_vertex_id', 'min_distance'])
-
-        building_ids = list(dict_osm_vertex.keys())
-        count = len(building_ids)
-
-        for i, building_id in enumerate(building_ids):
-
-            if i % 500 == 0:
-                if self.parent is not None:
-                    self.parent.setMessage(
-                        f'Finding nearest origin vertex for buildings {i} of {count}...')
-                    QApplication.processEvents()
-                if self.verify_break():
-                    return None
-
-            # --- ищем ближайшую исходную вершину ---
-            vertex_xy, dist = self.get_nearest_origin_vertex_for_building(
-                building_id,
-                graph,
-                graph_origin,
-                dict_osm_vertex
-            )
-
-            if vertex_xy is None:
-                continue
-
-            # --- перевод координаты → ID вершины QGIS ---
-            vertex_id = coord_to_vertex_id.get(vertex_xy)
-            if vertex_id is None:
-                continue
-
-            # --- сохраняем в словарь ---
-            result[int (building_id)] = (vertex_id, dist)
-
-            # --- сохраняем в файл ---
-            #rows.append([building_id, vertex_id, dist])
-        """
-        # --- запись файла ---
-        with open(path_to_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(rows)
-        """
-
-        return result
-
-    def build_graph_original(self, layer_roads):
-        graph = nx.Graph()
-        count = layer_roads.featureCount()
-
-        for i, feature in enumerate(layer_roads.getFeatures()):
-
-            if i % 50000 == 0:
-                if self.parent is not None:
-                    self.parent.setMessage(f'Constructing original road network graph link {i} of {count}...')
-                    QApplication.processEvents()
-
-                if self.verify_break():
-                    return 0
-                
-            geom = feature.geometry()
-            poly = geom.asPolyline()
-            if not poly or len(poly) < 2:
-                continue
-
-            coords = [(p.x(), p.y()) for p in poly]
-
-            for j in range(len(coords) - 1):
-                u = coords[j]
-                v = coords[j + 1]
-
-                graph.add_node(u)
-                graph.add_node(v)
-
-                seg_len = QgsGeometry.fromPolylineXY([
-                    QgsPointXY(*u), QgsPointXY(*v)
-                ]).length()
-
-                graph.add_edge(u, v, weight=seg_len)
-
-        return graph
-    
-    def get_nearest_origin_vertex_for_building(self,
-                                           building_id,
-                                           graph,
-                                           graph_origin,
-                                           dict_osm_vertex):
-        # 1. Получаем вершину, к которой привязано здание
-        data = dict_osm_vertex.get(building_id)
-        if data is None:
-            return None, None
-
-        vertex_proj, dist_3 = data  # dist_3 — расстояние от здания до проекции
-
-        # 2. Запускаем Дейкстру от проекции
-        lengths = nx.single_source_dijkstra_path_length(
-            graph,
-            vertex_proj,
-            cutoff= 400, #self.MaxPath,
-            weight='weight'
-        )
-
-        best_vertex = None
-        best_dist = float('inf')
-
-        # 3. Ищем ближайшую вершину, которая есть в graph_origin
-        for node, dist_2 in lengths.items():
-            if node not in graph_origin:
-                continue  # пропускаем проекции и искусственные точки
-
-            total = dist_2 + dist_3
-
-            if total < best_dist:
-                best_dist = total
-                best_vertex = node
-        
-        if best_vertex is None or not math.isfinite(best_dist):
-            return None, None
-        
-        return best_vertex, round(best_dist)
-    
-    def get_nearby_buildings_from_vertex(self, vertex_id, graph, dict_vertex_osm):
-        max_dist = self.MaxPath
-
-        lengths = nx.single_source_dijkstra_path_length(
-            graph,
-            vertex_id,
-            cutoff=max_dist,
-            weight='weight'
-        )
-
-        buildings = {}
-
-        for node, dist_2 in lengths.items():
-            lst = dict_vertex_osm.get(node)
-            if not lst:
-                continue
-
-            for osm2, dist_3, t in lst:
-                if t != "b":
-                    continue
-
-                total = round(dist_2 + dist_3)
-                if total > max_dist:
-                    continue
-
-                prev = buildings.get(osm2)
-                if prev is None or total < prev:
-                    buildings[osm2] = total
-
-        return buildings

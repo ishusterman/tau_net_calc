@@ -6,24 +6,13 @@ from pathlib import Path
 from collections import defaultdict
 
 from qgis.analysis import QgsGraphAnalyzer
-
 from qgis.PyQt.QtWidgets import QApplication
 
-from qgis.core import (QgsProject,
-                       QgsDistanceArea, 
-                       QgsWkbTypes,
-                       QgsGeometry, 
-                       QgsPointXY,
-                       )
-
-from qgis.analysis import QgsGraphBuilder
-
-from visualization import visualization
-from common import (get_existing_path, 
+from tau_net_calc.cls.visualization import visualization
+from tau_net_calc.cls.common import (get_existing_path, 
                     get_name_columns,
                     make_service_area_report_gpkg,
                     fast_write_gpkg,
-                    get_prefix_alias,
                     make_pivot_gpkg)
 
 
@@ -39,6 +28,8 @@ class car_accessibility:
                  list_fields_aggregate                 
                  ):
 
+        
+
         self.max_time_minutes = max_time_minutes
         
         #self.number_bins = time_step_minutes
@@ -50,6 +41,7 @@ class car_accessibility:
         self.time_step_last = int(max_time_minutes % (self.time_step_minutes) )
 
         self.layer_dest = layer_dest
+        
         self.layer_orig = parent.layer_origin
         self.layerorig_field = parent.layerorig_field
         self.crs = self.layer_dest.crs()
@@ -57,6 +49,7 @@ class car_accessibility:
         self.crs_grad = (units == 6)
         
         self.parent = parent
+        self.target_ids = set(self.parent.get_feature_from_layer(self.layer_dest))
 
         self.layer_vis = layer_vis
         self.max_time_sec = self.max_time_minutes * 60
@@ -64,9 +57,7 @@ class car_accessibility:
         self.layerdest_field = layerdest_field
         self.layer_vis_field = layer_vis_field
 
-        self.list_fields_aggregate = list_fields_aggregate
-
-        
+        self.list_fields_aggregate = list_fields_aggregate        
 
         self.already_display_break = False
 
@@ -106,7 +97,6 @@ class car_accessibility:
             if fname not in field_names:
                 return False
         return True
-
     
     def read_road_speed_default(self):
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -122,212 +112,12 @@ class car_accessibility:
             for row in reader:
                 type_road = row['link_type']
                 speed_default = int(row['speed_km_h'])
-                self.type_road_speed_default[type_road] = speed_default
+                self.type_road_speed_default[type_road] = speed_default    
     
-    def build_graph_from_layer(self, layer, hour, mode):
-
-        # ---------------------------------------------------------
-        # 1. Подготовка
-        # ---------------------------------------------------------
-        self.read_road_speed_default()
-
-        crs = layer.crs()
-        builder = QgsGraphBuilder(crs)
-
-        da = QgsDistanceArea()
-        da.setSourceCrs(crs, QgsProject.instance().transformContext())
-
-        vertex_map = {}
-
-        def get_vertex_id(pt: QgsPointXY):
-            key = (pt.x(), pt.y())
-            if key not in vertex_map:
-                vid = len(vertex_map)
-                builder.addVertex(vid, pt)
-                vertex_map[key] = vid
-            return vertex_map[key]
-
-        # Поля скоростей
-        fwd_field = f"fspeed_{hour:02d}"
-        bwd_field = f"bspeed_{hour:02d}"
-
-        fields = layer.fields().names()
-        if fwd_field not in fields or bwd_field not in fields:
-            raise Exception(f"Нет полей {fwd_field} / {bwd_field}")
-
-        # Нормализация скорости
-        def normalize_speed(v):
-            if v is None:
-                return None
-            try:
-                v = float(v)
-                return max(v, 3.6)  # минимум 3.6 км/ч
-            except (ValueError, TypeError):
-                return None
-
-        # ---------------------------------------------------------
-        # 2. Обработка каждого объекта слоя
-        # ---------------------------------------------------------
-        for feat in layer.getFeatures():
-            geom = feat.geometry()
-            if geom.isEmpty():
-                continue
-
-            # Универсальное извлечение линии
-            if geom.isMultipart():
-                parts = geom.asMultiPolyline()
-                if not parts:
-                    continue
-
-                merged = []
-                for part in parts:
-                    merged.extend(part)
-
-                if len(merged) < 2:
-                    continue
-
-                line = merged
-                line_geom = QgsGeometry.fromPolylineXY(line)
-
-            else:
-                line = geom.asPolyline()
-
-                if not line:
-                    curve = geom.constGet()
-                    if hasattr(curve, "curveToLine"):
-                        line_geom = QgsGeometry(curve.curveToLine())
-                        line = line_geom.asPolyline()
-                    else:
-                        continue
-                else:
-                    line_geom = geom
-
-                if len(line) < 2:
-                    continue
-
-            # Начальная и конечная точки
-            p1 = QgsPointXY(*line[0])
-            p2 = QgsPointXY(*line[-1])
-
-            # Длина линии
-            length = da.measureLength(line_geom)
-            if length <= 0:
-                continue
-
-            # Скорости
-            speed_fwd = normalize_speed(feat[fwd_field])
-            speed_bwd = normalize_speed(feat[bwd_field])
-
-            """
-            # Сравнение со скоростью в 12:00
-            fwd_field_12 = "fspeed_12"
-            bwd_field_12 = "bspeed_12"
-
-            speed_fwd_12 = normalize_speed(feat[fwd_field_12]) if fwd_field_12 in fields else None
-            speed_bwd_12 = normalize_speed(feat[bwd_field_12]) if bwd_field_12 in fields else None
-
-            if speed_fwd is not None and speed_fwd_12 is not None:
-                if speed_fwd < speed_fwd_12 / 2:
-                    speed_fwd = speed_fwd_12 / 2
-
-            if speed_bwd is not None and speed_bwd_12 is not None:
-                if speed_bwd < speed_bwd_12 / 2:
-                    speed_bwd = speed_bwd_12 / 2
-            """
-
-            # Если обе скорости отсутствуют → default
-            if speed_fwd is None and speed_bwd is None:
-                fclass = feat["FCLASS"]
-                if fclass in self.type_road_speed_default:
-                    default_speed = float(self.type_road_speed_default[fclass])
-                    speed_fwd = default_speed
-                    speed_bwd = default_speed
-
-            has_fwd = speed_fwd is not None and speed_fwd > 0
-            has_bwd = speed_bwd is not None and speed_bwd > 0
-
-            if not has_fwd and not has_bwd:
-                continue
-
-            # Вершины графа
-            v1 = get_vertex_id(p1)
-            v2 = get_vertex_id(p2)
-
-            # -----------------------------------------------------
-            # 2.6 Добавление рёбер (cost + speed)
-            # -----------------------------------------------------
-            if has_fwd:
-                cost_fwd = length / (speed_fwd / 3.6)
-                if mode == 2:
-                    builder.addEdge(v2, p2, v1, p1, [cost_fwd, speed_fwd])
-                else:
-                    builder.addEdge(v1, p1, v2, p2, [cost_fwd, speed_fwd])
-
-            if has_bwd:
-                cost_bwd = length / (speed_bwd / 3.6)
-                if mode == 2:
-                    builder.addEdge(v1, p1, v2, p2, [cost_bwd, speed_bwd])
-                else:
-                    builder.addEdge(v2, p2, v1, p1, [cost_bwd, speed_bwd])
-
-        # ---------------------------------------------------------
-        # 3. Построение графа
-        # ---------------------------------------------------------
-        graph = builder.graph()
-
-        """
-        # ----------------------------------------------------------------------
-        # Сохранение графа в CSV
-        # ----------------------------------------------------------------------
-        prefix = os.path.basename(self.parent.path_to_pkl)
-
-        nodes_file = os.path.join(self.parent.path_to_pkl,
-                                f"{prefix}_graph_hour{hour:02d}_nodes.csv")
-        edges_file = os.path.join(self.parent.path_to_pkl,
-                                f"{prefix}_graph_hour{hour:02d}_edges.csv")
-
-        # --- Сохраняем вершины ---
-        with open(nodes_file, "w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["id", "x", "y"])
-            for vid in range(graph.vertexCount()):
-                pt = graph.vertex(vid).point()
-                writer.writerow([vid, pt.x(), pt.y()])
-
-        # --- Сохраняем рёбра ---
-        with open(edges_file, "w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([
-                "edge_id", "source_id", "target_id",
-                "x1", "y1", "x2", "y2",
-                "cost", "speed", "wkt"
-            ])
-
-            for eid in range(graph.edgeCount()):
-                edge = graph.edge(eid)
-                src = edge.fromVertex()
-                dst = edge.toVertex()
-
-                p1 = graph.vertex(src).point()
-                p2 = graph.vertex(dst).point()
-
-                cost = edge.cost(0)
-                speed = edge.cost(1)
-
-                wkt = f"LINESTRING({p1.x()} {p1.y()}, {p2.x()} {p2.y()})"
-
-                writer.writerow([
-                    eid, src, dst,
-                    p1.x(), p1.y(), p2.x(), p2.y(),
-                    cost, speed, wkt
-                ])
-
-        print(f"Файлы сохранены:\n{nodes_file}\n{edges_file}")
-        """
-
-        return graph
-
     def find_car_accessibility(self):
+
+        self.short_result = {}
+
         graph = self.graph
 
         self.f_list = []
@@ -338,24 +128,8 @@ class car_accessibility:
         self.parent.progressBar.setValue(1)
         i = 0
 
-        ########################
-
-        # --- ЭКСПЕРИМЕНТАЛЬНЫЙ БЛОК  ---
-        """
-        self.road_layer = iface.activeLayer()
-        if self.check_speed_fields(self.road_layer):
-            self.parent.textLog.append (f'Use layer of roads {self.road_layer.name()}, calculating on hour')
-            graph = self.build_graph_from_layer(self.road_layer, self.hour, self.parent.mode)
-            self.factor_speed = 1
-        """
-                
-        # --- КОНЕЦ ЭКСПЕРИМЕНТА ---
-
-        #################################
-
         time_estimate_start = datetime.now()
         total_tasks = count * self.roundtrip_cycle_all
-
         
         for source in self.parent.points:
             QApplication.processEvents()
@@ -374,15 +148,13 @@ class car_accessibility:
                 display_time = str(remaining_duration).split('.')[0]                
                 self.parent.lblEstimateTime.setText(f'Time remaining: {display_time}')
 
-
             i += 1
 
             self.parent.setMessage(f'Building thematic map for the feature №{i} of {count}')
             QApplication.processEvents()
 
-            self.source = (source)
-            
-            idStart, _ = self.parent.dict_building_vertex.get(self.source, ("xxx", "xxx"))
+            self.source = source
+            idStart = self.parent.dict_building_vertex.get(self.source, ("xxx"))
             
             if idStart == "xxx":
                 self.parent.progressBar.setValue(count+1)
@@ -390,32 +162,31 @@ class car_accessibility:
 
             (self.tree, self.costs) = QgsGraphAnalyzer.dijkstra(graph,  idStart, 0)
             self.calc_min_cost()
-
-
             if self.parent.protocol_type == 2:
                 data_body = self.makeProtocolArea()
-                df_current = pd.DataFrame(data_body, columns=self.table_header_list)
-                self.df_all.append(df_current)
-
+                if not self.parent.roundtrip:
+                    df_current = pd.DataFrame(data_body, columns=self.table_header_list)
+                    self.df_all.append(df_current)
             else:
-
                 if len(self.fields_ok) > 0:
                     for field in self.fields_ok:
                         data_body = self.makeProtocolMap(self.aggregate_dict_all[field],field)
-                        df_current = pd.DataFrame(data_body, columns=self.header_dict[field])
-                        self.df_all_dict[field].append(df_current)
+                        if not self.parent.roundtrip:
+                            df_current = pd.DataFrame(data_body, columns=self.header_dict[field])
+                            self.df_all_dict[field].append(df_current)
 
             self.parent.progressBar.setValue(i + 1)
 
     def calc_min_cost(self):
-
         self.min_costs = {}
+        if self.source is not None:
+            self.min_costs[(self.source, self.source)] = (0, 0,0,0)
         count = 0        
-        _, dist_start = self.parent.dict_building_vertex[self.source]
+        
         sum_walk = self.parent.walk_on_start_m + self.parent.walk_on_finish_m
 
-        # iterate through all edgeId in the tree
-        for edgeId in self.tree:
+        # Итерируемся по вершинам: индекс — это vertex_id, значение — incoming edgeId
+        for vertex_id, edgeId in enumerate(self.tree):
 
             count += 1
             if count % 10000 == 0:
@@ -425,78 +196,60 @@ class car_accessibility:
 
             if edgeId == -1:
                 continue
-            try:
-                if edgeId >= len(self.costs):
-                    continue
-                if self.costs[edgeId] == float('inf'):
-                    continue
-
-                #buildings, dists_finish = zip(*self.parent.dict_vertex_buildings[edgeId])
-                items = self.parent.dict_vertex_buildings.get(edgeId, [])
-                if not items:
-                    continue  # ← пропускаем пустые
-
-                buildings = [b for b, d in items]
-                dists_finish = [d for b, d in items]
-
-            except KeyError:
+            
+            if vertex_id >= len(self.costs):
+                continue
+                
+            cost_edge = self.costs[vertex_id]  # Стоимость берется по vertex_id
+            if cost_edge == float('inf'):
                 continue
 
-            Dist_between_nodes = self.costs[edgeId] * 10
-            Dist_OD_0 = dist_start + Dist_between_nodes
+            # Ищем здание строго по ID вершины (vertex_id)
+            building = self.parent.dict_vertex_building.get(vertex_id)
 
-            # experiment
-            #if Dist_between_nodes == 0:
-            #    continue
-            ################
+            if building is None or int(building) not in self.target_ids:
+                continue
 
-            for building, dist_finish in zip(buildings, dists_finish):
-                # define the pair {self.source, building}                             
-                pair = (self.source, building)
-                #if building == 1000085:
-                #    print (f'building == 1000085 Dist_between_nodes {Dist_between_nodes}')
-                Dist_OD = Dist_OD_0 + dist_finish
-                Dist_to_drive = Dist_OD - sum_walk
-                if Dist_to_drive <= 0:                    
-                    cost_res = round(Dist_OD / self.parent.walk_speed_m_s)                    
-                    veh_legs = 0
+            Dist_between_nodes = cost_edge * 10            
+            Dist_OD = Dist_between_nodes
+            Dist_to_drive = Dist_OD - sum_walk
+
+            if Dist_to_drive <= 0:
+                cost_res = round(Dist_OD / self.parent.walk_speed_m_s)
+                veh_legs = 0
+            else:
+                veh_legs = 1
+                if Dist_between_nodes < self.parent.MinimalDistance:
+                    Time_to_drive = round(Dist_between_nodes / self.parent.walk_speed_m_s)
                 else:
-                    veh_legs = 1
-                    if Dist_between_nodes < self.parent.MinimalDistance:
-                        Time_to_drive = round(Dist_between_nodes/self.parent.walk_speed_m_s) # пешком
-                    else:
-                        if Dist_between_nodes != 0: # едем
-                            Time_to_drive = self.costs[edgeId] * \
-                                (Dist_to_drive/Dist_between_nodes)/self.factor_speed
-                        else:
-                            Time_to_drive = 0
-                    cost_res = round((sum_walk)/self.parent.walk_speed_m_s + Time_to_drive)
-                    
-                
-                if int(self.source) == int(building):
-                    cost_res = 0
+                    Time_to_drive = cost_edge * (Dist_to_drive / Dist_between_nodes) / self.factor_speed
 
-                if cost_res > self.max_time_sec:
-                    continue
-             
-                # If the pair does not exist in the dictionary, add it with the current cost_res and veh_legs               
-                existing = self.min_costs.get(pair)
-                if existing is None or cost_res < existing[0]:
-                    self.min_costs[pair] = (cost_res, veh_legs)    
+                cost_res = round(sum_walk / self.parent.walk_speed_m_s + Time_to_drive)
+
+            if self.source == building:
+                cost_res = 0
+
+            if cost_res > self.max_time_sec:
+                continue
+
+            pair = (self.source, building)
+            existing = self.min_costs.get(pair)
+            if existing is None or cost_res < existing[0]:
+                start_time = self.start_time
+                end_time = start_time + cost_res
+                self.min_costs[pair] = (cost_res, veh_legs, start_time, end_time)
 
     def makeProtocolArea(self):
 
         rows = []
-        for (source, building), (min_cost, veh_legs) in self.min_costs.items():
+        for (source, building), (min_cost, veh_legs, start_time, end_time) in self.min_costs.items():
             if self.parent.mode == 1:
                 row = f'{source},{building},{veh_legs},{min_cost}\n'
             else:
                 row = f'{building},{source},{veh_legs},{min_cost}\n'
-            
-            
+                        
             rows.append (row)
-            self.short_result[(source, building)] = min_cost
-        
+            self.short_result[(source, building)] = (start_time, end_time, min_cost)        
 
         data_body = [row.split(',') for row in rows]
         return data_body
@@ -511,10 +264,10 @@ class car_accessibility:
             aggregates = {x: 0 for x in range(0, len(self.grades))}
 
             # iterate through the minimum cost values for each pair (source, building)
-            for (src, building), (cost, veh_legs) in self.min_costs.items():
+            for (src, building), (cost, veh_legs, start_time, end_time) in self.min_costs.items():
                 if src == source and cost <= self.max_time_sec:
                     # find the corresponding gradation
-                    self.short_result[(src, building)] = cost
+                    self.short_result[(src, building)] = (start_time, end_time, cost)
                     for i in range(0, len(self.grades)):
                         grad = self.grades[i]
                         if cost <= grad[1]:
@@ -530,7 +283,6 @@ class car_accessibility:
                 Total = counts[len(self.grades) - 1]
             if field != "nbldg":
                 Total = aggregates[len(self.grades) - 1]
-
             
             for i in range(0, len(self.grades)):
                 row = f'{row},{counts[i]}'
@@ -571,9 +323,9 @@ class car_accessibility:
             protocol_header += ',nbldg_total\n'
             field = "nbldg"
 
-            hex = "_hex_" in self.layer_dest.name().lower()
+            #hex = "_hex_" in self.layer_dest.name().lower()
 
-            if not (hex and self.list_fields_aggregate):                                       
+            if True: #not (hex and self.list_fields_aggregate):                                       
                 self.header_dict[field] = protocol_header.strip().split(',')                        
                 self.fields_ok.append(field)
                 self.aggregate_this_fields[field] = False
@@ -630,7 +382,8 @@ class car_accessibility:
             begin_computation_time, 
             hour, 
             graph, 
-            write_info, 
+            start_time,
+            write_info,            
             roundtrip_cycle_all = 1,
             roundtrip_cycle_current =  1):
         
@@ -645,16 +398,17 @@ class car_accessibility:
 
         self.graph = graph
 
-        self.create_head_files()
+        self.start_time = start_time
 
-        if self.parent.mode == 1:
-            table_header = f'{self.cols["star"]},{self.cols["hash"]},Veh_legs,Duration\n'
-        else:
-            table_header = f'{self.cols["hash"]},{self.cols["star"]},Veh_legs,Duration\n'
-        
-        self.table_header_list = table_header.strip().split(',')
-        
-        
+        if True:
+            self.create_head_files()
+
+            if self.parent.mode == 1:
+                table_header = f'{self.cols["star"]},{self.cols["hash"]},Veh_legs,Duration\n'
+            else:
+                table_header = f'{self.cols["hash"]},{self.cols["star"]},Veh_legs,Duration\n'
+            
+            self.table_header_list = table_header.strip().split(',')
         
         self.file_name = Path(self.parent.file_name_gpkg).stem        
         self.find_car_accessibility()
@@ -665,14 +419,14 @@ class car_accessibility:
             name = 'destination'
         
         # создаем pivot если не roundtrip, данные не свернутые
-        if not self.parent.roundtrip:
+        if self.parent.protocol_type == 2 and not self.parent.roundtrip:
             df_pivot = make_pivot_gpkg (self.short_result, self.cols["star"], self.cols["hash"])
             table_name = f'{self.file_name}_triptime_by_{name}s'
             fast_write_gpkg(self.parent.file_name_gpkg, table_name, df_pivot)
 
         # данные сворачиваем если SA 
-        if self.parent.protocol_type == 2: #and len(self.parent.points) > 1:
-            df_min_duration, self.short_result = make_service_area_report_gpkg(self.df_all, self.cols["star"], self.cols["hash"])    
+        if self.parent.protocol_type == 2 and not self.parent.roundtrip: #and len(self.parent.points) > 1:            
+            df_min_duration = make_service_area_report_gpkg(self.df_all, self.cols["star"], self.cols["hash"])    
 
         # если SA и не roundtrip - сохраняем данные
         if self.parent.protocol_type == 2 and not self.parent.roundtrip:
@@ -744,6 +498,4 @@ class car_accessibility:
         self.parent.textLog.append(f'Output in file: <a href="file:///{self.parent.file_name_gpkg}" target="_blank" > {self.parent.file_name_gpkg}</a>')
         self.parent.setMessage(f'Finished')
         self.parent.lblEstimateTime.setText("")
-        self.parent.progressBar.setValue(self.parent.progressBar.maximum())
-
-        
+        self.parent.progressBar.setValue(self.parent.progressBar.maximum())       

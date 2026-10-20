@@ -1,4 +1,32 @@
-from common import seconds_to_time
+from tau_net_calc.cls.common import seconds_to_time
+
+
+def get_short_result(SOURCE,
+                          destinations,
+                          dictInput,                                 
+                          set_stops,
+                          short_result
+                          ):
+
+    
+    SOURCE_int = int(SOURCE)    
+    short_result[(SOURCE_int, SOURCE_int)] = (0, 0, 0)
+    
+        
+    for dest, info in dictInput.items():
+
+            if dest in set_stops:
+                continue
+            dest_int = int (dest)
+            if dest_int not in destinations:
+                continue
+            time_to_dest = int(info[1])
+            end_time = int(info[4])
+            start_time = int(info[5])            
+            short_result[(SOURCE_int, dest_int)] = (start_time, end_time, time_to_dest)  
+
+    return 1
+
 
 # for type_protokol = 1
 def make_protocol_summary(SOURCE,
@@ -7,8 +35,7 @@ def make_protocol_summary(SOURCE,
                           grades,
                           attribute_dict,                          
                           set_stops,
-                          field,
-                          short_result = None
+                          field,                          
                           ):
 
     """"
@@ -20,17 +47,13 @@ def make_protocol_summary(SOURCE,
     SOURCE type <'str'>
     dest type <class 'str'>
     """
-
+    #print (f'field {field}')
     SOURCE_int = int(SOURCE)
     time_grad = grades
     # [[-1,0], [0,10],[10,20],[20,30],[30,40],[40,50],[50,61] ]
 
     counts = {x: 1 for x in range(0, len(time_grad))}  # counters for grades - (1-{source,source})
     agrregates = {x: attribute_dict.get(SOURCE_int, 0) for x in range(0, len(time_grad))}
-
-    if short_result is not None: 
-        if field == "nbldg":
-            short_result[(SOURCE_int, SOURCE_int)] = 0
         
     for dest, info in dictInput.items():
 
@@ -55,12 +78,7 @@ def make_protocol_summary(SOURCE,
                     if field != "nbldg":
                         agrregates[i] = agrregates[i] + \
                             attribute_dict.get(dest_int, 0)
-            
-            if short_result is not None: 
-                if field == "nbldg":
-                    short_result[(SOURCE_int, dest_int)] = time_to_dest
-
-    
+                
     row = str(SOURCE)
     if field == "nbldg":
             Total = counts[len(time_grad)-1]
@@ -83,8 +101,7 @@ def make_protocol_detailed(raptor_mode,
                            timetable_mode,                           
                            set_stops,
                            destinations,
-                           SOURCE,                           
-                           short_result = None
+                           SOURCE,                                                      
                            ):
     
     """"
@@ -96,7 +113,6 @@ def make_protocol_detailed(raptor_mode,
     SOURCE type <'str'>
     orig_dest type <class 'str'>
     """
-    buffer = []
     sep = ","
     stop_symbol = "s:"
     rows_to_write = []
@@ -116,8 +132,7 @@ def make_protocol_detailed(raptor_mode,
 {sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}{sep}0{sep}{SOURCE}{sep}{start_time}{sep}{start_time}{sep}0{sep}0'
 
             rows_to_write.append(row)
-            if short_result is not None:
-                short_result[(SOURCE_int, SOURCE_int)] = 0        
+            
         # dictInput - dict from testRaptor
         # every item dictInput : dest - key, info - value
 
@@ -429,10 +444,7 @@ def make_protocol_detailed(raptor_mode,
 {sep}{walk2_time}{sep}{ssecond_boarding_stop}{sep}{wait2_time}{sep}{ssecond_boarding_time}{sep}{line2_id}{sep}{ride2_time}{sep}{ssecond_arrive_stop}{sep}{ssecond_bus_arrival_time}\
 {sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
 {sep}{dest_walk_time}{sep}{orig_dest}{sep}{sarrival_time}{sep}{legs}{sep}{duration}'
-                                        
-                    if short_result is not None:
-                        short_result[(SOURCE_int, orig_dest_int)] = int(duration)
-
+                    
                 else:
 
                     if (SOURCE_REV) in set_stops:
@@ -449,8 +461,6 @@ def make_protocol_detailed(raptor_mode,
 {sep}{walk3_time}{sep}{sthird_boarding_stop}{sep}{wait3_time}{sep}{sthird_boarding_time}{sep}{line3_id}{sep}{ride3_time}{sep}{sthird_arrive_stop}{sep}{sthird_bus_arrival_time}\
 {sep}{dest_walk_time}{sep}{SOURCE}{sep}{sarrival_time}{sep}{seconds_to_time(D_TIME)}{sep}{legs}{sep}{duration}'
                     
-                    if short_result is not None:
-                        short_result[(SOURCE_int, SOURCE_REV_int)] = int(duration)
                 rows_to_write.append(row)
 
                 # experiment --- запись line1_id, line2_id, line3_id в файл  НЕ ЗАБЫТЬ УБРАТЬ---                

@@ -8,7 +8,8 @@ from qgis.core import (QgsProject,
 
 from qgis.PyQt.QtCore import (Qt,
                           QEvent,
-                          QDate
+                          QDate,
+                          QTimer
                           )
 
 from qgis.PyQt.QtWidgets import (QDialogButtonBox,
@@ -34,11 +35,11 @@ except ImportError:
     RegExpClass = QRegularExpression
     RegExpValidatorClass = QRegularExpressionValidator
 
-from GTFS import GTFS
-from PKL import PKL
+from tau_net_calc.cls.GTFS import GTFS
+from tau_net_calc.cls.PKL import PKL
 from datetime import datetime
 
-from common import (get_qgis_info, 
+from tau_net_calc.cls.common import (get_qgis_info, 
                     zip_directory, 
                     getDateTime, 
                     check_file_parameters_accessibility, 
@@ -48,7 +49,10 @@ from common import (get_qgis_info,
                     check_layer,
                     transform_log_to_csv_text,
                     highlight_empty_fields,
-                    highlight_widget)
+                    highlight_widget,
+                    setup_clear_highlight_listeners,
+                    install_parent_folder_dialog
+                    )
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl.ui')
@@ -131,6 +135,27 @@ class form_pkl(QDialog, FORM_CLASS):
         self.setLabelDayGTFS()
 
         self.on_PathToGTFS_changed()
+
+        setup_clear_highlight_listeners(self)
+
+        QTimer.singleShot(
+                            0,
+                            lambda: setattr(
+                                self,
+                                "_pkl_filter",
+                                install_parent_folder_dialog(self.txtPathToGTFS)
+                            )
+                        )
+        
+        QTimer.singleShot(
+                            0,
+                            lambda: setattr(
+                                self,
+                                "_pkl_filter",
+                                install_parent_folder_dialog(self.txtPathToProtocols)
+                            )
+                        )
+
 
     def on_PathToGTFS_changed (self):
         path = self.txtPathToGTFS.text() + "_json"
@@ -223,7 +248,7 @@ class form_pkl(QDialog, FORM_CLASS):
         self.textLog.append(f"<a> Layer of roads: {self.layer_roads_path}</a>")
         self.textLog.append(f"<a> Maximum length of a single walk: {self.config['Settings']['MaxPathRoad_pkl']}</a>")
         
-        self.textLog.append(f"<a> The folder of the GTFS dataset: {self.config['Settings']['PathToGTFS_pkl']}</a>")
+        self.textLog.append(f"<a> GTFS dataset folder: {self.config['Settings']['PathToGTFS_pkl']}</a>")
         self.textLog.append(f"<a> The day for constructing transit routing database: {QDate.fromString(self.config['Settings']['Date_pkl'], 'yyyyMMdd').toString('dd.MM.yyyy')}</a>")
         self.textLog.append(f'<a> [Output]</a>')
 
@@ -243,14 +268,20 @@ class form_pkl(QDialog, FORM_CLASS):
     
     def showFoldersDialog(self, obj):
 
+        current_path = obj.text()
+        start_dir = ""
+        if current_path:            
+            start_dir = os.path.dirname(current_path)            
+
         folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder", obj.text())
+            self,
+            "Select Folder",
+            start_dir
+        )
+
         if folder_path:
             obj.setText(os.path.normpath(folder_path))
-                        
-        else:
-            obj.setText(obj.text())
-        
+
         if obj == self.txtPathToGTFS:
             self.setLabelDayGTFS()
 

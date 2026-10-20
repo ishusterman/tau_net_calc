@@ -82,7 +82,7 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-147</y>
+             <y>0</y>
              <width>527</width>
              <height>459</height>
             </rect>
@@ -177,7 +177,7 @@
                    <item>
                     <widget class="QLabel" name="label_4">
                      <property name="text">
-                      <string>The folder of the GTFS dataset</string>
+                      <string>GTFS dataset folder</string>
                      </property>
                     </widget>
                    </item>

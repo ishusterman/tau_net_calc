@@ -45,7 +45,7 @@ except ImportError:
     RegExpClass = QRegularExpression
     RegExpValidatorClass = QRegularExpressionValidator
 
-from common import (get_qgis_info, 
+from tau_net_calc.cls.common import (get_qgis_info, 
                    check_file_parameters_accessibility,                    
                    insert_layer_ontop,
                    FIELD_ID,
@@ -55,9 +55,11 @@ from common import (get_qgis_info,
                    fast_write_gpkg,
                    highlight_empty_fields,
                    get_unique_path,
-                   highlight_widget
+                   highlight_widget,
+                   setup_clear_highlight_listeners
                     )
-from visualization_clean import cls_clean_visualization
+
+from tau_net_calc.cls.visualization_clean import cls_clean_visualization
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), '..', 'UI', 'visualization_clean.ui')
@@ -130,14 +132,24 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
         self.show_info()
+
+        setup_clear_highlight_listeners(self)
     
     def showFoldersDialog(self, obj):
+
+        current_path = obj.text()
+        start_dir = ""
+        if current_path:            
+            start_dir = os.path.dirname(current_path)            
+
         folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder", obj.text())
+            self,
+            "Select Folder",
+            start_dir
+        )
+
         if folder_path:
             obj.setText(os.path.normpath(folder_path))
-        else:
-            obj.setText(obj.text())
 
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
@@ -176,10 +188,6 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             self.setMessage(text)
             return 0
-        
-        if not (self.check_folder_and_file()):
-            self.run_button.setEnabled(True)
-            return 0
                 
         spacing = []
         if self.cb50.isChecked():
@@ -197,6 +205,10 @@ class form_visualization_clean(QDialog, FORM_CLASS):
         
         if spacing == [] and not self.cbVoronoi.isChecked():
             self.setMessage(f"No checkbox is selected")
+            self.run_button.setEnabled(True)
+            return 0
+        
+        if not self.check_folder_and_file(spacing, self.cbVoronoi.isChecked()):
             self.run_button.setEnabled(True)
             return 0
 
@@ -366,7 +378,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             return False
         return True 
     
-    def check_folder_and_file(self):
+    def check_folder_and_file(self, spacing, run_voronoi):
 
         try:
             os.makedirs(self.txtPathToProtocols.text(), exist_ok=True)
@@ -374,7 +386,7 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.run_button.setEnabled(True)
             highlight_widget(self.txtPathToProtocols)              
             self.setMessage(f'The path {self.txtPathToProtocols.text()} is not found')
-            return 0
+            return False
 
         try:
             tmp_prefix = "write_tester"
@@ -386,21 +398,29 @@ class form_visualization_clean(QDialog, FORM_CLASS):
             self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
         
-        shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*_vis_layers*.gpkg"))
-        if shp_files:
-            msgBox = QMessageBox()
-            icon_question = QMessageBox.Icon.Question
-            btn_yes = QMessageBox.StandardButton.Yes
-            btn_no = QMessageBox.StandardButton.No
+        layer_name = self.cmbLayers.currentLayer().name()
+        folder = self.txtPathToProtocols.text()
+        
+        existing_files = []
+        if spacing:
+            vis_gpkg = os.path.join(folder, f"{layer_name}_vis_layers.gpkg")
+            if os.path.exists(vis_gpkg):
+                existing_files.append(vis_gpkg)
+                
+        if run_voronoi:
+            vor_gpkg = os.path.join(folder, f"{layer_name}_vor_viz.gpkg")
+            if os.path.exists(vor_gpkg):
+                existing_files.append(vor_gpkg)
 
-            msgBox.setIcon(icon_question)
+        if existing_files:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Icon.Question)
             msgBox.setWindowTitle("Confirm")
-            msgBox.setText(
-                f"The folder '{self.txtPathToProtocols.text()}' already contains layers. Continue?")
-            msgBox.setStandardButtons(btn_yes | btn_no)
+            msgBox.setText("Do you want to substitute the existing one?")
+            msgBox.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
             result = msgBox.exec()
-            if result == btn_no:
+            if result == QMessageBox.StandardButton.No:
                 return False
 
         return True

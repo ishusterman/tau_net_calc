@@ -19,7 +19,7 @@ from qgis.core import (
 from qgis.PyQt.QtWidgets import QApplication
 from qgis.PyQt.QtCore import Qt, QVariant, QObject, pyqtSignal
 
-from common import (convert_meters_to_degrees, 
+from tau_net_calc.cls.common import (convert_meters_to_degrees, 
                     create_and_check_field, 
                     get_unique_path,
                     FIELD_ID)

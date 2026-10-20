@@ -7,27 +7,29 @@ import json
 import cProfile
 import pstats
 from pathlib import Path
-#from collections import Counter
-from report import (make_protocol_detailed, 
-                    make_protocol_summary                  
-                    )
+
 
 from qgis.PyQt.QtWidgets import QApplication
 
-from footpath_on_projection import cls_footpath_on_projection
 from RAPTOR.std_raptor import raptor
 from RAPTOR.rev_std_raptor import rev_raptor
 
-
-from visualization import visualization
-from common import (seconds_to_time, 
+from tau_net_calc.cls.visualization import visualization
+from tau_net_calc.cls.common import (seconds_to_time, 
                     get_existing_path, 
                     get_name_columns,
                     FIELD_ID,
                     fast_write_gpkg,
                     make_service_area_report_gpkg,
                     get_prefix_alias,
+
                     make_pivot_gpkg)
+from tau_net_calc.cls.report import (make_protocol_detailed, 
+                    make_protocol_summary,
+                    get_short_result                  
+                    )
+
+from tau_net_calc.cls.footpath_on_projection import cls_footpath_on_projection
 
 def myload_all_dict(self, PathToNetwork, mode):
     path = PathToNetwork
@@ -110,8 +112,6 @@ def myload_all_dict(self, PathToNetwork, mode):
 
 def verify_break(self):
 
-    
-
     if getattr(self, 'break_on', False):
         if self.break_on:
             self.lblEstimateTime.setText("")
@@ -138,7 +138,6 @@ def prepare_protocol_region(field, number_bins, time_step, time_step_last, cols_
             #header_parts.append(f"sum({field}[{curr_top}m])")
             header_parts.append(f"{curr_top}m_{field}")
         grades.append([-1, curr_top])
-
     
     if time_step_last > 0:
     
@@ -267,74 +266,75 @@ def runRaptorWithProtocol(self,
     if verify_break(self):
         return 0, 0
    
-    fields_ok = []
-    
-    cols_dict = get_name_columns()
-    cols = cols_dict[(raptor_mode, protocol_type)]
-    if protocol_type == 2:
+    if not roundtrip_mode:
+        fields_ok = []
+        
+        cols_dict = get_name_columns()
+        cols = cols_dict[(raptor_mode, protocol_type)]
+        if protocol_type == 2:
 
-        ss = f"{cols[1]},Start_time"
-        ss += ",Walk_time1,BStop_ID1,Wait_time1,Bus_start_time1,Line_ID1,Ride_time1,AStop_ID1,Bus_finish_time1"
-        ss += ",Walk_time2,BStop_ID2,Wait_time2,Bus_start_time2,Line_ID2,Ride_time2,AStop_ID2,Bus_finish_time2"
-        ss += ",Walk_time3,BStop_ID3,Wait_time3,Bus_start_time3,Line_ID3,Ride_time3,AStop_ID3,Bus_finish_time3"
-        ss += f",DestWalk_time,{cols[2]},Destination_time"
-        if raptor_mode == 2:            
-            if timetable_mode:
-                ss += ",Earlest_arrival_time"
-            if not(timetable_mode):
-                ss += ",Arrive_before"
-        ss += ",Legs,Duration"
-        protocol_header = ss + "\n"
+            ss = f"{cols[1]},Start_time"
+            ss += ",Walk_time1,BStop_ID1,Wait_time1,Bus_start_time1,Line_ID1,Ride_time1,AStop_ID1,Bus_finish_time1"
+            ss += ",Walk_time2,BStop_ID2,Wait_time2,Bus_start_time2,Line_ID2,Ride_time2,AStop_ID2,Bus_finish_time2"
+            ss += ",Walk_time3,BStop_ID3,Wait_time3,Bus_start_time3,Line_ID3,Ride_time3,AStop_ID3,Bus_finish_time3"
+            ss += f",DestWalk_time,{cols[2]},Destination_time"
+            if raptor_mode == 2:            
+                if timetable_mode:
+                    ss += ",Earlest_arrival_time"
+                if not(timetable_mode):
+                    ss += ",Arrive_before"
+            ss += ",Legs,Duration"
+            protocol_header = ss + "\n"
 
-        header_list = protocol_header.strip().split(',')
-    
-    suffixes = ["_min_duration.csv"]
-    
-    if protocol_type == 1:
-        aggregate_dict_all = {}
+            header_list = protocol_header.strip().split(',')
         
-        # 1. Обработка базового поля "bldg"        
-        hex = "_hex_" in layer_dest.name().lower()
+        suffixes = ["_min_duration.csv"]
         
-        field_bldg = "nbldg"
-        header, grades = prepare_protocol_region(field_bldg, number_bins, time_step, time_step_last, cols ["star"])
-        if not (hex and list_fields_aggregate):                                        
-            header_dict[field_bldg] = header.strip().split(',')            
-            fields_ok.append(field_bldg)
-            aggregate_dict_all[field_bldg] = {}
-        
-        # 2. Обработка агрегируемых полей
-        if list_fields_aggregate:
-            fields_to_process = [v.strip() for v in list_fields_aggregate.split(',')]
+        if protocol_type == 1:
+            aggregate_dict_all = {}
             
-            for field in fields_to_process:
-                if hasattr(self, 'setMessage'):
-                    self.setMessage(f"Building dictionary for '{field}' ...")
-                    QApplication.processEvents()
+            # 1. Обработка базового поля "bldg"        
+            #hex = "_hex_" in layer_dest.name().lower()
+            
+            field_bldg = "nbldg"
+            header, grades = prepare_protocol_region(field_bldg, number_bins, time_step, time_step_last, cols ["star"])
+            if True : #not (hex and list_fields_aggregate):                                        
+                header_dict[field_bldg] = header.strip().split(',')            
+                fields_ok.append(field_bldg)
+                aggregate_dict_all[field_bldg] = {}
+            
+            # 2. Обработка агрегируемых полей
+            if list_fields_aggregate:
+                fields_to_process = [v.strip() for v in list_fields_aggregate.split(',')]
+                
+                for field in fields_to_process:
+                    if hasattr(self, 'setMessage'):
+                        self.setMessage(f"Building dictionary for '{field}' ...")
+                        QApplication.processEvents()
 
-                # Собираем данные из слоя (только если числовые)
-                features = layer_dest.getFeatures()
-                try:
-                    # Быстрая проверка и сборка словаря
-                    attribute_dict = {
-                        int(feat[layer_dest_field]): int(feat[field]) 
-                        for feat in features 
-                        if isinstance(feat[field], (int, float)) or str(feat[field]).isdigit()
-                    }
-                except (ValueError, KeyError):
-                    self.textLog.append(f'<a><b><font color="red"> WARNING: The field "{field}" is not numeric, excluded from aggregation</font> </b></a>')
-                    continue
+                    # Собираем данные из слоя (только если числовые)
+                    features = layer_dest.getFeatures()
+                    try:
+                        # Быстрая проверка и сборка словаря
+                        attribute_dict = {
+                            int(feat[layer_dest_field]): int(feat[field]) 
+                            for feat in features 
+                            if isinstance(feat[field], (int, float)) or str(feat[field]).isdigit()
+                        }
+                    except (ValueError, KeyError):
+                        self.textLog.append(f'<a><b><font color="red"> WARNING: The field "{field}" is not numeric, excluded from aggregation</font> </b></a>')
+                        continue
 
-                # Если поле пустое или не числовое (проверка по первому элементу или через исключение выше)
-                if not attribute_dict:
-                    continue
+                    # Если поле пустое или не числовое (проверка по первому элементу или через исключение выше)
+                    if not attribute_dict:
+                        continue
 
-                aggregate_dict_all[field] = attribute_dict
-                fields_ok.append(field)
+                    aggregate_dict_all[field] = attribute_dict
+                    fields_ok.append(field)
 
-                # Генерируем заголовки с суммами
-                header, _ = prepare_protocol_region(field, number_bins, time_step, time_step_last, cols ["star"],is_aggregate=True)
-                header_dict[field] = header.strip().split(',')
+                    # Генерируем заголовки с суммами
+                    header, _ = prepare_protocol_region(field, number_bins, time_step, time_step_last, cols ["star"],is_aggregate=True)
+                    header_dict[field] = header.strip().split(',')
                 
     
     if not (shift_mode):
@@ -373,7 +373,7 @@ def runRaptorWithProtocol(self,
     total_tasks = count * roundtrip_cycle_all
 
     for source in sources:
-
+        
         if i > 0 and i%10 == 0:          
             tasks_done = ((roundtrip_cycle_current - 1) * count) + i                    
             # 3. Среднее время на одну задачу
@@ -385,12 +385,10 @@ def runRaptorWithProtocol(self,
             remaining_duration = avg_time_per_task * tasks_remaining                            
             display_time = str(remaining_duration).split('.')[0]            
             self.lblEstimateTime.setText(f'Time remaining: {display_time}')
-   
-           
             
         i = i + 1
 
-        #if i == 10:
+        #if i == 50:
         #    break
         if hasattr(self, 'progressBar'):
             self.progressBar.setValue(i)
@@ -584,24 +582,7 @@ def runRaptorWithProtocol(self,
                                                             stop_times_index,
                                                             raptor_mode,                                                          
                                                             )
-                
-                #print (f'len available_boardings {len (available_boardings)}')
-                #print (f'available_boardings {available_boardings}')
-
-                # !!!!!! exp
-                #target_stop = '48415'
-                #target_time = 34799
-
-                #filtered = [
-                #    (stop_id, time_departure, dist)
-                #    for (stop_id, time_departure, dist) in available_boardings
-                #    if stop_id == target_stop and time_departure == target_time
-                #]
-                #available_boardings = filtered
-                # !!!!!! exp
-
-                #print (f'len available_boardings {len (available_boardings)}')
-                            
+                                         
                 for step in available_boardings:
                     (stop_id, time_departure, dist) = step
 
@@ -694,105 +675,103 @@ def runRaptorWithProtocol(self,
                                 
                 output_duration = final_output_duration
         
-        
-        if protocol_type == 1:
-            
-            if len(fields_ok) > 0:
-                for field in fields_ok:
-                    for suffix in suffixes:
-                        
-                        if "_min_duration" in suffix:
-                            data_body = make_protocol_summary(SOURCE,
-                                                  destinations,
-                                          output_duration,                        
-                                          grades,
-                                          aggregate_dict_all[field],                                          
-                                          set_stops,
-                                          field,
-                                          short_result
-                                          )
+        if not roundtrip_mode:
+            if protocol_type == 1:
+                
+                if len(fields_ok) > 0:
+                    for field in fields_ok:
+                        for suffix in suffixes:
                             
-                            if not roundtrip_mode:                                
+                            if "_min_duration" in suffix:
+                                data_body = make_protocol_summary(SOURCE,
+                                                    destinations,
+                                            output_duration,                        
+                                            grades,
+                                            aggregate_dict_all[field],                                          
+                                            set_stops,
+                                            field,                                            
+                                            )
                                 df_current_min_duration = pd.DataFrame(data_body, columns=header_dict[field])
                                 df_min_duration_all_dict[field].append(df_current_min_duration)
-                      
                         
-        if protocol_type == 2:
-                                     
-            data_body = make_protocol_detailed(                                   
-                                   raptor_mode,
-                                   D_TIME_copy,
-                                   output_duration,                                   
-                                   timetable_mode,                                   
-                                   set_stops,
-                                   destinations,
-                                   SOURCE,
-                                   short_result
-                                   )
-            
-            
-            #if not roundtrip_mode:
-            df_current_min_duration = pd.DataFrame(data_body, columns=header_list)
-            df_min_duration_all.append(df_current_min_duration)
-            
                             
-            QApplication.processEvents()    
+            if protocol_type == 2:
+                                        
+                data_body = make_protocol_detailed(                                   
+                                    raptor_mode,
+                                    D_TIME_copy,
+                                    output_duration,                                   
+                                    timetable_mode,                                   
+                                    set_stops,
+                                    destinations,
+                                    SOURCE,
+                                    )
+                
+                df_current_min_duration = pd.DataFrame(data_body, columns=header_list)
+                df_min_duration_all.append(df_current_min_duration)
+                
         
-    if protocol_type == 1 and not roundtrip_mode:
-    
-            for field, list_of_dfs in df_min_duration_all_dict.items():
-                if list_of_dfs:  
-                    df_final = pd.concat(list_of_dfs, ignore_index=True)
-                    table_name = f'{file_name}_stat_{field}_triptime'
-                    table_name_list.append(table_name)
-                    fast_write_gpkg(file_name_gpkg, table_name, df_final)
-
-
-    col_star = cols["star"]
-    col_hash = cols["hash"]
-
-    # создаем pivot если не roundtrip, данные не свернутые
-    if not roundtrip_mode:
-       df_pivot = make_pivot_gpkg (short_result, col_star, col_hash)              
-       table_name = f'{file_name}_triptime_by_{name}s'
-       fast_write_gpkg(file_name_gpkg, table_name, df_pivot)        
-
-    # данные сворачиваем если SA и количество больше 1
-    if protocol_type == 2:# and len(sources) > 1:      
-        df_min_duration, short_result = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash)        
-        ### experiment ############
-        #df_min_duration, _ = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash) 
-      
-
-    # если SA и не roundtrip - сохраняем данные
-    if protocol_type == 2 and not roundtrip_mode: 
-        table_name_list = []                
-        table_name = f'{file_name}_triptime'
-        table_name_list.append(table_name)
-        fast_write_gpkg(file_name_gpkg, table_name, df_min_duration)       
-    
+        get_short_result(SOURCE,
+                                destinations,
+                                output_duration,                                 
+                                set_stops,
+                                short_result
+                                )
     QApplication.processEvents()
-    if not (shift_mode):
-        after_computation_time = datetime.now()
-        after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
-        self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
-        duration_computation = after_computation_time - begin_computation_time
-        duration_without_microseconds = str(duration_computation).split('.')[0]
-    
-        self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
 
-    add_thematic_map = True
-    
-    write_info(self,
-               file_name_gpkg,
-               vis,
-               fields_ok,
-               table_name_list,
-               protocol_type,
-               shift_mode,
-               add_thematic_map                           
-               )
-    
+    if not roundtrip_mode:
+        if protocol_type == 1:
+        
+                for field, list_of_dfs in df_min_duration_all_dict.items():
+                    if list_of_dfs:  
+                        df_final = pd.concat(list_of_dfs, ignore_index=True)
+                        table_name = f'{file_name}_stat_{field}_triptime'
+                        table_name_list.append(table_name)
+                        fast_write_gpkg(file_name_gpkg, table_name, df_final)
+
+
+        col_star = cols["star"]
+        col_hash = cols["hash"]
+
+        # создаем pivot если не roundtrip, данные не свернутые
+        if protocol_type == 2:
+            df_pivot = make_pivot_gpkg (short_result, col_star, col_hash)            
+            table_name = f'{file_name}_triptime_by_{name}s'
+            fast_write_gpkg(file_name_gpkg, table_name, df_pivot)        
+
+        # данные сворачиваем если SA и количество больше 1
+        if protocol_type == 2:# and len(sources) > 1:                  
+            df_min_duration = make_service_area_report_gpkg(df_min_duration_all,col_star, col_hash) 
+        
+        # если SA и не roundtrip - сохраняем данные
+        if protocol_type == 2: 
+            table_name_list = []                
+            table_name = f'{file_name}_triptime'
+            table_name_list.append(table_name)
+            fast_write_gpkg(file_name_gpkg, table_name, df_min_duration)       
+        
+        QApplication.processEvents()
+        if not (shift_mode):
+            after_computation_time = datetime.now()
+            after_computation_str = after_computation_time.strftime('%Y-%m-%d %H:%M:%S')
+            self.textLog.append(f'<a>Finished: {after_computation_str}</a>')
+            duration_computation = after_computation_time - begin_computation_time
+            duration_without_microseconds = str(duration_computation).split('.')[0]
+        
+            self.textLog.append(f'<a>Processing time: {duration_without_microseconds}</a>')
+
+        add_thematic_map = True
+
+        write_info(self,
+                file_name_gpkg,
+                vis,
+                fields_ok,
+                table_name_list,
+                protocol_type,
+                shift_mode,
+                add_thematic_map                           
+                )
+        
     if hasattr(self, 'progressBar'):   
         self.setMessage(f'Finished')
         self.progressBar.setValue(self.progressBar.maximum())

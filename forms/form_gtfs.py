@@ -21,17 +21,18 @@ from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt import uic
 
 from datetime import datetime
-from gtfs_exclude_routes import GTFSExcludeRoutes
-from gtfs_add_routes import GTFSAddRoutes
+from tau_net_calc.cls.gtfs_exclude_routes import GTFSExcludeRoutes
+from tau_net_calc.cls.gtfs_add_routes import GTFSAddRoutes
 
-from common import (get_qgis_info, 
+from tau_net_calc.cls.common import (get_qgis_info, 
                     getDateTime, 
                     check_file_parameters_accessibility, 
                     get_documents_path,
                     get_gtfs_date_range,
                     transform_log_to_csv_text,
                     highlight_empty_fields,
-                    highlight_widget
+                    highlight_widget,
+                    setup_clear_highlight_listeners
                     )
 
 FORM_CLASS, _ = uic.loadUiType(
@@ -93,7 +94,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.table1.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table2.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
-
+        self.btnSearch.setText("Apply")
         self.btnSearch.clicked.connect(self.btnSearch_on_click)
         
         self.btnAdd.clicked.connect(self.btnAdd_on_click) 
@@ -116,12 +117,14 @@ class form_gtfs(QDialog, FORM_CLASS):
             parent_layout = self.horizontalLayout_11.parent()
             parent_layout.removeItem(self.horizontalLayout_11)
 
-            self.lblNumbers.setText('Enter the route short names to delete (comma separated)')
+            self.lblNumbers.setText('List of lines’ route_id to delete (comma separated)')
         
         else:
-            self.lblNumbers.setText('Enter the route short names to add (comma separated)')
+            self.lblNumbers.setText('List of lines’ route_id to add (comma separated)')
 
         self.progressBar.setMaximum(5)
+
+        setup_clear_highlight_listeners(self)
 
     
     def on_PathToGTFS_changed (self):
@@ -146,13 +149,12 @@ class form_gtfs(QDialog, FORM_CLASS):
             lengths[col] = len(val)
         return max(lengths, key=lengths.get)
     
-    def UpdateTable1(self, show_all=False):
+    def UpdateTable1(self, show_all=True):
 
         self.InitTable1()
-        #self.InitTable2()
 
-        # --- 2. Определяем путь к GTFS --- txtPathToGTFS vs txtAddRoutes
-        gtfs_path = (self.txtPathToGTFS.text().strip() if self.mode == 2  else self.txtAddRoutes.text().strip())
+        # --- Определяем путь к GTFS --- txtPathToGTFS vs txtAddRoutes
+        gtfs_path = (self.txtPathToGTFS.text().strip() if self.mode == 2 else self.txtAddRoutes.text().strip())
 
         if self.CheckGtfsDirectory(gtfs_path):
             search_enable = True
@@ -164,21 +166,11 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.layout_tables.setEnabled(search_enable)
 
         if not search_enable:
-            #self.InitTable1()
-            return
-        
-        # --- 1. Получаем текст поиска ---
-        search_text = self.txtSearch.text().strip()
-
-        if not search_text:
-            show_all = True
-
-        if not show_all and not search_text:
             return
 
         filename = os.path.join(gtfs_path, "routes.txt")
       
-        # --- 3. Загружаем routes.txt ---
+        # --- Загружаем routes.txt ---
         try:
             df = pd.read_csv(
                 filename,
@@ -188,40 +180,25 @@ class form_gtfs(QDialog, FORM_CLASS):
                 keep_default_na=False
             )
 
-            if not {"route_id", "route_short_name"}.issubset(df.columns):
+            if "route_id" not in df.columns:
                 return
 
             # Определяем лучшую колонку описания
             best_desc_col = self.detect_best_description_column(df)
 
-            # --- 4. Фильтрация ---
-
-            #unique_cols = list(set(["route_id", "route_short_name", best_desc_col]))
-            
-            if show_all:
-                routes = df.loc[:, ["route_id", "route_short_name", best_desc_col]].copy()
-                #routes = df.loc[:, unique_cols].copy()
-                
-            else:
-                parts = re.split(r"[,\s;]+", search_text)
-                search_values = [p.lower() for p in parts if p.strip()]
-                mask = df["route_short_name"].str.lower().isin(search_values)
-                routes = df[mask].loc[:, ["route_id", "route_short_name", best_desc_col]].copy()
-                #routes = df.loc[:, unique_cols].copy()
-
-            # ПРИНУДИТЕЛЬНЫЙ СБРОС ДЛЯ ВСЕХ ВАРИАНТОВ
+            routes = df.loc[:, ["route_id", best_desc_col]].copy()
             routes = routes.reset_index(drop=True)
 
         except Exception as e:
             print("Error:", e)
             return
 
-        # --- 5. Отображение в таблице ---
+        # --- Отображение в левой таблице ---
         self.InitTable1()
         self.table1.setRowCount(len(routes))
-        for i, (_, row) in enumerate(routes.iterrows()): # Используем i как счетчик от 0 до N
+        for i, (_, row) in enumerate(routes.iterrows()):
             self.table1.setItem(i, 0, QTableWidgetItem(str(row["route_id"])))
-            self.table1.setItem(i, 1, QTableWidgetItem(str(row["route_short_name"])))
+            self.table1.setItem(i, 1, QTableWidgetItem(str(row["route_id"])))
             self.table1.setItem(i, 2, QTableWidgetItem(str(row[best_desc_col])))
             
         QTimer.singleShot(0, self.adjust_table1_rows) 
@@ -231,7 +208,44 @@ class form_gtfs(QDialog, FORM_CLASS):
             self.table1.resizeRowToContents(row)  
 
     def btnSearch_on_click(self):
-        self.UpdateTable1()
+        search_text = self.txtSearch.text().strip()
+        if not search_text:
+            return
+
+        parts = re.split(r"[,\s;]+", search_text)
+        search_values = {p.lower() for p in parts if p.strip()}
+        if not search_values:
+            return
+
+        def is_route_in_table2(route_id):
+            for r in range(self.table2.rowCount()):
+                item = self.table2.item(r, 0)
+                if item and item.text() == route_id:
+                    return True
+            return False
+
+        # Ищем совпадения в левой таблице (не изменяя её) и сразу добавляем в правую
+        for row in range(self.table1.rowCount()):
+            item_id = self.table1.item(row, 0)
+            if not item_id:
+                continue
+            route_id = item_id.text()
+
+            if route_id.lower() in search_values:
+                if is_route_in_table2(route_id):
+                    continue
+
+                name = self.table1.item(row, 1).text()
+                desc = self.table1.item(row, 2).text()
+
+                new_row = self.table2.rowCount()
+                self.table2.insertRow(new_row)
+
+                self.table2.setItem(new_row, 0, QTableWidgetItem(route_id))
+                self.table2.setItem(new_row, 1, QTableWidgetItem(name))
+                self.table2.setItem(new_row, 2, QTableWidgetItem(desc))
+
+        QTimer.singleShot(0, lambda: self.adjust_rows_height(self.table2))
                 
 
     def btnAdd_on_click(self):
@@ -294,7 +308,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         table.setWordWrap(True)
-        table.setColumnHidden(0, True) # Прячем ID
+        table.setColumnHidden(0, True) # Прячем внутренний ID (колонка 0), колонка 1 отображает route_id
         
         header = table.horizontalHeader()
         resize_to_contents = QHeaderView.ResizeMode.ResizeToContents
@@ -307,14 +321,14 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.table1.clear()
         self.table1.setRowCount(0)
         self.table1.setColumnCount(3)
-        self.table1.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
+        self.table1.setHorizontalHeaderLabels(["ID", "route_id", "Description"])
         self.apply_table_style(self.table1)
         
     def InitTable2(self):
         self.table2.clear()
         self.table2.setRowCount(0)
         self.table2.setColumnCount(3)
-        self.table2.setHorizontalHeaderLabels(["ID", "Route\n short name", "Description"])
+        self.table2.setHorizontalHeaderLabels(["ID", "route_id", "Description"])
         self.table2.setColumnHidden(0, True)        
 
         self.table2.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -403,7 +417,7 @@ class form_gtfs(QDialog, FORM_CLASS):
         self.textLog.append("<a style='font-weight:bold;'>[Mode]</a>")
         self.textLog.append(f'<a> Mode: {self.title}</a>')
         self.textLog.append("<a style='font-weight:bold;'>[Settings]</a>")
-        self.textLog.append(f"<a> The folder of the GTFS dataset: {self.config['Settings']['PathToGTFS_gtfs']}</a>")        
+        self.textLog.append(f"<a> GTFS dataset folder: {self.config['Settings']['PathToGTFS_gtfs']}</a>")        
         
         if self.mode == 2:
             self.textLog.append(f"<a> Delete lines from GTFS: {self.route_ids} </a>")
@@ -430,13 +444,20 @@ class form_gtfs(QDialog, FORM_CLASS):
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj):
+
+        current_path = obj.text()
+        start_dir = ""
+        if current_path:            
+            start_dir = os.path.dirname(current_path)            
+
         folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder", obj.text()
+            self,
+            "Select Folder",
+            start_dir
         )
+
         if folder_path:
-            obj.setText(os.path.normpath(folder_path))
-        else:
-            obj.setText(obj.text())               
+            obj.setText(os.path.normpath(folder_path))            
 
     def readParameters(self):
         project_path = QgsProject.instance().fileName()

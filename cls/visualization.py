@@ -15,10 +15,13 @@ from qgis.core import (
     QgsGraduatedSymbolRenderer,
     QgsRendererRange,    
     QgsClassificationEqualInterval,
-    QgsSymbol
+    QgsSymbol,
+
+    QgsGradientColorRamp,
+    QgsGradientStop
     )
 
-from common import insert_layer_ontop, get_name_columns
+from tau_net_calc.cls.common import insert_layer_ontop, get_name_columns
 
 class visualization:
     def __init__(self,
@@ -31,7 +34,8 @@ class visualization:
                  from_to = "",
                  roundtrip = False,
                  roundtrip_compare = False,
-                 prefix = "XXXX"
+                 prefix = "XXXX",
+                 mode_by = False
                  ):
 
         self.mode = mode
@@ -39,6 +43,7 @@ class visualization:
         self.mode_compare = mode_compare
         self.roundtrip = roundtrip
         self.prefix = prefix
+        self.mode_by = mode_by
                 
         cols_dict = get_name_columns()
         cols = cols_dict[(from_to, self.mode)]
@@ -73,6 +78,8 @@ class visualization:
         if self.mode == 1:
             style_filename = "Region.qml"
         self.style_file = os.path.normpath(os.path.join(self.style_directory, style_filename))
+
+        
 
     def auto_switch_cleaned_to_voronoi(self):
         """
@@ -140,17 +147,30 @@ class visualization:
         join_info.setJoinLayer(self.protocol_layer)        
 
         if self.roundtrip:
-            #join_info.setJoinFieldName("Destination_aid_1")            
-            join_info.setJoinFieldName("Origin_aid")                        
+            if self.mode == 1:
+                join_field = "Destination_aid"
+            else: 
+                join_field = "Origin_aid"                   
             
-        else:
-            join_info.setJoinFieldName(self.fieldname_in_protocol)      
+        else:            
+            join_field = self.fieldname_in_protocol
+        
+
 
         if self.roundtrip_compare:
             if self.mode == 1:  # MAP
-                join_info.setJoinFieldName("Destination_aid")                        
+                join_field = "Destination_aid"
             else:
-                join_info.setJoinFieldName("Origin_aid")     
+                join_field = "Origin_aid"
+
+        if self.mode_by:
+            protocol_fields = [f.name() for f in self.protocol_layer.fields()]
+            if "Origin_aid" in protocol_fields:
+                join_field = "Origin_aid"
+            if "Destination_aid" in protocol_fields:
+                join_field = "Destination_aid"
+        
+        join_info.setJoinFieldName(join_field)  
 
         join_info.setTargetFieldName(self.fieldname_layer)
         join_info.setUsingMemoryCache(True)
@@ -162,6 +182,9 @@ class visualization:
                 joinField =  [self.add_joinField, self.targetField_base]                
             join_info.setJoinFieldNamesSubset(joinField)
 
+        #print (f'self.roundtrip {self.roundtrip}')
+        #print (f'self.roundtrip_compare: {self.roundtrip_compare:}')
+        #join_info.setJoinFieldName("Destination_aid")            
         self.layer_clone.addJoin(join_info)
 
         self.layer_clone.triggerRepaint()
@@ -221,8 +244,9 @@ class visualization:
             return
         
         self.targetField_base = fields[-1].name()
-        if self.roundtrip:
-            self.targetField_base = "Duration_ave"
+        if not self.mode_by:
+            if self.roundtrip and self.mode == 2:
+                self.targetField_base = "Duration_ave"
 
         if self.mode_compare:
             self.add_name_field1 = fields[-3].name()
@@ -246,15 +270,26 @@ class visualization:
             data_provider = self.protocol_layer.dataProvider()
 
             for feature in data_provider.getFeatures():                
-                value = feature[self.targetField_base]
-                
-                if value is not None:
-                    if self.max_value == 0 or value > self.max_value:
-                        self.max_value = value
+                raw_value = feature[self.targetField_base]
 
-                    abs_value = abs(value)  # Вычисляем абсолютное значение
-                    if abs_value > self.max_abs_value:
-                        self.max_abs_value = abs_value  # Обновляем максимальное абсолютное значение
+                # Пропускаем пустые / NULL значения QVariant и None
+                if raw_value is None:
+                    continue
+                if hasattr(raw_value, "isNull") and raw_value.isNull():
+                    continue
+
+                try:
+                    # Принудительно преобразуем к float
+                    value = float(raw_value)
+                except (ValueError, TypeError):
+                    continue
+
+                if self.max_value == 0 or value > self.max_value:
+                    self.max_value = value
+
+                abs_value = abs(value)
+                if abs_value > self.max_abs_value:
+                    self.max_abs_value = abs_value
                     
         # make clone
         self.layer_clone = self.layer_buildings.clone()
@@ -287,7 +322,6 @@ class visualization:
         elif self.type_compare == "CompareSecondOnly":
             style_filename = "CompareSecondOnly.qml"
         elif self.type_compare == "DifferenceServiceAreas":
-
             style_filename = "DifferenceServiceAreas.qml"
             layer = self.layer_clone            
             qml_path = os.path.join(self.style_directory, style_filename)
@@ -300,7 +334,6 @@ class visualization:
             return
 
         elif self.type_compare in ("DifferenceRegion", "RatioRelative", "Rel_difference"):
-    
             if self.type_compare == "DifferenceRegion":
                 style_filename = "DifferenceRegion.qml"
             elif self.type_compare == "RatioRelative":
@@ -330,8 +363,22 @@ class visualization:
                 low = float(f"{low:.3f}")
                 up = float(f"{up:.3f}")
                 ranges.append(QgsRendererRange(low, up, sym, label))
+
             renderer = QgsGraduatedSymbolRenderer(self.targetField_base, ranges)
             renderer.setMode(QgsGraduatedSymbolRenderer.Mode.Custom)
+
+            # Формируем и привязываем световую шкалу Color Ramp
+            if len(colors) >= 2:
+                stops = []
+                n = len(colors)
+                for i in range(1, n - 1):
+                    r, g, b, a = map(int, colors[i])
+                    offset = i / (n - 1)
+                    stops.append(QgsGradientStop(offset, QColor(r, g, b, a)))
+                c_start = QColor(*map(int, colors[0]))
+                c_end = QColor(*map(int, colors[-1]))
+                ramp = QgsGradientColorRamp(c_start, c_end, False, stops)
+                renderer.setSourceColorRamp(ramp)
 
             layer = self.layer_clone
             layer.setRenderer(renderer)
@@ -339,13 +386,21 @@ class visualization:
             QTimer.singleShot(500, lambda: self.refresh_legend(layer))
             return
 
-
         if self.type_compare in ("CompareFirstOnly", "CompareSecondOnly"):
-
             layer = self.layer_clone            
             layer.loadNamedStyle(os.path.join(self.style_directory, style_filename))
             renderer = layer.renderer()            
             old_ranges = renderer.ranges()
+            
+            # Пробуем взять цветовую шкалу из QML
+            color_ramp = renderer.sourceColorRamp()
+            
+            # Если в QML не было шкалы (однотонный цвет), создаем ramp из цвета символа
+            if not color_ramp and old_ranges:
+                base_color = old_ranges[0].symbol().color()
+                # Градиент от того же цвета к тому же цвету (чистый сплошной цвет)
+                color_ramp = QgsGradientColorRamp(base_color, base_color)
+
             new_ranges = []
             for r in old_ranges:
                 sym = r.symbol().clone()     
@@ -363,14 +418,19 @@ class visualization:
                 new_ranges
             )
             new_renderer.setMode(QgsGraduatedSymbolRenderer.Mode.Custom)
-
+            
+            # Задаем шкалу и базовый символ
+            if color_ramp:
+                new_renderer.setSourceColorRamp(color_ramp.clone())
+            if old_ranges:
+                new_renderer.setSourceSymbol(old_ranges[0].symbol().clone())
 
             layer.setRenderer(new_renderer)
             layer.triggerRepaint()
 
             layer.setCustomProperty("showFeatureCount", True)
             QTimer.singleShot(500, lambda: self.refresh_legend(layer))
-            return    
+            return
     
     def slyle_Region(self):
         layer = self.layer_clone
@@ -410,9 +470,11 @@ class visualization:
             new_ranges.append(QgsRendererRange(low, up, symbol, label))
 
 
-
+        original_ramp = renderer.sourceColorRamp()
         # Создаём новый рендерер
-        new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)        
+        new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)      
+        if original_ramp:
+            new_renderer.setSourceColorRamp(original_ramp.clone())  
         new_renderer.setClassificationMethod(QgsClassificationEqualInterval())
         new_renderer.setClassAttribute(self.targetField)
         
@@ -470,8 +532,15 @@ class visualization:
             up  = float(f"{round(up, 3):.3f}")
             new_ranges.append(QgsRendererRange(low, up, symbol, label))
 
-
+        ramp = QgsGradientColorRamp(
+                start_color, 
+                end_color, 
+                False, 
+                [QgsGradientStop(0.5, mid_color)]
+            )
+        
         new_renderer = QgsGraduatedSymbolRenderer('', new_ranges)
+        new_renderer.setSourceColorRamp(ramp)
         new_renderer.setClassificationMethod(QgsClassificationEqualInterval())
         new_renderer.setClassAttribute(self.targetField)
         
@@ -482,7 +551,7 @@ class visualization:
         layer.setCustomProperty("showFeatureCount", True)        
         QTimer.singleShot(500, lambda: self.refresh_legend(layer))
 
-    def refresh_legend(self, layer):
+    def refresh_legend(self, layer):            
             root = QgsProject.instance().layerTreeRoot()
             node = root.findLayer(layer.id())
             if node:                
