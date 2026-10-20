@@ -14,7 +14,6 @@ import geopandas as gpd
 from pathlib import Path
 from osgeo import ogr
 
-
 try:
     import qgis.core
     import qgis.PyQt
@@ -38,7 +37,7 @@ try:
     QComboBox
     )
 
-    from qgis.gui import QgsCheckableComboBox
+    from qgis.gui import QgsCheckableComboBox, QgsMapLayerComboBox, QgsFieldComboBox
 
     IN_QGIS = True
 except ImportError:
@@ -548,7 +547,6 @@ def fast_write_gpkg(file_name_gpkg, table_name, df_current, mode_relative=False)
             layer_options={'OVERWRITE': 'YES'}
         )
 
-
 def make_service_area_report_gpkg(all_frames, col_star, col_hash):
 
     if not all_frames:
@@ -562,17 +560,9 @@ def make_service_area_report_gpkg(all_frames, col_star, col_hash):
 
     df_min = df_total.loc[df_total.groupby(col_hash)['Duration'].idxmin()]
 
-    # Определяем порядок колонок в зависимости от mode
-    key_cols = (col_star, col_hash)
-    
-    short_result = {
-        (int(row._asdict()[key_cols[0]]), int(row._asdict()[key_cols[1]])): int(row.Duration)
-        for row in df_min.itertuples(index=False)
-    }
+    return df_min
 
-    return df_min, short_result
-
-def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=10):
+def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=1003):
     rows = [(h, s, d) for (h, s), d in all_frames.items()]
     df_total = pd.DataFrame(rows, columns=[col_star, col_hash, "Duration"])
 
@@ -580,25 +570,81 @@ def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=10):
     df_total[col_star] = pd.to_numeric(df_total[col_star], errors="coerce")
     df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors="coerce")
 
-    # Берём только первые max_cols уникальных значений
-    allowed_stars = df_total[col_star].dropna().unique()[:max_cols]
-    df_total = df_total[df_total[col_star].isin(allowed_stars)]
-
+    # pivot строится по ВСЕМ col_star ----
     pivot = df_total.pivot(index=col_hash, columns=col_star, values="Duration").reset_index()
 
+    # Переименовываем Duration_* колонки
     new_cols = [pivot.columns[0]] + [f"Duration_{c}" for c in pivot.columns[1:]]
     pivot.columns = new_cols
+
+    # ---- вычисляем статистики ДО обрезания ----
+    duration_cols = pivot.columns[1:]  # все Duration_*
+    pivot["No_reachable"] = pivot[duration_cols].notna().sum(axis=1)
+    pivot["Duration_mean"] = pivot[duration_cols].mean(axis=1)
+
+    # ---- вставляем два столбца сразу после первой колонки ----
+    first_col = pivot.columns[0]
+    ordered_cols = [first_col, "No_reachable", "Duration_mean"] + duration_cols.tolist()
+    pivot = pivot[ordered_cols]
+
+    # ---- теперь обрезаем до max_cols ----
+    if pivot.shape[1] > max_cols:
+        pivot = pivot[pivot.columns[:max_cols]]
+
     return pivot
+
+
+# def make_pivot_gpkg(all_frames, col_star, col_hash, max_cols=50):
+#     rows = [(h, s, d) for (h, s), d in all_frames.items()]
+#     df_total = pd.DataFrame(rows, columns=[col_star, col_hash, "Duration"])
+
+#     df_total["Duration"] = pd.to_numeric(df_total["Duration"], errors="coerce")
+#     df_total[col_star] = pd.to_numeric(df_total[col_star], errors="coerce")
+#     df_total[col_hash] = pd.to_numeric(df_total[col_hash], errors="coerce")
+
+#     # Берём только первые max_cols уникальных значений
+#     allowed_stars = df_total[col_star].dropna().unique()[:max_cols]
+#     df_total = df_total[df_total[col_star].isin(allowed_stars)]
+
+#     pivot = df_total.pivot(index=col_hash, columns=col_star, values="Duration").reset_index()
+
+#     new_cols = [pivot.columns[0]] + [f"Duration_{c}" for c in pivot.columns[1:]]
+#     pivot.columns = new_cols
+#     return pivot
 
 def is_child_of(child, parent):
     while child is not None:
         if child is parent:
             return True
-        child = child.parentWidget()   # ← ключевое исправление
+        child = child.parentWidget()  
     return False
 
+# def highlight_widget(widget):
+#     widget.setStyleSheet("background-color: #fff7cc;")
+
 def highlight_widget(widget):
-    widget.setStyleSheet("background-color: #fff7cc;")
+    widget.setStyleSheet("""
+        QComboBox, QLineEdit, QTextEdit, QPlainTextEdit {
+            background-color: #fff7cc;
+            color: #1a1a1a;
+        }
+        /* Стили для выпадающего списка комбобокса */
+        QComboBox QAbstractItemView {
+            background-color: #fffdf0;
+            color: #1a1a1a;
+            selection-background-color: #ffe066;
+            selection-color: #000000;
+        }
+        /* Стиль активного/выделенного пункта меню */
+        QComboBox QAbstractItemView::item:selected {
+            background-color: #ffe066;
+            color: #000000;
+        }
+        QComboBox QAbstractItemView::item:hover {
+            background-color: #ffeaa7;
+            color: #000000;
+        }
+    """)
 
 def highlight_widget_no(widget):
     widget.setStyleSheet("")
@@ -622,26 +668,92 @@ def highlight_empty_fields(widget, exclude=None) -> bool:
 
         if isinstance(child, QLineEdit):
             is_empty = not child.text().strip()
+            # Подключаем очистку стиля при вводе текста
+            if not child.property("_clear_hl_connected"):
+                child.textChanged.connect(lambda _, w=child: w.setStyleSheet(""))
+                child.setProperty("_clear_hl_connected", True)
 
         elif isinstance(child, QTextEdit):
             is_empty = not child.toPlainText().strip()
+            if not child.property("_clear_hl_connected"):
+                child.textChanged.connect(lambda w=child: w.setStyleSheet(""))
+                child.setProperty("_clear_hl_connected", True)
 
         elif isinstance(child, QPlainTextEdit):
             is_empty = not child.toPlainText().strip()
-
-        elif isinstance(child, QComboBox):
-            is_empty = child.currentIndex() < 0 or not child.currentText().strip()
+            if not child.property("_clear_hl_connected"):
+                child.textChanged.connect(lambda w=child: w.setStyleSheet(""))
+                child.setProperty("_clear_hl_connected", True)
 
         elif isinstance(child, QgsCheckableComboBox):
             is_empty = len(child.checkedItems()) == 0
+            if not child.property("_clear_hl_connected"):
+                child.checkedItemsChanged.connect(lambda _, w=child: w.setStyleSheet(""))
+                child.setProperty("_clear_hl_connected", True)
 
-        if is_empty:                        
-            child.setStyleSheet("background-color: #fff7cc;")
+        elif isinstance(child, QComboBox):
+            is_empty = child.currentIndex() < 0 or not child.currentText().strip()
+            if not child.property("_clear_hl_connected"):
+                child.currentIndexChanged.connect(lambda _, w=child: w.setStyleSheet(""))
+                child.setProperty("_clear_hl_connected", True)
+
+        # if is_empty:                        
+        #     child.setStyleSheet("background-color: #fff7cc;")
+        #     found_empty = True
+        # else:
+        #     child.setStyleSheet("")
+        if is_empty:
+            highlight_widget(child)
             found_empty = True
         else:
-            child.setStyleSheet("")
+            highlight_widget_no(child)
 
     return found_empty
+
+
+
+def setup_clear_highlight_listeners(parent_widget, exclude=None):
+    """
+    Автоматически находит все поля ввода и комбобоксы внутри parent_widget
+    и подключает сброс желтой подсветки при любом изменении пользователем.
+    """
+    if exclude is None:
+        exclude = []
+
+    target_types = (
+        QLineEdit,
+        QTextEdit,
+        QPlainTextEdit,
+        QComboBox,
+        QgsCheckableComboBox,
+        QgsMapLayerComboBox,
+        QgsFieldComboBox
+    )
+
+    for child in parent_widget.findChildren(target_types):
+        if any(is_child_of(child, ex) for ex in exclude):
+            continue
+
+        # Функция сброса стиля
+        clear_style = lambda _, w=child: w.setStyleSheet("")
+
+        # 1. Специфичные QGIS-комбобоксы
+        if isinstance(child, QgsMapLayerComboBox):
+            child.layerChanged.connect(lambda _, w=child: w.setStyleSheet(""))
+        elif isinstance(child, QgsFieldComboBox):
+            child.fieldChanged.connect(lambda _, w=child: w.setStyleSheet(""))
+        elif isinstance(child, QgsCheckableComboBox):
+            child.checkedItemsChanged.connect(clear_style)
+
+        # 2. Обычные текстовые поля
+        elif isinstance(child, QLineEdit):
+            child.textChanged.connect(clear_style)
+        elif isinstance(child, (QTextEdit, QPlainTextEdit)):
+            child.textChanged.connect(lambda w=child: w.setStyleSheet(""))
+
+        # 3. Обычный QComboBox
+        elif isinstance(child, QComboBox):
+            child.currentIndexChanged.connect(clear_style)
 
 def get_tablename(layer):
     uri = layer.dataProvider().dataSourceUri()
@@ -745,6 +857,96 @@ def check_ids_match(ids, ids_vor, type = 1):
     
     return False, msg
 
+def extract_values_from_text_file(file_path):    
+    path = Path(file_path)    
+    content = path.read_text(encoding="utf-8")
+    tokens = re.split(r"[\s,;]+", content.strip())
+    return [item for item in tokens if item]
+
+
+
+##################
+
+from qgis.PyQt.QtWidgets import QFileDialog, QToolButton
+from qgis.PyQt.QtCore import QTimer
+from qgis.PyQt.QtCore import QObject, QEvent, QTimer
+
+class OpenParentFolderFilter(QObject):
+
+    def __init__(self, widget):
+        super().__init__(widget)
+        self.widget = widget
+
+    def eventFilter(self, watched, event):
+
+        if event.type() != QEvent.Type.MouseButtonRelease:
+            return False
+
+        # Для кнопки QgsFileWidget
+        if hasattr(watched, "setDown"):
+            watched.setDown(False)
+
+        QTimer.singleShot(0, self.open_dialog)
+
+        return True
+
+    def open_dialog(self):
+
+        # QgsFileWidget
+        if hasattr(self.widget, "filePath"):
+            current_path = self.widget.filePath()
+        # QLineEdit
+        else:
+            current_path = self.widget.text()
+
+        start_dir = ""
+
+        if current_path:
+
+            clean_path = os.path.normpath(current_path)
+
+            if os.path.isdir(clean_path):
+                base_dir = clean_path
+            else:
+                base_dir = os.path.dirname(clean_path)
+
+            parent_dir = os.path.dirname(base_dir)
+
+            if os.path.exists(parent_dir):
+                start_dir = parent_dir
+            elif os.path.exists(base_dir):
+                start_dir = base_dir
+
+        selected_dir = QFileDialog.getExistingDirectory(
+            self.widget,
+            "Select folder",
+            start_dir
+        )
+
+        if not selected_dir:
+            return
+
+        selected_dir = os.path.normpath(selected_dir)
+
+        # QgsFileWidget
+        if hasattr(self.widget, "setFilePath"):
+            self.widget.setFilePath(selected_dir)
+        # QLineEdit
+        else:
+            self.widget.setText(selected_dir)
+
+
+def install_parent_folder_dialog(widget):
+
+    filter_obj = OpenParentFolderFilter(widget)
+
+    # QgsFileWidget
+    if hasattr(widget, "filePath"):
+
+        for btn in widget.findChildren(QToolButton):
+            btn.installEventFilter(filter_obj)
+    return filter_obj
+##################
 
 
 

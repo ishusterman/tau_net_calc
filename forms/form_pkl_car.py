@@ -39,16 +39,17 @@ except ImportError:
     RegExpClass = QRegularExpression
     RegExpValidatorClass = QRegularExpressionValidator
 
-from pkl_car import pkl_car
-from common import (get_qgis_info, 
+from tau_net_calc.cls.pkl_car import pkl_car
+from tau_net_calc.cls.common import (get_qgis_info, 
                     check_file_parameters_accessibility,
                     FIELD_ID,
                     check_layer,
                     highlight_empty_fields,
-                    highlight_widget
+                    highlight_widget,
+                    setup_clear_highlight_listeners
                     )
 
-from road_layer_processor import RoadLayerProcessor
+from tau_net_calc.cls.road_layer_processor import RoadLayerProcessor
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'pkl_car.ui'))
 
@@ -170,7 +171,8 @@ class form_pkl_car(QDialog, FORM_CLASS):
         self.test_button.setFixedWidth(185)       
         self.btnCheckOSM.setFixedWidth(185)       
 
-        self.run_completed = False        
+        self.run_completed = False     
+        setup_clear_highlight_listeners(self)   
 
     def on_field_changed (self):
         if self.cmbFieldsSpeed.count() > 0 and self.cmbFieldsDirection.count() > 0:
@@ -413,10 +415,22 @@ class form_pkl_car(QDialog, FORM_CLASS):
         webbrowser.open(url)
 
     def showFoldersDialog(self, obj, mode_road=False):
+
+        current_path = obj.text()
+        start_dir = ""
+        if current_path:            
+            start_dir = os.path.dirname(current_path)            
+
         folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder", obj.text())
+            self,
+            "Select Folder",
+            start_dir
+        )
+
         if folder_path:
             obj.setText(os.path.normpath(folder_path))
+
+
             if mode_road:
                 self.onLayerRoadChanged()
 

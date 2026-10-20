@@ -82,9 +82,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
-             <width>498</width>
-             <height>372</height>
+             <y>-104</y>
+             <width>477</width>
+             <height>487</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -115,36 +115,72 @@
                   </property>
                  </widget>
                 </item>
+               </layout>
+              </item>
+              <item row="5" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <item>
-                 <widget class="QComboBox" name="comboBox_table1"/>
+                 <widget class="QComboBox" name="comboBox_table1">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>
-              <item row="5" column="0">
+              <item row="7" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_8">
+                <item>
+                 <widget class="QgsFieldComboBox" name="comboBox_field1"/>
+                </item>
+               </layout>
+              </item>
+              <item row="9" column="0">
                <widget class="QLabel" name="label_3">
                 <property name="text">
                  <string>Result_2</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="0" colspan="2">
+              <item row="10" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_311">
                 <item>
                  <widget class="QgsFileWidget" name="widget_result2"/>
                 </item>
+               </layout>
+              </item>
+              <item row="12" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_7">
                 <item>
-                 <widget class="QComboBox" name="comboBox_table2"/>
+                 <widget class="QComboBox" name="comboBox_table2">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>
-              <item row="8" column="0">
+              <item row="13" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="horizontalLayout_9">
+                <item>
+                 <widget class="QgsFieldComboBox" name="comboBox_field2"/>
+                </item>
+               </layout>
+              </item>
+              <item row="15" column="0">
                <widget class="QLabel" name="label_1">
                 <property name="text">
                  <string>Save results of comparison as…</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0" colspan="2">
+              <item row="16" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_3">
                 <item>
                  <widget class="QgsFileWidget" name="wgFileSave">
@@ -155,42 +191,35 @@
                 </item>
                </layout>
               </item>
-              <item row="10" column="0">
+              <item row="17" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Visualization layer</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="0" colspan="2">
+              <item row="18" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
                  <widget class="QgsMapLayerComboBox" name="cbVisLayers"/>
                 </item>
                </layout>
               </item>
-              <item row="12" column="0">
+              <item row="19" column="0">
                <widget class="QLabel" name="label_6">
                 <property name="text">
                  <string>Select the measures</string>
                 </property>
                </widget>
               </item>
-              <item row="13" column="0">
-               <widget class="QCheckBox" name="cb_ratio">
-                <property name="text">
-                 <string>Ratio: Result_1/Result_2</string>
-                </property>
-               </widget>
-              </item>
-              <item row="14" column="0">
+              <item row="20" column="0">
                <widget class="QCheckBox" name="cb_difference">
                 <property name="text">
                  <string>Difference: Result_1 - Result_2</string>
                 </property>
                </widget>
               </item>
-              <item row="15" column="0">
+              <item row="21" column="0">
                <widget class="QCheckBox" name="cb_relative_difference">
                 <property name="text">
                  <string>Relative difference: [Result_1 - Result_2]/Result 2</string>
@@ -270,6 +299,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>QgsFieldComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsfieldcombobox.h</header>
+  </customwidget>
   <customwidget>
    <class>QgsFileWidget</class>
    <extends>QWidget</extends>

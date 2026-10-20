@@ -33,9 +33,9 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant
 
 
-from footpath_on_projection import cls_footpath_on_projection
-from converter_layer import MultiLineStringToLineStringConverter
-from common import (getDateTime, 
+from tau_net_calc.cls.footpath_on_projection import cls_footpath_on_projection
+from tau_net_calc.cls.converter_layer import MultiLineStringToLineStringConverter
+from tau_net_calc.cls.common import (getDateTime, 
                     time_to_seconds, 
                     seconds_to_time,                     
                     get_unique_path,

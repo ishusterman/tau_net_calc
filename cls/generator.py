@@ -9,10 +9,10 @@ import pandas as pd
 from types import SimpleNamespace
 
 from pyproj import Transformer
-from PKL import PKL
-from GTFS import GTFS
-from query_file import myload_all_dict, runRaptorWithProtocol
-from common import time_to_seconds
+from tau_net_calc.cls.PKL import PKL
+from tau_net_calc.cls.GTFS import GTFS
+from tau_net_calc.cls.query_file import myload_all_dict, runRaptorWithProtocol
+from tau_net_calc.cls.common import time_to_seconds
 
 from qgis.core import QgsApplication, QgsVectorLayer, QgsProject
 from shapely.geometry import LineString

@@ -176,7 +176,7 @@ def post_processing(DESTINATION,
                 
             if len(journey) > 0 and not (journey[-1][0] == 'walking' and journey[-1][3] > MaxWalkDist3) and (transfer_needed >= MIN_TRANSFER):
                 if append:
-                    pareto_set.append((transfer_needed, duration, end_time, journey))
+                    pareto_set.append((transfer_needed, duration, end_time, journey, start_time))
                     
     if len(pareto_set) == 0:
         return None
@@ -282,8 +282,8 @@ def post_processingAll(
         if not(pareto_set is None) and len(pareto_set) > 0:
             # Just one journey with minimal end time will be in pareto set
             optimal_duration = get_optimal_journeys(pareto_set)            
-            duration, transfers, end_time, journey = optimal_duration
-            Dict_duration[p_i] = [SOURCE, duration, journey, transfers, end_time]
+            duration, transfers, end_time, journey, start_time = optimal_duration
+            Dict_duration[p_i] = [SOURCE, duration, journey, transfers, end_time, start_time]
                     
     return Dict_duration
 
@@ -296,16 +296,16 @@ def get_optimal_journeys(pareto_set):
     """
     
     first_journey_data = pareto_set[0]    
-    count_leg_0, duration_0, end_time_0, journey_0 = first_journey_data   
+    count_leg_0, duration_0, end_time_0, journey_0, start_time_0 = first_journey_data   
     # Инициализация оптимальных значений
-    optimal_duration_journey = (duration_0, count_leg_0, end_time_0, journey_0)  
+    optimal_duration_journey = (duration_0, count_leg_0, end_time_0, journey_0, start_time_0)  
 
     # Единый проход по набору Парето, начиная со второго элемента
     for journey_data in pareto_set[1:]:        
-        count_leg, duration, end_time, journey = journey_data        
+        count_leg, duration, end_time, journey, start_time = journey_data        
         # Обновляем оптимальный маршрут по длительности
         if duration < optimal_duration_journey[0] or (duration == optimal_duration_journey[0] and count_leg < optimal_duration_journey[1]):
-            optimal_duration_journey = (duration, count_leg, end_time, journey)        
+            optimal_duration_journey = (duration, count_leg, end_time, journey,start_time)        
         
     return optimal_duration_journey
 

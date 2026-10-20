@@ -14,7 +14,7 @@ from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from qgis import processing
 
-from common import (get_unique_path, 
+from tau_net_calc.cls.common import (get_unique_path, 
                     create_and_check_field,
                     convert_meters_to_degrees,
                     FIELD_ID)
@@ -267,7 +267,7 @@ class cls_clean_buildings(QgsTask):
         else:
             voronoi_name = f"{self.layer_name_single_part.rpartition("_")[0]}_vor_system"        
         self.save_layer_to_gpkg(clip, voronoi_name)
-
+        self.list_layer.insert(0, (self.output_gpkg_path, voronoi_name))
         self.signals.progress.emit(10)   
 
     def make_centroids(self, lyr):

@@ -82,9 +82,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-318</y>
-             <width>656</width>
-             <height>761</height>
+             <y>-241</y>
+             <width>648</width>
+             <height>790</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -566,7 +566,7 @@ QGroupBox::title {
                       </layout>
                      </item>
                      <item>
-                      <widget class="QWidget" name="widget_spacer3" native="true">
+                      <widget class="QWidget" name="spacer_roundtrip1" native="true">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                          <horstretch>0</horstretch>
@@ -576,57 +576,80 @@ QGroupBox::title {
                       </widget>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="rightLayout">
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip2">
-                         <property name="text">
-                          <string>between</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QTimeEdit" name="dtRoundtripStartTime1">
-                         <property name="displayFormat">
-                          <string>hh:mm:ss</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip3">
-                         <property name="text">
-                          <string>and</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QTimeEdit" name="dtRoundtripStartTime2">
-                         <property name="displayFormat">
-                          <string>hh:mm:ss</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip4">
-                         <property name="text">
-                          <string>test every</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="txtRountrip_timedelta1">
-                         <property name="alignment">
-                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip5">
-                         <property name="text">
-                          <string>minutes</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                      <widget class="QWidget" name="rightContainer1" native="true">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <layout class="QHBoxLayout" name="rightLayout">
+                        <property name="spacing">
+                         <number>6</number>
+                        </property>
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip2">
+                          <property name="text">
+                           <string>between</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QTimeEdit" name="dtRoundtripStartTime1">
+                          <property name="displayFormat">
+                           <string>hh:mm:ss</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip3">
+                          <property name="text">
+                           <string>and</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QTimeEdit" name="dtRoundtripStartTime2">
+                          <property name="displayFormat">
+                           <string>hh:mm:ss</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip4">
+                          <property name="text">
+                           <string>test every</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLineEdit" name="txtRountrip_timedelta1">
+                          <property name="alignment">
+                           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip5">
+                          <property name="text">
+                           <string>minutes</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                     </layout>
                    </item>
@@ -644,9 +667,9 @@ QGroupBox::title {
                       </layout>
                      </item>
                      <item>
-                      <widget class="QWidget" name="widget_spacer4" native="true">
+                      <widget class="QWidget" name="spacer_roundtrip2" native="true">
                        <property name="sizePolicy">
-                        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                          <horstretch>0</horstretch>
                          <verstretch>0</verstretch>
                         </sizepolicy>
@@ -654,57 +677,121 @@ QGroupBox::title {
                       </widget>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="rightLayout2">
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip7">
-                         <property name="text">
-                          <string>between</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QTimeEdit" name="dtRoundtripStartTime3">
-                         <property name="displayFormat">
-                          <string>hh:mm:ss</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip8">
-                         <property name="text">
-                          <string>and</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QTimeEdit" name="dtRoundtripStartTime4">
-                         <property name="displayFormat">
-                          <string>hh:mm:ss</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip9">
-                         <property name="text">
-                          <string>test every</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="txtRountrip_timedelta2">
-                         <property name="alignment">
-                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="lblRoundtrip10">
-                         <property name="text">
-                          <string>minutes</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                      <widget class="QWidget" name="rightContainer2" native="true">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <layout class="QHBoxLayout" name="rightLayout2">
+                        <property name="spacing">
+                         <number>6</number>
+                        </property>
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip7">
+                          <property name="text">
+                           <string>between</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QTimeEdit" name="dtRoundtripStartTime3">
+                          <property name="displayFormat">
+                           <string>hh:mm:ss</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip8">
+                          <property name="text">
+                           <string>and</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QTimeEdit" name="dtRoundtripStartTime4">
+                          <property name="displayFormat">
+                           <string>hh:mm:ss</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip9">
+                          <property name="text">
+                           <string>test every</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLineEdit" name="txtRountrip_timedelta2">
+                          <property name="alignment">
+                           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="lblRoundtrip10">
+                          <property name="text">
+                           <string>minutes</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_19">
+                     <item>
+                      <widget class="QLabel" name="lblMinTimeTripBack">
+                       <property name="text">
+                        <string>Minimum time gap between arrival and trip back</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QWidget" name="widget_2" native="true">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="txtTimeBack">
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="lblMinGap">
+                       <property name="text">
+                        <string>minutes</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </item>
@@ -713,7 +800,17 @@ QGroupBox::title {
                      <item>
                       <widget class="QLabel" name="label_3">
                        <property name="text">
-                        <string>Maximum travel time, min</string>
+                        <string>Maximum travel time</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QWidget" name="widget" native="true">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
                        </property>
                       </widget>
                      </item>
@@ -724,6 +821,16 @@ QGroupBox::title {
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignRight</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="lblMaxTravelTimeMin">
+                       <property name="text">
+                        <string>minutes</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                        </property>
                       </widget>
                      </item>

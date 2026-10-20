@@ -11,7 +11,7 @@ from qgis import processing
 from qgis.PyQt.QtWidgets import QApplication
 from qgis.PyQt.QtGui import QColor
 
-from common import (convert_meters_to_degrees, get_unique_path, FIELD_ID)
+from tau_net_calc.cls.common import (convert_meters_to_degrees, get_unique_path, FIELD_ID)
 
 class TaskSignals(QObject):
     log = pyqtSignal(str)
@@ -36,21 +36,19 @@ class cls_clean_visualization(QgsTask):
         self.list_layer = []
 
         self.name = self.layer.name()
-        base_path = os.path.join(self.folder_name, f"{self.name}_vis_layers.gpkg")
-        self.main_gpkg_path = get_unique_path(base_path)
-
-        self.voronoi_gpkg_path = get_unique_path(os.path.join(self.folder_name, f"{self.name}_vor_viz.gpkg"))
+        self.main_gpkg_path = os.path.join(self.folder_name, f"{self.name}_vis_layers.gpkg")
+        self.voronoi_gpkg_path = os.path.join(self.folder_name, f"{self.name}_vor_viz.gpkg")
 
     def save_voronoi_to_gpkg(self, qgs_layer, layer_name):
-        suffix = self._extract_suffix(self.voronoi_gpkg_path)
-        layer_name = f"{layer_name}{suffix}"
-
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = "GPKG"
         options.layerName = layer_name
         
-        options.actionOnExistingFile = QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
-
+        options.actionOnExistingFile = (
+            QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteLayer
+            if os.path.exists(self.voronoi_gpkg_path)
+            else QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
+        )
 
         QgsVectorFileWriter.writeAsVectorFormatV3(
             qgs_layer,
@@ -62,23 +60,23 @@ class cls_clean_visualization(QgsTask):
         layer_source = f"{self.voronoi_gpkg_path}|layername={layer_name}"
         self.list_layer.append((layer_source, layer_name))
 
-
     def save_layer_to_gpkg(self, qgs_layer, layer_name):
-        suffix = self._extract_suffix(self.main_gpkg_path)
-        layer_name = f"{layer_name}{suffix}"
-        
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = "GPKG"
         options.layerName = layer_name
         
         options.actionOnExistingFile = (
-                QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteLayer
-                if os.path.exists(self.main_gpkg_path)
-                else QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
-            )
-
+            QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteLayer
+            if os.path.exists(self.main_gpkg_path)
+            else QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
+        )
         
-        QgsVectorFileWriter.writeAsVectorFormatV3(qgs_layer, self.main_gpkg_path, QgsProject.instance().transformContext(), options)
+        QgsVectorFileWriter.writeAsVectorFormatV3(
+            qgs_layer, 
+            self.main_gpkg_path, 
+            QgsProject.instance().transformContext(), 
+            options
+        )
         layer_source = f"{self.main_gpkg_path}|layername={layer_name}"
         self.list_layer.append((layer_source, layer_name))
 
@@ -318,8 +316,13 @@ class cls_clean_visualization(QgsTask):
                     for fld in numeric_fields:
                         idx = field_index_map[fld.name()]
                         val = attrs[idx]
-                        if val is not None:
-                            sums[fld.name()] += float(val)
+                        
+                        # Пропускаем пустые значения
+                        if val in (None, "", "NULL"):
+                            continue
+                        
+                        sums[fld.name()] += val
+
 
             hex_layer.changeAttributeValue(hex_feat.id(), fld_idx_count, count)
 

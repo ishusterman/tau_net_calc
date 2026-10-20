@@ -25,7 +25,7 @@ from qgis.PyQt.QtWidgets import (QDialogButtonBox,
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt import uic
 
-from common import (get_qgis_info, 
+from tau_net_calc.cls.common import (get_qgis_info, 
                     check_file_parameters_accessibility,                     
                     insert_layer_ontop,
                     check_layer,
@@ -33,10 +33,11 @@ from common import (get_qgis_info,
                     transform_log_to_dataframe,
                     fast_write_gpkg,
                     highlight_empty_fields,
-                    highlight_widget
+                    highlight_widget,
+                    setup_clear_highlight_listeners                    
                     )
 
-from layer_clean import cls_clean_roads
+from tau_net_calc.cls.layer_clean import cls_clean_roads
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), '..', 'UI', 'roads_clean.ui'))
 
@@ -97,14 +98,24 @@ class form_roads_clean(QDialog, FORM_CLASS):
         self.show()
         self.ParametrsShow()
         self.show_info()
+        
+        setup_clear_highlight_listeners(self)
     
     def showFoldersDialog(self, obj):
+
+        current_path = obj.text()
+        start_dir = ""
+        if current_path:            
+            start_dir = os.path.dirname(current_path)            
+
         folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder", obj.text())
+            self,
+            "Select Folder",
+            start_dir
+        )
+
         if folder_path:
             obj.setText(os.path.normpath(folder_path))
-        else:
-            obj.setText(obj.text())
 
     def openFolder(self, url):
         QDesktopServices.openUrl(url)
@@ -296,7 +307,8 @@ class form_roads_clean(QDialog, FORM_CLASS):
         btn_ok = QMessageBox.StandardButton.Ok
 
         field_names = [field.name().lower() for field in layer.fields()]
-        for forbidden_field in ["fid", "cat"]:
+        #for forbidden_field in ["fid", "cat"]:
+        for forbidden_field in []:    
             if forbidden_field in field_names:
                 msgBox = QMessageBox()
                 msgBox.setIcon(icon_info)
@@ -331,7 +343,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
             self.setMessage(f"Access to the folder '{self.txtPathToProtocols.text()}' is denied")
             return False
         
-        
+        """
         shp_files = glob.glob(os.path.join(self.txtPathToProtocols.text(), "*cleaned*.gpkg"))
         if shp_files:
             msgBox = QMessageBox()
@@ -348,6 +360,7 @@ class form_roads_clean(QDialog, FORM_CLASS):
             result = msgBox.exec()
             if result == btn_no:
                 return False
+        """
 
         return True
 

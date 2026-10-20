@@ -1,31 +1,33 @@
 import json
 import os
 import shutil
-import math
 from datetime import datetime
-from scipy.spatial import KDTree
 
 from qgis.PyQt.QtWidgets import QApplication
 from qgis.core import (QgsVectorLayer,
                        QgsFeature,
                        QgsWkbTypes,
-                       QgsPointXY                       
+                       QgsPointXY,
+                       QgsFeatureRequest,
+                       QgsProject,
+                       QgsGeometry,
+                       QgsField                       
                        )
+from qgis.PyQt.QtCore import QVariant
 
 from qgis.analysis import (
     QgsGraphBuilder,
     QgsVectorLayerDirector,
-    QgsNetworkSpeedStrategy,
-    QgsNetworkDistanceStrategy
+    QgsNetworkSpeedStrategy
 )
 
-from converter_layer import MultiLineStringToLineStringConverter
-from footpath_on_projection import cls_footpath_on_projection
-from common import (getDateTime, 
-                    convert_distance_to_meters, 
+from tau_net_calc.cls.converter_layer import MultiLineStringToLineStringConverter
+
+from tau_net_calc.cls.common import (getDateTime, 
                     get_existing_path,
-                    transform_log_to_csv_text,
-                    FIELD_ID)
+                    transform_log_to_csv_text)
+
+from tau_net_calc.cls.car_json import clsCarJSON
 
 
 class pkl_car ():
@@ -33,20 +35,12 @@ class pkl_car ():
     def __init__(self, parent=""):
         self.parent = parent
         self.already_display_break = False
-        ########### experiment !!!!!!
-        #if parent != "":
-        #    self.parent.idx_field_speed = 26
         
-
     def create_files(self):
 
         self.crs = self.parent.layer_road.crs()
         units = self.crs.mapUnits()
         self.crs_grad = (units == 6)
-
-
-        #############################################
-        
 
         begin_computation_time = datetime.now()
         begin_computation_str = begin_computation_time.strftime(
@@ -54,28 +48,22 @@ class pkl_car ():
         self.parent.textLog.append(f'<a>Started: {begin_computation_str}</a>')
         QApplication.processEvents()
 
-        self.parent.progressBar.setMaximum(10)
+        self.parent.progressBar.setMaximum(6)
         self.parent.progressBar.setValue(0)
         
         if self.verify_break():
             return 0
-        
-        ###
-        # experiment
-        
+                
         self.parent.setMessage('Converting multilines into lines ...')
-        self.converter = MultiLineStringToLineStringConverter( self.parent, self.parent.layer_road)
+        self.converter = MultiLineStringToLineStringConverter(self.parent, self.parent.layer_road)
         self.layer_roads = self.converter.execute()
-        #self.layer_roads = self.parent.layer_road
-        ###
-        # experiment
+        self.parent.progressBar.setValue(0)
 
         if self.verify_break():
             return 0
 
         removed = self.remove_features_with_value(self.layer_roads, self.parent.idx_field_direction, "N")
-        #print(f"Removed {removed} features with value 'N'")
-
+        
         if self.verify_break():
             return 0
         self.parent.progressBar.setValue(1)
@@ -99,79 +87,39 @@ class pkl_car ():
         if self.verify_break():
             return 0
 
+        car_json = clsCarJSON(self.parent,
+                              idx_direction = self.parent.idx_field_direction,
+                              idx_speed = self.parent.idx_field_speed,
+                              speed_default = self.parent.speed)
+        
+        self.layer_roads = car_json.make_new_layer_with_projections (self.layer_roads, 
+                                                                    self.parent.layer_buildings,
+                                                                    )
         self.parent.progressBar.setValue(2)
-
-        self.parent.progressBar.setValue(3)
 
         self.create_graph(mode=1)
         if self.verify_break():
             return 0
-        self.parent.progressBar.setValue(4)
+        self.parent.progressBar.setValue(3)
         self.create_graph(mode=2)
         if self.verify_break():
             return 0
-        self.parent.progressBar.setValue(5)
+        self.parent.progressBar.setValue(4)
 
         self.count_item = self.parent.layer_buildings.featureCount()
         self.buildings = self.create_list_buidings()       
         self.converter.remove_temp_layer()        
         QApplication.processEvents()
-
-
-        #############################
+        self.parent.progressBar.setValue(5)
         # 2. Строим словарь координата → ID вершины QGIS-графа
         coord_to_vertex_id = self.build_coord_to_vertex_id(self.graph)
-
-        # 3. Создаём слой с проекциями
-        footpath_on_projection_car = cls_footpath_on_projection(self.parent, MaxPath=400)
-        new_layer, _ = footpath_on_projection_car.make_new_layer_with_projections(
-            layer_roads=self.layer_roads,
-            layer_buildings=self.parent.layer_buildings,
-            layer_buildings_field_id=FIELD_ID,
-            path_to_stops="",
-            file_name_gpkg=""
-        )
+        building_to_vertex = self.build_building_to_vertex(self.buildings, coord_to_vertex_id)
+        self.save_json (building_to_vertex, "dict_building_vertex.json")
+        self.parent.progressBar.setValue(6)
 
         if self.verify_break():
             return 0
         self.parent.progressBar.setValue(6)
-
-        graph_origin = footpath_on_projection_car.build_graph_original(self.layer_roads)
-        if self.verify_break():
-            return 0
-        self.parent.progressBar.setValue(7)
-        graph, dict_osm_vertex, dict_vertex_osm = footpath_on_projection_car.build_graph(new_layer)
-        if self.verify_break():
-            return 0
-        self.parent.progressBar.setValue(8)
-
-        # 6. Расчёт расстояний
-        
-        footpath_on_projection_car.construct_dict_near_buildings_stream_json(
-            graph_origin,
-            graph,
-            dict_vertex_osm,
-            coord_to_vertex_id,
-            self.get_full_filename("dict_vertex_buildings.json")
-        )
-
-        #self.save_pkl (dict_vertex_buildings,"dict_vertex_buildings.json")
-        if self.verify_break():
-            return 0
-        self.parent.progressBar.setValue(9)
-
-        dict_building_vertex = footpath_on_projection_car.construct_dict_nearest_origin_vertex_for_buildings(
-            graph_origin,
-            graph,
-            dict_osm_vertex,
-            coord_to_vertex_id            
-        )
-        
-        self.save_pkl (dict_building_vertex, "dict_building_vertex.json")
-
-        if self.verify_break():
-            return 0
-        self.parent.progressBar.setValue(10)
 
         after_computation_time = datetime.now()
         after_computation_str = after_computation_time.strftime(
@@ -214,73 +162,38 @@ class pkl_car ():
         layer.commitChanges()
 
         return len(ids_to_delete)
-    
-
-    def create_spatial_index_graph(self):
-
-        vertex_coords = []
-        c = 0
-        for i in range(self.graph.vertexCount()):
-            c += 1
-
-            if c % 1000 == 0:
-                if self.verify_break():
-                    return 0
-                self.parent.setMessage('Building spatial index...')
-                QApplication.processEvents()
-
-            vertex_point = self.graph.vertex(i).point()
-            vertex_coords.append([vertex_point.x(), vertex_point.y()])
-
-        self.graph_vertex_index = KDTree(vertex_coords)
 
     def create_graph(self, mode):
 
         self.mode = mode
         self.layer_roads_mod = self.change_road_layer()
         
+        #print("DEBUG layer_roads_mod:", self.layer_roads_mod)
+        #self.layer_roads_mod.setName("check !!!")
+        #QgsProject.instance().addMapLayer(self.layer_roads_mod)
 
         if self.verify_break():
             return 0
 
-        """
-        if self.parent.default_direction == "B":
-            direction = QgsVectorLayerDirector.DirectionBoth
-        if self.mode == 1:
-            if self.parent.default_direction == "T":
-                direction = QgsVectorLayerDirector.DirectionForward
-            if self.parent.default_direction == "F":
-                direction = QgsVectorLayerDirector.DirectionBackward
-        else:
-            if self.parent.default_direction == "T":
-                direction = QgsVectorLayerDirector.DirectionBackward
-            if self.parent.default_direction == "F":
-                direction = QgsVectorLayerDirector.DirectionForward
-        """
-
         direction = QgsVectorLayerDirector.Direction.DirectionBoth
-
         
         director = QgsVectorLayerDirector(self.layer_roads_mod,
                                           self.parent.idx_field_direction,
                                           "T", "F", "B", direction
                                           )
-
+                
         defaultValue = int(self.parent.speed)
 
         toMetricFactor = 1 / 3.6  # for speed km/h
-
-        #if self.parent.strategy_id == 1:
+        
         strategy1 = QgsNetworkSpeedStrategy(self.parent.idx_field_speed,
                                                defaultValue,
                                                toMetricFactor
                                                )
-        #else:
-        #strategy2 = QgsNetworkDistanceStrategy()
+        
         if self.verify_break():
             return 0
         director.addStrategy(strategy1)
-        #director.addStrategy(strategy2)
         if self.verify_break():
             return 0
         builder = QgsGraphBuilder(self.crs)
@@ -308,12 +221,7 @@ class pkl_car ():
         self.save_graph(self.graph, file_path)
 
         return self.graph
-
-
-
-
-
-
+    
     def save_graph(self, graph, file_path):
         ROUND = 3
 
@@ -368,39 +276,7 @@ class pkl_car ():
             )
 
         return builder.graph()
-
-        """
-        # --- Сохраняем координаты вершин ---
-        with open(nodes_file, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["id", "x", "y"])
-            for vid, (x, y) in enumerate(graph_data['nodes']):
-                writer.writerow([vid, x, y])
-
-        print(f"Файл с вершинами сохранён: {nodes_file}")
-
-        # --- Сохраняем рёбра с WKT ---
-        with open(edges_file, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([
-                "edge_id", "source_id", "target_id",
-                "x1", "y1", "x2", "y2",
-                "cost", "wkt"
-            ])
-
-            for eid, (source_id, target_id, costs) in enumerate(graph_data['edges']):
-                x1, y1 = graph_data['nodes'][source_id]
-                x2, y2 = graph_data['nodes'][target_id]
-
-                cost = costs[0] if isinstance(costs, (list, tuple)) else costs
-
-                wkt = f"LINESTRING({x1} {y1}, {x2} {y2})"
-
-                writer.writerow([eid, source_id, target_id, x1, y1, x2, y2, cost, wkt])
-
-        print(f"Файл с рёбрами сохранён: {edges_file}")
-        """
- 
+    
     def change_road_layer(self):
         comment = ""
         if self.mode == 2:
@@ -420,9 +296,6 @@ class pkl_car ():
             new_feature = QgsFeature(feature)
 
             if self.parent.idx_field_direction != -1:
-                current_value = new_feature.attribute(
-                    self.parent.idx_field_direction)
-
                 current_value = new_feature.attribute(self.parent.idx_field_direction)
 
                 if self.mode == 1:
@@ -438,16 +311,15 @@ class pkl_car ():
                 
                 new_feature.setAttribute(self.parent.idx_field_direction, new_value)
 
-            
+            speed_value = new_feature[self.parent.speed_fieldname]
             if self.parent.layer_road_type_road != '':
-                fclass_value = new_feature[self.parent.layer_road_type_road]
-                speed_value = new_feature[self.parent.speed_fieldname]
+                fclass_value = new_feature[self.parent.layer_road_type_road]                
                 if not speed_value or speed_value == 0 or speed_value == "0":
                     new_value = self.parent.type_road_speed_default.get(fclass_value, int(self.parent.speed))
                     new_feature.setAttribute(self.parent.idx_field_speed, int(new_value))
             
             if self.parent.layer_road_type_road == '':
-                speed_value = new_feature[self.parent.speed_fieldname]
+                
                 speed = int(self.parent.speed)
                 if not speed_value or speed_value == 0 or speed_value == "0":
                     new_feature.setAttribute(self.parent.idx_field_speed, speed)
@@ -475,29 +347,24 @@ class pkl_car ():
 
     def load_files(self, pathtopkl):
 
-        # dict_building_vertex
         path1 = get_existing_path(pathtopkl, "dict_building_vertex.json")
+
         with open(path1, "r", encoding="utf-8") as f:
-            raw1 = json.load(f)
+            raw = json.load(f)
 
-        dict_building_vertex = {
-            int(k): tuple(v)
-            for k, v in raw1.items()
-        }
+        building_vertex = {}
+        vertex_building = {}
 
-        # dict_vertex_buildings
-        path2 = get_existing_path(pathtopkl, "dict_vertex_buildings.json")
-        with open(path2, "r", encoding="utf-8") as f:
-            raw2 = json.load(f)
+        for b, v in raw.items():
 
-        dict_vertex_buildings = {
-            int(k): [(b, d) for b, d in v]
-            for k, v in raw2.items()
-        }
+            if b in (None, "", "NULL") or v in (None, "", "NULL"):
+                continue
+            b = int(b)
+            v = int(v)
+            building_vertex[b] = v
+            vertex_building[v] = b
 
-        return dict_building_vertex, dict_vertex_buildings
-
-
+        return building_vertex, vertex_building
 
     def converting_roads(self):
         self.converter = MultiLineStringToLineStringConverter(self.parent, self.parent.layer_road)
@@ -518,11 +385,9 @@ class pkl_car ():
     def get_full_filename (self, filename):
         self.prefix = os.path.basename(self.parent.path_to_protocol)
         path = os.path.join(self.parent.path_to_protocol, f"{self.prefix}_{filename}")
-
         return path
-        
 
-    def save_pkl(self, data, filename):
+    def save_json(self, data, filename):
         self.prefix = os.path.basename(self.parent.path_to_protocol)
         path = os.path.join(self.parent.path_to_protocol, f"{self.prefix}_{filename}")
 
@@ -569,11 +434,28 @@ class pkl_car ():
         return points
 
     def build_coord_to_vertex_id(self, graph):
-            coord_to_id = {}
+        coord_to_id = {}
+        ROUND = 3
 
-            for vid in range(graph.vertexCount()):
-                p = graph.vertex(vid).point()                
-                key = (p.x(), p.y())
-                coord_to_id[key] = vid
+        for vid in range(graph.vertexCount()):
+            p = graph.vertex(vid).point()
+            key = (round(p.x(), ROUND), round(p.y(), ROUND))
+            coord_to_id[key] = vid
 
-            return coord_to_id
+        return coord_to_id
+    
+    def build_building_to_vertex(self, buildings, coord_to_vertex_id):
+        building_to_vertex = {}
+        ROUND = 3
+
+        for building_id, point in buildings:
+            key = (round(point.x(), ROUND), round(point.y(), ROUND))
+
+            if key in coord_to_vertex_id:
+                building_to_vertex[building_id] = coord_to_vertex_id[key]
+            else:
+                # нет точного совпадения — можно поставить None или пропустить
+                building_to_vertex[building_id] = None
+
+        return building_to_vertex
+

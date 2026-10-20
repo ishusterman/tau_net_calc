@@ -10,7 +10,7 @@ try:
 except ImportError:
     IN_QGIS = False
 
-from common import time_to_seconds
+from tau_net_calc.cls.common import time_to_seconds
 
 class PKL ():
 
